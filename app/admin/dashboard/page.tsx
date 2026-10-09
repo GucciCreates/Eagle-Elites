@@ -55,9 +55,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
 
-  const [assignDate, setAssignDate] = useState(
-    () => new Date().toISOString().split('T')[0],
-  );
+  const [assignDate, setAssignDate] = useState('');
   const [groupAssignments, setGroupAssignments] = useState<
     Record<string, AssignmentGroup>
   >({});
@@ -84,6 +82,10 @@ export default function AdminDashboard() {
 
   const router = useRouter();
   const supabase = createClient();
+
+  useEffect(() => {
+    setAssignDate(new Date().toISOString().split('T')[0]);
+  }, []);
 
   useEffect(() => {
     const init = async () => {
@@ -309,7 +311,7 @@ export default function AdminDashboard() {
   const openMessages = helpMessages.filter(
     (message) => message.status === 'open',
   ).length;
-  const today = new Date().toISOString().split('T')[0];
+  const today = assignDate || '';
   const upcomingHoliday = holidays.find((holiday) => holiday.date >= today);
 
   const tabs = [
