@@ -91,14 +91,45 @@ function canChangeTime(tripTime: string) {
 }
 
 function formatTime(t: string) {
-  return t?.slice(0, 5) || '—';
+  if (!t) return '—';
+
+  const [hourStr, minuteStr] = t.split(':');
+  const hour = Number(hourStr);
+  const minute = Number(minuteStr);
+
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return t;
+
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+  const normalizedHour = hour % 12 === 0 ? 12 : hour % 12;
+
+  return `${normalizedHour}:${String(minute).padStart(2, '0')} ${suffix}`;
 }
+
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString('en-PK', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
   });
+}
+
+function getNextWeekRange() {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = day === 0 ? 1 : 8 - day;
+  const start = new Date(now);
+  start.setDate(now.getDate() + diff);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+
+  const format = (date: Date) =>
+    date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+
+  return `${format(start)} – ${format(end)}`;
 }
 
 export default function Dashboard() {
@@ -159,6 +190,7 @@ export default function Dashboard() {
 
   const [confirmingSeat, setConfirmingSeat] = useState(false);
   const [todayName, setTodayName] = useState('Monday');
+  const [nextWeekRange, setNextWeekRange] = useState('');
   const [isSundayToday, setIsSundayToday] = useState(false);
   const [isFridaySaturdayToday, setIsFridaySaturdayToday] = useState(false);
 
@@ -359,6 +391,7 @@ export default function Dashboard() {
     const now = new Date();
     const weekdayIndex = now.getDay() === 0 ? 6 : now.getDay() - 1;
     setTodayName(DAYS[weekdayIndex]);
+    setNextWeekRange(getNextWeekRange());
     setIsSundayToday(now.getDay() === 0);
     setIsFridaySaturdayToday([5, 6].includes(now.getDay()));
   }, []);
@@ -584,10 +617,10 @@ export default function Dashboard() {
         <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-fuchsia-500/8 blur-3xl" />
       </div>
 
-      <nav className="sticky top-0 z-50 border-b border-white/5 bg-[#0b0f14]/80 backdrop-blur-xl">
+      <nav className="sticky top-0 z-50 border-b border-white/5 bg-[#0b0f14]/85 backdrop-blur-xl shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-yellow-400/20 bg-gradient-to-br from-yellow-300/20 to-yellow-500/10 text-[11px] font-black tracking-[0.12em] text-yellow-200">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-yellow-400/20 bg-gradient-to-br from-yellow-300/20 to-yellow-500/10 text-[11px] font-black tracking-[0.12em] text-yellow-200 shadow-[0_0_24px_rgba(250,204,21,0.12)]">
               EE
             </div>
             <div>
@@ -604,7 +637,7 @@ export default function Dashboard() {
                   setShowNotifications(!showNotifications);
                   setUnreadCount(0);
                 }}
-                className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/8 bg-white/[0.02] text-sm text-zinc-300 transition hover:border-yellow-400/20 hover:text-yellow-200"
+                className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/8 bg-white/[0.03] text-sm text-zinc-300 transition hover:border-yellow-400/20 hover:text-yellow-200"
               >
                 <span>🔔</span>
                 {unreadCount > 0 && (
@@ -615,7 +648,7 @@ export default function Dashboard() {
               </button>
 
               {showNotifications && (
-                <div className="absolute right-0 top-12 z-50 w-80 overflow-hidden rounded-2xl border border-white/10 bg-[#10161d] shadow-2xl">
+                <div className="absolute right-0 top-12 z-50 w-80 overflow-hidden rounded-2xl border border-white/10 bg-[#10161d] shadow-[0_20px_50px_rgba(0,0,0,0.32)]">
                   <div className="border-b border-white/5 p-4">
                     <p className="text-sm font-bold text-white">
                       Announcements
@@ -651,8 +684,8 @@ export default function Dashboard() {
               )}
             </div>
 
-            <div className="hidden items-center gap-2 rounded-xl border border-white/8 bg-white/[0.02] px-2.5 py-1.5 sm:flex">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-white/10 to-yellow-400/10 text-[11px] font-semibold text-white">
+            <div className="hidden items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-2.5 py-1.5 sm:flex">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-white/12 to-yellow-400/12 text-[11px] font-semibold text-white">
                 {profile?.full_name?.charAt(0)?.toUpperCase() || 'S'}
               </div>
               <div className="text-left">
@@ -677,7 +710,7 @@ export default function Dashboard() {
                 await supabase.auth.signOut();
                 router.push('/auth/login');
               }}
-              className="rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2 text-[11px] font-medium tracking-[0.08em] text-zinc-200 uppercase transition hover:border-yellow-400/20 hover:text-yellow-200"
+              className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2 text-[11px] font-medium tracking-[0.08em] text-zinc-200 uppercase transition hover:border-yellow-400/20 hover:text-yellow-200"
             >
               Log out
             </button>
@@ -716,19 +749,24 @@ export default function Dashboard() {
           {summaryCards.map((item) => (
             <div
               key={item.label}
-              className={`rounded-2xl border p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_18px_32px_rgba(0,0,0,0.18)] ${
+              className={`rounded-[24px] border p-4 shadow-[0_20px_40px_rgba(0,0,0,0.18)] backdrop-blur-sm ${
                 item.featured
-                  ? 'border-yellow-500/20 bg-gradient-to-br from-yellow-500/12 via-transparent to-emerald-500/10 sm:col-span-2'
-                  : 'border-white/8 bg-gradient-to-br from-white/5 to-white/[0.02]'
+                  ? 'border-yellow-500/20 bg-gradient-to-br from-yellow-500/12 via-[#10171f] to-emerald-500/10 sm:col-span-2'
+                  : 'border-white/8 bg-gradient-to-br from-white/5 to-[#10171f]/80'
               }`}
             >
-              <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                {item.label}
-              </p>
-              <p className={`mt-3 text-2xl font-black ${item.accent}`}>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+                  {item.label}
+                </p>
+                <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-yellow-300 to-yellow-500 shadow-[0_0_16px_rgba(250,204,21,0.45)]" />
+              </div>
+              <p
+                className={`mt-4 text-3xl font-black tracking-tight ${item.accent}`}
+              >
                 {item.value}
               </p>
-              <p className="mt-1 text-xs text-zinc-400">{item.hint}</p>
+              <p className="mt-2 text-xs text-zinc-400">{item.hint}</p>
             </div>
           ))}
         </div>
@@ -751,20 +789,21 @@ export default function Dashboard() {
 
         {activeTab === 'home' && (
           <div className="space-y-4">
-            <div className="rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(250,204,21,0.18),_transparent_28%),linear-gradient(135deg,_rgba(18,22,30,0.96),_rgba(9,12,17,0.96))] p-5 shadow-[0_28px_60px_rgba(0,0,0,0.25)] sm:p-6">
+            <div className="overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(250,204,21,0.18),_transparent_28%),linear-gradient(135deg,_rgba(18,20,26,0.96),_rgba(8,12,17,0.96))] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.25)] sm:p-6">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.28em] text-zinc-400">
                     Welcome back
                   </p>
-                  <h2 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">
-                    {profile?.full_name} 👋
+                  <h2 className="mt-2 text-3xl font-black tracking-[-0.04em] text-white sm:text-4xl">
+                    {profile?.full_name}{' '}
+                    <span className="inline-block">👋</span>
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-zinc-400">
                     {profile?.email}
                   </p>
                   {profile?.destination && (
-                    <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-yellow-500/20 bg-yellow-500/10 px-3 py-1.5 text-sm text-yellow-200">
+                    <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-yellow-500/20 bg-yellow-500/10 px-3 py-1.5 text-sm text-yellow-200 shadow-[0_0_20px_rgba(250,204,21,0.08)]">
                       <span>📍</span>
                       <span>{profile.destination}</span>
                     </div>
@@ -976,8 +1015,7 @@ export default function Dashboard() {
               <div className="flex flex-wrap gap-2">
                 {[
                   { key: 'overview', label: 'Overview' },
-                  { key: 'change', label: 'Change time' },
-                  { key: 'timetable', label: 'Timetable' },
+                  { key: 'change', label: 'Request Time Change' },
                 ].map((item) => (
                   <button
                     key={item.key}
@@ -996,61 +1034,261 @@ export default function Dashboard() {
 
             {scheduleView === 'overview' && (
               <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 space-y-5">
-                <div>
-                  <h3 className="text-white font-bold text-lg">
-                    Weekly Schedule
-                  </h3>
-                  <p className="text-zinc-500 text-sm mt-1">
-                    {isSundayToday
-                      ? '✅ Today is Sunday — submit your schedule for next week'
-                      : '⚠️ Submission opens every Sunday'}
-                  </p>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="text-white font-bold text-lg">
+                      Weekly Schedule
+                    </h3>
+                    <p className="mt-1 text-zinc-400 text-xs uppercase tracking-[0.18em]">
+                      {nextWeekRange}
+                    </p>
+                  </div>
+
+                  {!isSundayToday && (
+                    <span className="inline-flex items-center rounded-full border border-zinc-700 bg-zinc-800/80 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-zinc-400">
+                      Submission opens Sunday
+                    </span>
+                  )}
                 </div>
 
                 {schedules.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-zinc-400 text-xs uppercase tracking-widest font-semibold">
-                      Next Week&apos;s Schedule
-                    </p>
-                    {schedules.map((s) => (
-                      <div
-                        key={s.id}
-                        className="bg-zinc-800 rounded-xl p-3 flex items-center justify-between"
-                      >
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-yellow-500/20 bg-yellow-500/10 text-base shadow-[0_0_20px_rgba(250,204,21,0.12)]">
+                          📅
+                        </span>
                         <div>
-                          <p className="text-white font-medium text-sm">
-                            {s.day_of_week}
+                          <p className="text-zinc-300 text-[10px] font-semibold uppercase tracking-[0.22em]">
+                            Schedule overview
                           </p>
-                          <p className="text-zinc-500 text-xs">
-                            📍 {s.pickup_points?.name}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-zinc-300 text-xs">
-                            🌅 Pickup: {formatTime(s.arrival_time)}
-                          </p>
-                          <p className="text-zinc-300 text-xs">
-                            🌆 Return: {formatTime(s.departure_time)}
-                          </p>
+                          <h4 className="mt-1 text-white text-sm font-semibold">
+                            Weekly trip plan
+                          </h4>
                         </div>
                       </div>
-                    ))}
+
+                      <div className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                        {schedules.length} active
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-[1.5fr_0.8fr]">
+                      <div className="relative rounded-[24px] border border-white/8 bg-gradient-to-br from-zinc-900 via-zinc-900/95 to-zinc-800/70 p-4">
+                        <div className="absolute left-6 top-5 bottom-5 w-px bg-gradient-to-b from-yellow-500/0 via-yellow-500/50 to-yellow-500/0" />
+
+                        <div className="space-y-3">
+                          {schedules.map((s, index) => (
+                            <div key={s.id} className="relative pl-8">
+                              <span className="absolute left-2 top-5 h-3 w-3 rounded-full border border-yellow-300 bg-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.55)]" />
+
+                              <div className="rounded-2xl border border-white/8 bg-zinc-900/80 p-3 shadow-[0_12px_28px_rgba(0,0,0,0.14)]">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-3">
+                                    <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-yellow-500/20 bg-yellow-500/10 text-[10px] font-black text-yellow-200">
+                                      {s.day_of_week.slice(0, 2).toUpperCase()}
+                                    </span>
+                                    <div>
+                                      <p className="text-white font-semibold text-sm">
+                                        {s.day_of_week}
+                                      </p>
+                                      <p className="mt-1 text-[11px] text-zinc-400">
+                                        {s.pickup_points?.name}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <span
+                                    className={`rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] ${
+                                      index === 0
+                                        ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+                                        : 'border-cyan-500/20 bg-cyan-500/10 text-cyan-300'
+                                    }`}
+                                  >
+                                    {index === 0 ? 'Today' : 'Trip'}
+                                  </span>
+                                </div>
+
+                                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                  <div className="rounded-xl border border-yellow-500/10 bg-yellow-500/5 p-3">
+                                    <p className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                                      <span>🕘</span> Pickup
+                                    </p>
+                                    <p className="mt-2 text-base font-black text-yellow-200">
+                                      {formatTime(s.arrival_time)}
+                                    </p>
+                                  </div>
+
+                                  <div className="rounded-xl border border-cyan-500/10 bg-cyan-500/5 p-3">
+                                    <p className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                                      <span>🕙</span> Return
+                                    </p>
+                                    <p className="mt-2 text-base font-black text-cyan-200">
+                                      {formatTime(s.departure_time)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="rounded-[24px] border border-white/8 bg-gradient-to-br from-yellow-500/8 via-transparent to-transparent p-4">
+                          <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                            Week summary
+                          </p>
+                          <div className="mt-4 space-y-3">
+                            <div className="rounded-xl border border-white/8 bg-zinc-900/75 p-3">
+                              <p className="text-zinc-500 text-[10px] uppercase tracking-[0.2em]">
+                                Days on route
+                              </p>
+                              <p className="mt-2 text-2xl font-black text-white">
+                                {schedules.length}
+                              </p>
+                            </div>
+
+                            <div className="rounded-xl border border-white/8 bg-zinc-900/75 p-3">
+                              <p className="text-zinc-500 text-[10px] uppercase tracking-[0.2em]">
+                                Pickup points
+                              </p>
+                              <p className="mt-2 text-lg font-bold text-yellow-200">
+                                {
+                                  new Set(
+                                    schedules
+                                      .map((day) => day.pickup_points?.name)
+                                      .filter(Boolean),
+                                  ).size
+                                }
+                              </p>
+                            </div>
+
+                            <div className="rounded-xl border border-white/8 bg-zinc-900/75 p-3">
+                              <p className="text-zinc-500 text-[10px] uppercase tracking-[0.2em]">
+                                Travel window
+                              </p>
+                              <p className="mt-2 text-sm font-semibold text-cyan-200">
+                                {formatTime(
+                                  schedules[0]?.arrival_time || '07:15',
+                                )}{' '}
+                                -{' '}
+                                {formatTime(
+                                  schedules[0]?.departure_time || '18:30',
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
 
+                <div className="rounded-2xl border border-white/8 bg-gradient-to-br from-zinc-800/80 to-zinc-900/80 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <h4 className="flex items-center gap-2 text-white font-semibold text-sm">
+                      <span className="text-base">🎓</span>
+                      Class days
+                    </h4>
+                    {isSundayToday && (
+                      <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-emerald-300">
+                        Active
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {DAYS.map((day) => {
+                      const selected = classDays.includes(day);
+                      const editable = isSundayToday;
+
+                      return (
+                        <button
+                          key={day}
+                          type="button"
+                          disabled={!editable}
+                          onClick={() => {
+                            if (!isSundayToday) return;
+                            setClassDays((prev) =>
+                              prev.includes(day)
+                                ? prev.filter((d) => d !== day)
+                                : [...prev, day],
+                            );
+                          }}
+                          className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm transition ${
+                            selected
+                              ? 'border-yellow-400/40 bg-yellow-400/10 text-white shadow-[0_0_0_1px_rgba(250,204,21,0.12)]'
+                              : 'border-zinc-700 bg-zinc-900/60 text-zinc-400'
+                          } ${!editable ? 'cursor-default opacity-80' : 'hover:border-zinc-500'}`}
+                        >
+                          <span>{day}</span>
+                          <span
+                            className={`flex h-5 w-5 items-center justify-center rounded-md text-[10px] font-bold ${
+                              selected
+                                ? 'bg-yellow-400 text-black'
+                                : 'border border-zinc-600 text-zinc-500'
+                            }`}
+                          >
+                            {selected ? '✓' : ''}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {!isSundayToday && (
+                    <p className="mt-3 text-xs text-zinc-500">
+                      Class day preferences are read-only until Sunday
+                      submission opens.
+                    </p>
+                  )}
+                </div>
+
                 {isSundayToday ? (
                   <div className="space-y-4">
-                    <p className="text-zinc-400 text-xs uppercase tracking-widest font-semibold">
-                      Submit Next Week
-                    </p>
+                    <div className="rounded-2xl border border-white/8 bg-zinc-800/60 p-4">
+                      <p className="text-zinc-400 text-xs uppercase tracking-widest font-semibold">
+                        Submit next week
+                      </p>
+                      <p className="mt-2 text-sm text-zinc-300">
+                        Pick your pickup point and times for each day you are
+                        travelling.
+                      </p>
+                    </div>
+
                     {DAYS.map((day) => (
                       <div
                         key={day}
-                        className="bg-zinc-800/60 border border-zinc-700 rounded-xl p-4 space-y-3"
+                        className={`rounded-xl border p-4 space-y-3 transition ${
+                          scheduleForm[day]?.pickup_point_id ||
+                          scheduleForm[day]?.arrival_time ||
+                          scheduleForm[day]?.departure_time
+                            ? 'border-yellow-500/30 bg-yellow-500/5'
+                            : 'border-zinc-700 bg-zinc-800/60'
+                        }`}
                       >
-                        <p className="text-white font-semibold text-sm">
-                          {day}
-                        </p>
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-white font-semibold text-sm">
+                            {day}
+                          </p>
+                          <span
+                            className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] ${
+                              scheduleForm[day]?.pickup_point_id ||
+                              scheduleForm[day]?.arrival_time ||
+                              scheduleForm[day]?.departure_time
+                                ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-200'
+                                : 'border-zinc-700 bg-zinc-900 text-zinc-500'
+                            }`}
+                          >
+                            {scheduleForm[day]?.pickup_point_id ||
+                            scheduleForm[day]?.arrival_time ||
+                            scheduleForm[day]?.departure_time
+                              ? 'Selected'
+                              : 'Not selected'}
+                          </span>
+                        </div>
+
                         <select
                           value={scheduleForm[day]?.pickup_point_id || ''}
                           onChange={(e) =>
@@ -1074,7 +1312,7 @@ export default function Dashboard() {
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <p className="text-zinc-500 text-xs mb-1">
-                              🌅 Pickup time
+                              Pickup time
                             </p>
                             <input
                               type="time"
@@ -1093,7 +1331,7 @@ export default function Dashboard() {
                           </div>
                           <div>
                             <p className="text-zinc-500 text-xs mb-1">
-                              🌆 Return time
+                              Return time
                             </p>
                             <input
                               type="time"
@@ -1116,7 +1354,7 @@ export default function Dashboard() {
 
                     {scheduleSuccess && (
                       <div className="bg-green-950/60 border border-green-800 text-green-400 px-4 py-3 rounded-xl text-sm">
-                        ✅ Schedule submitted!
+                        Schedule submitted successfully.
                       </div>
                     )}
 
@@ -1154,14 +1392,8 @@ export default function Dashboard() {
                     </button>
                   </div>
                 ) : (
-                  <div className="bg-zinc-800/40 border border-zinc-700 rounded-xl p-6 text-center">
-                    <p className="text-3xl mb-3">📅</p>
-                    <p className="text-zinc-400 font-medium">
-                      Schedule submission opens on Sunday
-                    </p>
-                    <p className="text-zinc-600 text-sm mt-1">
-                      Come back this Sunday to submit next week&apos;s schedule
-                    </p>
+                  <div className="rounded-xl border border-zinc-700 bg-zinc-800/40 px-4 py-3 text-sm text-zinc-400">
+                    Submission opens Sunday · {nextWeekRange}
                   </div>
                 )}
               </div>
@@ -1171,16 +1403,16 @@ export default function Dashboard() {
               <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 space-y-5">
                 <div>
                   <h3 className="text-white font-bold text-lg">
-                    Change Trip Time
+                    Request Time Change
                   </h3>
                   <p className="text-zinc-500 text-sm mt-1">
-                    One change per day, at least 8 hours before the trip
+                    Requests are reviewed by admin. One change per day, at least
+                    8 hours before the trip.
                   </p>
                 </div>
 
                 {schedules.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className="text-3xl mb-3">📅</p>
                     <p className="text-zinc-400">
                       No schedule found for this week
                     </p>
@@ -1189,7 +1421,7 @@ export default function Dashboard() {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest">
-                        Select Day
+                        Select day
                       </label>
                       <div className="grid grid-cols-3 gap-2">
                         {schedules.map((s) => (
@@ -1221,7 +1453,7 @@ export default function Dashboard() {
                       <>
                         <div className="space-y-2">
                           <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest">
-                            Which Trip
+                            Which trip
                           </label>
                           <div className="grid grid-cols-2 gap-2">
                             {(['arrival', 'departure'] as const).map((type) => (
@@ -1230,9 +1462,7 @@ export default function Dashboard() {
                                 onClick={() => setChangeType(type)}
                                 className={`px-4 py-3 rounded-xl text-sm font-medium border transition-all ${changeType === type ? 'bg-yellow-400 text-black border-yellow-400' : 'bg-zinc-800 text-zinc-400 border-zinc-700'}`}
                               >
-                                {type === 'arrival'
-                                  ? '🌅 Pickup (Arrival)'
-                                  : '🌆 Return (Departure)'}
+                                {type === 'arrival' ? 'Pickup' : 'Return'}
                               </button>
                             ))}
                           </div>
@@ -1240,7 +1470,7 @@ export default function Dashboard() {
 
                         <div className="space-y-2">
                           <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest">
-                            New Time
+                            New time
                           </label>
                           <input
                             type="time"
@@ -1254,12 +1484,12 @@ export default function Dashboard() {
 
                     {changeError && (
                       <div className="bg-red-950/60 border border-red-800 text-red-400 px-4 py-3 rounded-xl text-sm">
-                        ⚠️ {changeError}
+                        {changeError}
                       </div>
                     )}
                     {changeSuccess && (
                       <div className="bg-green-950/60 border border-green-800 text-green-400 px-4 py-3 rounded-xl text-sm">
-                        ✅ Time updated successfully!
+                        Time change request submitted successfully.
                       </div>
                     )}
 
@@ -1292,194 +1522,11 @@ export default function Dashboard() {
                           Updating...
                         </>
                       ) : (
-                        'Confirm Change →'
+                        'Submit Request →'
                       )}
                     </button>
                   </div>
                 )}
-              </div>
-            )}
-
-            {scheduleView === 'timetable' && (
-              <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 space-y-5">
-                <div>
-                  <h3 className="text-white font-bold text-lg">
-                    University Timetable
-                  </h3>
-                  <p className="text-zinc-500 text-sm mt-1">
-                    Select your class days so admin can plan your schedule
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {DAYS.map((day) => (
-                    <button
-                      key={day}
-                      onClick={() =>
-                        setClassDays((prev) =>
-                          prev.includes(day)
-                            ? prev.filter((d) => d !== day)
-                            : [...prev, day],
-                        )
-                      }
-                      className={`px-4 py-3 rounded-xl text-sm font-medium border transition-all text-left ${
-                        classDays.includes(day)
-                          ? 'bg-yellow-400 text-black border-yellow-400'
-                          : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:border-zinc-500'
-                      }`}
-                    >
-                      <span className="mr-2">
-                        {classDays.includes(day) ? '✓' : '○'}
-                      </span>
-                      {day}
-                    </button>
-                  ))}
-                </div>
-
-                {classDays.length > 0 && (
-                  <div className="bg-zinc-800 rounded-xl p-3">
-                    <p className="text-zinc-400 text-xs mb-1">Selected days</p>
-                    <p className="text-white font-medium text-sm">
-                      {classDays.join(', ')}
-                    </p>
-                  </div>
-                )}
-
-                <button
-                  onClick={handleSaveTimetable}
-                  className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold py-3.5 rounded-xl transition"
-                >
-                  Save Timetable →
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'change' && (
-          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 space-y-5">
-            <div>
-              <h3 className="text-white font-bold text-lg">Change Trip Time</h3>
-              <p className="text-zinc-500 text-sm mt-1">
-                One change per day, at least 8 hours before the trip
-              </p>
-            </div>
-
-            {schedules.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-3xl mb-3">📅</p>
-                <p className="text-zinc-400">No schedule found for this week</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest">
-                    Select Day
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {schedules.map((s) => (
-                      <button
-                        key={s.id}
-                        onClick={() =>
-                          s.change_count < 1 && setChangeDay(s.day_of_week)
-                        }
-                        className={`px-3 py-2.5 rounded-xl text-xs font-medium border transition-all ${
-                          changeDay === s.day_of_week
-                            ? 'bg-yellow-400 text-black border-yellow-400'
-                            : s.change_count >= 1
-                              ? 'bg-zinc-800 text-zinc-600 border-zinc-700 cursor-not-allowed'
-                              : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:border-zinc-500'
-                        }`}
-                      >
-                        <p>{s.day_of_week.slice(0, 3)}</p>
-                        <p
-                          className={`text-xs mt-0.5 ${s.change_count >= 1 ? 'text-red-500' : 'text-green-500'}`}
-                        >
-                          {s.change_count >= 1 ? 'Used' : 'Available'}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {changeDay && (
-                  <>
-                    <div className="space-y-2">
-                      <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest">
-                        Which Trip
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {(['arrival', 'departure'] as const).map((type) => (
-                          <button
-                            key={type}
-                            onClick={() => setChangeType(type)}
-                            className={`px-4 py-3 rounded-xl text-sm font-medium border transition-all ${changeType === type ? 'bg-yellow-400 text-black border-yellow-400' : 'bg-zinc-800 text-zinc-400 border-zinc-700'}`}
-                          >
-                            {type === 'arrival'
-                              ? '🌅 Pickup (Arrival)'
-                              : '🌆 Return (Departure)'}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest">
-                        New Time
-                      </label>
-                      <input
-                        type="time"
-                        value={changeTime}
-                        onChange={(e) => setChangeTime(e.target.value)}
-                        className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white focus:outline-none focus:border-yellow-400 transition"
-                      />
-                    </div>
-                  </>
-                )}
-
-                {changeError && (
-                  <div className="bg-red-950/60 border border-red-800 text-red-400 px-4 py-3 rounded-xl text-sm">
-                    ⚠️ {changeError}
-                  </div>
-                )}
-                {changeSuccess && (
-                  <div className="bg-green-950/60 border border-green-800 text-green-400 px-4 py-3 rounded-xl text-sm">
-                    ✅ Time updated successfully!
-                  </div>
-                )}
-
-                <button
-                  onClick={handleTimeChange}
-                  disabled={!changeDay || !changeTime || changingTime}
-                  className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold py-3.5 rounded-xl transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {changingTime ? (
-                    <>
-                      <svg
-                        className="animate-spin h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8v8z"
-                        />
-                      </svg>
-                      Updating...
-                    </>
-                  ) : (
-                    'Confirm Change →'
-                  )}
-                </button>
               </div>
             )}
           </div>
@@ -1656,63 +1703,120 @@ export default function Dashboard() {
 
         {activeTab === 'profile' && (
           <div className="space-y-4">
-            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 space-y-4">
-              <h3 className="text-white font-bold text-lg">My Profile</h3>
-              <div className="space-y-3">
-                {[
-                  { label: 'Full Name', value: profile?.full_name },
-                  { label: 'Email', value: profile?.email },
-                  { label: 'Role', value: profile?.role },
-                  {
-                    label: 'Destination',
-                    value: profile?.destination || 'Not assigned yet',
-                  },
-                  { label: 'Fee Status', value: profile?.fee_status },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="flex items-center justify-between py-2 border-b border-zinc-800"
-                  >
-                    <p className="text-zinc-500 text-sm">{item.label}</p>
-                    <p className="text-white text-sm font-medium capitalize">
-                      {item.value}
+            <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(250,204,21,0.14),_transparent_28%),linear-gradient(135deg,_rgba(18,22,30,0.96),_rgba(11,15,20,0.96))] p-5 shadow-[0_30px_60px_rgba(0,0,0,0.2)] sm:p-6">
+              <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-yellow-500/20 bg-gradient-to-br from-yellow-300/30 to-yellow-500/10 text-2xl font-black text-yellow-200">
+                    {profile?.full_name?.charAt(0)?.toUpperCase() || 'S'}
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-400">
+                      Student profile
+                    </p>
+                    <h3 className="mt-2 text-2xl font-black text-white">
+                      {profile?.full_name || 'Student'}
+                    </h3>
+                    <p className="mt-1 text-sm text-zinc-400">
+                      {profile?.email}
                     </p>
                   </div>
-                ))}
+                </div>
+
+                <div className="flex flex-wrap gap-2 md:justify-end">
+                  <span className="inline-flex items-center rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                    {profile?.fee_status === 'paid'
+                      ? 'Fees paid'
+                      : 'Fees pending'}
+                  </span>
+                  <span className="inline-flex items-center rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300">
+                    {profile?.role || 'Student'}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 space-y-4">
-              <h3 className="text-white font-bold">Change Password</h3>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">
-                  🔒
-                </span>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="New password (min 6 characters)"
-                  className="w-full pl-10 pr-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-yellow-400 transition"
-                />
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-[28px] border border-white/10 bg-[#0d131c] p-5 sm:p-6">
+                <div className="mb-4 flex items-center gap-2">
+                  <span className="text-lg">👤</span>
+                  <h3 className="text-white font-bold text-lg">
+                    Account details
+                  </h3>
+                </div>
+
+                <div className="space-y-3">
+                  {[
+                    { label: 'Full Name', value: profile?.full_name },
+                    { label: 'Email', value: profile?.email },
+                    { label: 'Role', value: profile?.role },
+                    {
+                      label: 'Destination',
+                      value: profile?.destination || 'Not assigned yet',
+                    },
+                    {
+                      label: 'Fee status',
+                      value:
+                        profile?.fee_status === 'paid'
+                          ? 'Paid in full'
+                          : 'Pending',
+                    },
+                  ].map((item) => (
+                    <div
+                      key={item.label}
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-white/3 px-3 py-3"
+                    >
+                      <p className="text-zinc-500 text-xs uppercase tracking-[0.2em]">
+                        {item.label}
+                      </p>
+                      <p className="text-white text-sm font-medium text-right capitalize">
+                        {item.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              {passwordError && (
-                <p className="text-red-400 text-sm">⚠️ {passwordError}</p>
-              )}
-              {passwordSuccess && (
-                <p className="text-green-400 text-sm">
-                  ✅ Password updated successfully!
-                </p>
-              )}
+              <div className="rounded-[28px] border border-white/10 bg-[#0d131c] p-5 sm:p-6">
+                <div className="mb-4 flex items-center gap-2">
+                  <span className="text-lg">🔒</span>
+                  <h3 className="text-white font-bold text-lg">
+                    Change password
+                  </h3>
+                </div>
 
-              <button
-                onClick={handleChangePassword}
-                disabled={changingPassword || !newPassword}
-                className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold py-3 rounded-xl transition disabled:opacity-30"
-              >
-                {changingPassword ? 'Updating...' : 'Update Password →'}
-              </button>
+                <div className="space-y-4">
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">
+                      🔒
+                    </span>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="New password (min 6 characters)"
+                      className="w-full pl-10 pr-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-yellow-400 transition"
+                    />
+                  </div>
+
+                  {passwordError && (
+                    <p className="text-red-400 text-sm">⚠️ {passwordError}</p>
+                  )}
+                  {passwordSuccess && (
+                    <p className="text-green-400 text-sm">
+                      ✅ Password updated successfully!
+                    </p>
+                  )}
+
+                  <button
+                    onClick={handleChangePassword}
+                    disabled={changingPassword || !newPassword}
+                    className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold py-3 rounded-xl transition disabled:opacity-30"
+                  >
+                    {changingPassword ? 'Updating...' : 'Update Password →'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
