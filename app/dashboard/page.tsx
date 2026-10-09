@@ -164,6 +164,108 @@ export default function Dashboard() {
 
   useEffect(() => {
     const init = async () => {
+      const demoSessionString = localStorage.getItem('ee_demo_session');
+      if (demoSessionString) {
+        try {
+          const demoSession = JSON.parse(demoSessionString);
+
+          setProfile({
+            id: demoSession.user.id,
+            full_name: demoSession.profile.full_name,
+            email: demoSession.profile.email,
+            role: demoSession.profile.role,
+            fee_status: 'paid',
+            destination: 'North Campus',
+            route_id: 'demo-route',
+          });
+
+          setAssignment({
+            id: 'demo-assignment',
+            driver_name: 'Ammar Hassan',
+            driver_contact: '+92 300 1234567',
+            seat_confirmed: true,
+            confirmed_at: new Date().toISOString(),
+            coasters: { coaster_number: '12' },
+          });
+
+          setSchedules([
+            {
+              id: 'demo-mon',
+              day_of_week: 'Monday',
+              arrival_time: '07:15',
+              departure_time: '18:30',
+              change_count: 0,
+              last_changed_at: new Date().toISOString(),
+              pickup_points: { name: 'Main Gate' },
+            },
+            {
+              id: 'demo-tue',
+              day_of_week: 'Tuesday',
+              arrival_time: '07:15',
+              departure_time: '18:30',
+              change_count: 0,
+              last_changed_at: new Date().toISOString(),
+              pickup_points: { name: 'Main Gate' },
+            },
+            {
+              id: 'demo-wed',
+              day_of_week: 'Wednesday',
+              arrival_time: '07:15',
+              departure_time: '18:30',
+              change_count: 0,
+              last_changed_at: new Date().toISOString(),
+              pickup_points: { name: 'Main Gate' },
+            },
+          ]);
+
+          setPickupPoints([
+            { id: 'demo-pick-1', name: 'Main Gate', route_id: 'demo-route' },
+            { id: 'demo-pick-2', name: 'Library', route_id: 'demo-route' },
+          ]);
+
+          setPayments([
+            {
+              id: 'demo-payment-1',
+              amount: 3200,
+              month: 'October',
+              status: 'paid',
+              paid_at: new Date().toISOString(),
+            },
+            {
+              id: 'demo-payment-2',
+              amount: 3200,
+              month: 'September',
+              status: 'paid',
+              paid_at: new Date().toISOString(),
+            },
+          ]);
+
+          setNotifications([
+            {
+              id: 'demo-note-1',
+              title: 'Demo mode active',
+              message: 'This dashboard is running in local demo mode.',
+              type: 'info',
+              created_at: new Date().toISOString(),
+            },
+          ]);
+
+          setHolidays([
+            {
+              id: 'demo-holiday',
+              date: new Date().toISOString(),
+              reason: 'National holiday',
+            },
+          ]);
+
+          setClassDays(['Monday', 'Wednesday', 'Friday']);
+          setLoading(false);
+          return;
+        } catch {
+          localStorage.removeItem('ee_demo_session');
+        }
+      }
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -424,6 +526,28 @@ export default function Dashboard() {
   const todaySchedule = schedules.find((s) => s.day_of_week === todayName);
   const unpaidPayments = payments.filter((p) => p.status === 'unpaid');
 
+  const summaryCards = [
+    {
+      label: 'Trips this week',
+      value: `${schedules.length || 0}`,
+      hint: 'Schedule entries',
+      accent: 'text-yellow-300',
+    },
+    {
+      label: 'Fee status',
+      value: profile?.fee_status === 'paid' ? 'Paid' : 'Pending',
+      hint: profile?.fee_status === 'paid' ? 'All clear' : 'Action needed',
+      accent:
+        profile?.fee_status === 'paid' ? 'text-emerald-300' : 'text-red-300',
+    },
+    {
+      label: 'Class days',
+      value: `${classDays.length || 0}`,
+      hint: 'Selected days',
+      accent: 'text-cyan-300',
+    },
+  ];
+
   const tabs = [
     { key: 'home', label: '🏠', title: 'Home' },
     { key: 'schedule', label: '📅', title: 'Schedule' },
@@ -436,60 +560,70 @@ export default function Dashboard() {
 
   if (loading)
     return (
-      <div className="min-h-screen bg-[#080808] flex items-center justify-center">
+      <div className="min-h-screen bg-[#07090d] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+          <div className="w-14 h-14 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-[0_10px_30px_rgba(250,204,21,0.35)] animate-pulse">
             <span className="text-black font-black text-lg">EE</span>
           </div>
-          <p className="text-zinc-500 text-sm">Loading your dashboard...</p>
+          <p className="text-zinc-300 text-sm tracking-[0.2em] uppercase">
+            Loading your dashboard...
+          </p>
         </div>
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-[#080808]">
-      <nav className="border-b border-zinc-800 bg-zinc-900/60 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div className="min-h-screen bg-[#07090d] text-white relative overflow-hidden">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-20 left-10 h-72 w-72 rounded-full bg-yellow-400/10 blur-3xl" />
+        <div className="absolute top-1/3 right-10 h-80 w-80 rounded-full bg-cyan-500/8 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-fuchsia-500/8 blur-3xl" />
+      </div>
+
+      <nav className="sticky top-0 z-50 border-b border-white/5 bg-[#0b0f14]/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-yellow-400 rounded-xl flex items-center justify-center shrink-0">
-              <span className="text-black font-black text-sm">EE</span>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-yellow-300 to-yellow-500 shadow-[0_8px_24px_rgba(250,204,21,0.35)]">
+              <span className="text-sm font-black text-black">EE</span>
             </div>
             <div>
-              <p className="text-white font-bold text-sm leading-none">
+              <p className="text-sm font-bold leading-none text-white">
                 Eagle Elites
               </p>
-              <p className="text-zinc-500 text-xs mt-0.5">Student Portal</p>
+              <p className="mt-1 text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+                Student Portal
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-3">
             <div className="relative">
               <button
                 onClick={() => {
                   setShowNotifications(!showNotifications);
                   setUnreadCount(0);
                 }}
-                className="w-9 h-9 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl flex items-center justify-center transition relative"
+                className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/3 transition hover:bg-white/6"
               >
                 <span className="text-sm">🔔</span>
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 text-black text-xs font-bold rounded-full flex items-center justify-center">
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-yellow-400 text-[10px] font-bold text-black">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
               </button>
 
               {showNotifications && (
-                <div className="absolute right-0 top-11 w-80 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl z-50 overflow-hidden">
-                  <div className="p-4 border-b border-zinc-800">
-                    <p className="text-white font-bold text-sm">
+                <div className="absolute right-0 top-12 z-50 w-80 overflow-hidden rounded-2xl border border-white/10 bg-[#10161d] shadow-2xl">
+                  <div className="border-b border-white/5 p-4">
+                    <p className="text-sm font-bold text-white">
                       Announcements
                     </p>
                   </div>
                   <div className="max-h-72 overflow-y-auto">
                     {notifications.length === 0 ? (
                       <div className="p-6 text-center">
-                        <p className="text-zinc-500 text-sm">
+                        <p className="text-sm text-zinc-500">
                           No announcements yet
                         </p>
                       </div>
@@ -497,15 +631,15 @@ export default function Dashboard() {
                       notifications.map((n) => (
                         <div
                           key={n.id}
-                          className="p-4 border-b border-zinc-800 hover:bg-zinc-800/50 transition"
+                          className="border-b border-white/5 p-4 transition hover:bg-white/3"
                         >
-                          <p className="text-white text-sm font-medium">
+                          <p className="text-sm font-medium text-white">
                             {n.title}
                           </p>
-                          <p className="text-zinc-400 text-xs mt-1">
+                          <p className="mt-1 text-xs text-zinc-400">
                             {n.message}
                           </p>
-                          <p className="text-zinc-600 text-xs mt-2">
+                          <p className="mt-2 text-[10px] uppercase tracking-[0.18em] text-zinc-600">
                             {formatDate(n.created_at)}
                           </p>
                         </div>
@@ -516,27 +650,28 @@ export default function Dashboard() {
               )}
             </div>
 
-            <div className="hidden sm:block text-right">
-              <p className="text-white text-sm font-medium leading-none">
+            <div className="hidden text-right sm:block">
+              <p className="text-sm font-medium leading-none text-white">
                 {profile?.full_name}
               </p>
               <span
-                className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                className={`mt-1 inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-medium uppercase tracking-[0.12em] ${
                   profile?.fee_status === 'paid'
-                    ? 'bg-green-950 text-green-400 border border-green-800'
-                    : 'bg-red-950 text-red-400 border border-red-800'
+                    ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+                    : 'border-red-500/20 bg-red-500/10 text-red-300'
                 }`}
               >
-                {profile?.fee_status === 'paid' ? '✓ Paid' : '⚠ Unpaid'}
+                {profile?.fee_status === 'paid' ? 'Paid' : 'Unpaid'}
               </span>
             </div>
 
             <button
               onClick={async () => {
+                localStorage.removeItem('ee_demo_session');
                 await supabase.auth.signOut();
                 router.push('/auth/login');
               }}
-              className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs font-medium rounded-lg transition border border-zinc-700"
+              className="rounded-xl border border-white/10 bg-white/3 px-3 py-2 text-xs font-medium text-zinc-200 transition hover:bg-white/6 hover:text-white"
             >
               Log out
             </button>
@@ -544,11 +679,11 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-5">
+      <main className="relative z-10 mx-auto max-w-6xl space-y-5 px-4 py-6 sm:py-8">
         {isFridaySaturdayToday && (
-          <div className="bg-yellow-400/10 border border-yellow-400/30 rounded-xl px-4 py-3 flex items-center gap-3">
+          <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-4 py-3 flex items-center gap-3 shadow-[0_0_0_1px_rgba(250,204,21,0.04)]">
             <span className="text-xl">⏰</span>
-            <p className="text-yellow-300 text-sm font-medium">
+            <p className="text-yellow-200 text-sm font-medium">
               Reminder: Submit your schedule for next week before Sunday
               midnight.
             </p>
@@ -556,30 +691,64 @@ export default function Dashboard() {
         )}
 
         {unpaidPayments.length > 0 && (
-          <div className="bg-red-950/40 border border-red-800/50 rounded-xl px-4 py-3 flex items-center gap-3">
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/8 px-4 py-3 flex items-center gap-3">
             <span className="text-xl">💳</span>
-            <p className="text-red-400 text-sm font-medium">
+            <p className="text-red-200 text-sm font-medium">
               You have {unpaidPayments.length} unpaid payment
               {unpaidPayments.length > 1 ? 's' : ''}. Please clear your dues.
             </p>
             <button
               onClick={() => setActiveTab('payments')}
-              className="ml-auto text-xs bg-red-800 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg transition"
+              className="ml-auto text-xs bg-red-500 hover:bg-red-400 text-white px-3 py-1.5 rounded-lg transition"
             >
               View
             </button>
           </div>
         )}
 
-        <div className="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-xl p-1 overflow-x-auto scrollbar-hide">
+        <div className="grid gap-3 sm:grid-cols-3">
+          {summaryCards.map((item) => (
+            <div
+              key={item.label}
+              className="rounded-2xl border border-white/8 bg-gradient-to-br from-white/5 to-white/[0.02] p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_18px_32px_rgba(0,0,0,0.18)]"
+            >
+              <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                {item.label}
+              </p>
+              <p className={`mt-3 text-2xl font-black ${item.accent}`}>
+                {item.value}
+              </p>
+              <p className="mt-1 text-xs text-zinc-400">{item.hint}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-3xl border border-yellow-500/20 bg-gradient-to-r from-yellow-500/10 via-transparent to-cyan-500/10 p-3.5 shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-400">
+                Operations overview
+              </p>
+              <h3 className="mt-1 text-lg font-bold text-white">
+                Student mobility is running smoothly
+              </h3>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300">
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              Live status: ready
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-1 overflow-x-auto rounded-2xl border border-white/8 bg-white/3 p-1">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as any)}
-              className={`px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+              className={`px-3 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 activeTab === tab.key
-                  ? 'bg-yellow-400 text-black'
-                  : 'text-zinc-400 hover:text-white'
+                  ? 'bg-yellow-400 text-black shadow-[0_8px_18px_rgba(250,204,21,0.35)]'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/4'
               }`}
             >
               <span>{tab.label}</span>
@@ -590,206 +759,215 @@ export default function Dashboard() {
 
         {activeTab === 'home' && (
           <div className="space-y-4">
-            <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 border border-zinc-700/50 rounded-2xl p-6">
-              <div className="flex items-start justify-between">
+            <div className="rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(250,204,21,0.18),_transparent_28%),linear-gradient(135deg,_rgba(18,22,30,0.96),_rgba(9,12,17,0.96))] p-5 shadow-[0_28px_60px_rgba(0,0,0,0.25)] sm:p-6">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                  <p className="text-zinc-400 text-sm">Welcome back,</p>
-                  <h2 className="text-2xl font-bold text-white mt-1">
+                  <p className="text-[10px] uppercase tracking-[0.28em] text-zinc-400">
+                    Welcome back
+                  </p>
+                  <h2 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">
                     {profile?.full_name} 👋
                   </h2>
-                  <p className="text-zinc-500 text-sm mt-1">{profile?.email}</p>
+                  <p className="mt-2 text-sm text-zinc-400">{profile?.email}</p>
                   {profile?.destination && (
-                    <div className="mt-3 flex items-center gap-2">
-                      <span className="text-zinc-500 text-sm">
-                        📍 Destination:
-                      </span>
-                      <span className="text-yellow-400 font-semibold text-sm">
-                        {profile.destination}
-                      </span>
+                    <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-yellow-500/20 bg-yellow-500/10 px-3 py-1.5 text-sm text-yellow-200">
+                      <span>📍</span>
+                      <span>{profile.destination}</span>
                     </div>
                   )}
                 </div>
-                <span
-                  className={`text-xs px-3 py-1.5 rounded-full font-semibold shrink-0 ${
-                    profile?.fee_status === 'paid'
-                      ? 'bg-green-950 text-green-400 border border-green-800'
-                      : 'bg-red-950 text-red-400 border border-red-800'
-                  }`}
-                >
-                  {profile?.fee_status === 'paid'
-                    ? '✓ Fees Paid'
-                    : '⚠️ Fees Unpaid'}
-                </span>
-              </div>
-            </div>
 
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-              <h3 className="text-white font-bold mb-4 flex items-center gap-2">
-                🚌 Today's Trip
-                <span className="text-zinc-500 text-xs font-normal">
-                  ({todayName})
-                </span>
-              </h3>
-
-              {todaySchedule ? (
-                <>
-                  <div className="relative h-20 bg-zinc-800/80 rounded-xl overflow-hidden mb-4 border border-zinc-700">
-                    <div className="absolute inset-0 flex items-center px-4">
-                      <div className="w-full h-0.5 bg-zinc-600" />
-                    </div>
-                    <div className="absolute inset-0 flex items-center justify-around px-8">
-                      {[...Array(6)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="w-6 h-0.5 bg-yellow-400/30 rounded"
-                        />
-                      ))}
-                    </div>
-                    <div
-                      className="absolute top-1/2 -translate-y-1/2"
-                      style={{ animation: 'drive 5s linear infinite' }}
-                    >
-                      <span className="text-3xl">🚌</span>
-                    </div>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-2xl">
-                      🏫
-                    </div>
-                    <div className="absolute left-3 top-2 text-xs text-zinc-500">
-                      Home
-                    </div>
-                    <div className="absolute right-3 top-2 text-xs text-zinc-500">
-                      {profile?.destination || 'Destination'}
-                    </div>
-                  </div>
-
-                  <style>{`
-                    @keyframes drive {
-                      0% { left: -50px; }
-                      100% { left: 100%; }
-                    }
-                  `}</style>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-zinc-800 rounded-xl p-3">
-                      <p className="text-zinc-500 text-xs mb-1">
-                        🌅 Pickup (Arrival)
-                      </p>
-                      <p className="text-white font-bold text-lg">
-                        {formatTime(todaySchedule.arrival_time)}
-                      </p>
-                    </div>
-                    <div className="bg-zinc-800 rounded-xl p-3">
-                      <p className="text-zinc-500 text-xs mb-1">
-                        🌆 Return (Departure)
-                      </p>
-                      <p className="text-white font-bold text-lg">
-                        {formatTime(todaySchedule.departure_time)}
-                      </p>
-                    </div>
-                    <div className="bg-zinc-800 rounded-xl p-3">
-                      <p className="text-zinc-500 text-xs mb-1">
-                        📍 Pickup Point
-                      </p>
-                      <p className="text-white font-bold text-sm">
-                        {todaySchedule.pickup_points?.name}
-                      </p>
-                    </div>
-                    <div className="bg-zinc-800 rounded-xl p-3">
-                      <p className="text-zinc-500 text-xs mb-1">
-                        ✏️ Time Changes
-                      </p>
-                      <p
-                        className={`font-bold text-sm ${todaySchedule.change_count >= 1 ? 'text-red-400' : 'text-green-400'}`}
-                      >
-                        {todaySchedule.change_count}/1 used
-                      </p>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-4xl mb-3">🚌</p>
-                  <p className="text-zinc-400 font-medium">
-                    No trip scheduled for today
-                  </p>
-                  <p className="text-zinc-600 text-sm mt-1">
-                    Submit your schedule every Sunday
-                  </p>
+                <div className="flex flex-wrap gap-2">
+                  <span
+                    className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] ${
+                      profile?.fee_status === 'paid'
+                        ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
+                        : 'border-red-500/25 bg-red-500/10 text-red-300'
+                    }`}
+                  >
+                    {profile?.fee_status === 'paid'
+                      ? 'Fees Paid'
+                      : 'Fees Pending'}
+                  </span>
+                  <span className="inline-flex items-center rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-cyan-300">
+                    {todayName}
+                  </span>
                 </div>
-              )}
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-                <p className="text-zinc-500 text-xs mb-2">🚐 Today's Vehicle</p>
-                {assignment ? (
-                  <p className="text-yellow-400 font-bold text-xl">
-                    #{assignment.coasters?.coaster_number}
-                  </p>
-                ) : (
-                  <p className="text-zinc-600 text-sm">Not assigned yet</p>
-                )}
-              </div>
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-                <p className="text-zinc-500 text-xs mb-2">👨‍✈️ Today's Driver</p>
-                {assignment ? (
+            <div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
+              <div className="rounded-[28px] border border-white/10 bg-[#0d131c] p-5 shadow-[0_24px_50px_rgba(0,0,0,0.2)]">
+                <div className="mb-5 flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-white">
+                    Today&apos;s trip
+                  </h3>
+                  <span className="rounded-full border border-yellow-500/20 bg-yellow-500/10 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-yellow-300">
+                    live
+                  </span>
+                </div>
+
+                {todaySchedule ? (
                   <>
-                    <p className="text-white font-bold text-sm">
-                      {assignment.driver_name}
-                    </p>
-                    <p className="text-zinc-400 text-xs mt-1">
-                      📞 {assignment.driver_contact}
-                    </p>
+                    <div className="relative mb-5 h-24 overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900/90">
+                      <div className="absolute inset-0 flex items-center px-4">
+                        <div className="h-0.5 w-full bg-zinc-700" />
+                      </div>
+                      <div className="absolute inset-0 flex items-center justify-around px-8">
+                        {[...Array(6)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="h-2 w-2 rounded-full bg-yellow-400/30"
+                          />
+                        ))}
+                      </div>
+                      <div className="absolute left-3 top-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                        home
+                      </div>
+                      <div className="absolute right-3 top-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                        {profile?.destination || 'destination'}
+                      </div>
+                      <div
+                        className="absolute top-1/2 -translate-y-1/2"
+                        style={{ animation: 'drive 5s linear infinite' }}
+                      >
+                        <span className="text-3xl">🚌</span>
+                      </div>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-2xl">
+                        🏫
+                      </div>
+                    </div>
+
+                    <style>{`
+                      @keyframes drive {
+                        0% { left: -60px; }
+                        100% { left: 100%; }
+                      }
+                    `}</style>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-2xl border border-white/8 bg-white/3 p-3">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                          Pickup
+                        </p>
+                        <p className="mt-2 text-xl font-black text-white">
+                          {formatTime(todaySchedule.arrival_time)}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-white/8 bg-white/3 p-3">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                          Return
+                        </p>
+                        <p className="mt-2 text-xl font-black text-white">
+                          {formatTime(todaySchedule.departure_time)}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-white/8 bg-white/3 p-3">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                          Pickup point
+                        </p>
+                        <p className="mt-2 text-sm font-bold text-white">
+                          {todaySchedule.pickup_points?.name}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-white/8 bg-white/3 p-3">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                          Time changes
+                        </p>
+                        <p
+                          className={`mt-2 text-sm font-bold ${todaySchedule.change_count >= 1 ? 'text-red-400' : 'text-emerald-400'}`}
+                        >
+                          {todaySchedule.change_count}/1 used
+                        </p>
+                      </div>
+                    </div>
                   </>
                 ) : (
-                  <p className="text-zinc-600 text-sm">Not assigned yet</p>
+                  <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 p-8 text-center">
+                    <p className="text-4xl mb-3">🚌</p>
+                    <p className="font-medium text-zinc-300">
+                      No trip scheduled for today
+                    </p>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      Submit your schedule every Sunday
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-[28px] border border-white/10 bg-[#0d131c] p-5">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                    Driver & vehicle
+                  </p>
+                  {assignment ? (
+                    <div className="mt-4 space-y-4">
+                      <div>
+                        <p className="text-zinc-500 text-xs">Vehicle</p>
+                        <p className="mt-1 text-2xl font-black text-yellow-300">
+                          #{assignment.coasters?.coaster_number}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-zinc-500 text-xs">Assigned driver</p>
+                        <p className="mt-1 text-base font-bold text-white">
+                          {assignment.driver_name}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-400">
+                          📞 {assignment.driver_contact}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mt-4 text-sm text-zinc-500">
+                      Not assigned yet
+                    </p>
+                  )}
+                </div>
+
+                {assignment && (
+                  <div
+                    className={`rounded-[28px] border p-5 ${
+                      assignment.seat_confirmed
+                        ? 'border-emerald-500/20 bg-emerald-500/10'
+                        : 'border-white/10 bg-[#0d131c]'
+                    }`}
+                  >
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                      Seat status
+                    </p>
+                    <p className="mt-3 text-sm font-medium text-white">
+                      {assignment.seat_confirmed
+                        ? `Confirmed on ${formatDate(assignment.confirmed_at)}`
+                        : 'Seat not confirmed yet'}
+                    </p>
+                    {!assignment.seat_confirmed && (
+                      <button
+                        onClick={handleConfirmSeat}
+                        disabled={confirmingSeat}
+                        className="mt-4 w-full rounded-xl bg-yellow-400 px-4 py-2.5 text-sm font-bold text-black transition hover:bg-yellow-300 disabled:opacity-45"
+                      >
+                        {confirmingSeat ? 'Confirming...' : 'Confirm Seat'}
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
 
-            {assignment && (
-              <div
-                className={`border rounded-2xl p-4 flex items-center justify-between ${
-                  assignment.seat_confirmed
-                    ? 'bg-green-950/30 border-green-800/50'
-                    : 'bg-zinc-900 border-zinc-800'
-                }`}
-              >
-                <div>
-                  <p className="text-white font-semibold text-sm">
-                    Seat Confirmation
-                  </p>
-                  <p className="text-zinc-500 text-xs mt-0.5">
-                    {assignment.seat_confirmed
-                      ? `✅ Confirmed on ${formatDate(assignment.confirmed_at)}`
-                      : 'Tap to confirm your seat for today'}
-                  </p>
-                </div>
-                {!assignment.seat_confirmed && (
-                  <button
-                    onClick={handleConfirmSeat}
-                    disabled={confirmingSeat}
-                    className="px-4 py-2 bg-yellow-400 hover:bg-yellow-300 text-black text-sm font-bold rounded-xl transition disabled:opacity-40"
-                  >
-                    {confirmingSeat ? '...' : 'Confirm Seat'}
-                  </button>
-                )}
-              </div>
-            )}
-
             {holidays.length > 0 && (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-                <p className="text-white font-bold text-sm mb-3">
-                  📆 Upcoming No-Service Days
+              <div className="rounded-[28px] border border-white/10 bg-[#0d131c] p-5">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                  Upcoming no-service days
                 </p>
-                <div className="space-y-2">
+                <div className="mt-4 space-y-3">
                   {holidays.map((h) => (
                     <div
                       key={h.id}
-                      className="flex items-center justify-between"
+                      className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/3 px-3 py-2.5"
                     >
-                      <p className="text-zinc-400 text-sm">{h.reason}</p>
-                      <span className="text-yellow-400 text-xs font-semibold">
+                      <span className="text-sm text-zinc-300">{h.reason}</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.12em] text-yellow-300">
                         {formatDate(h.date)}
                       </span>
                     </div>

@@ -1,8 +1,14 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #05070b;
+  --foreground: #f5f7fb;
+  --panel: rgba(15, 19, 26, 0.82);
+  --panel-strong: rgba(17, 24, 39, 0.9);
+  --stroke: rgba(255, 255, 255, 0.08);
+  --muted: #a4acbb;
+  --yellow: #facc15;
+  --yellow-strong: #fbbf24;
 }
 
 @theme inline {
@@ -12,15 +18,72 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(250, 204, 21, 0.12),
+      transparent 25%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(59, 130, 246, 0.1),
+      transparent 28%
+    ),
+    var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(circle at center, black 35%, transparent 100%);
+}
+
+button,
+input,
+select,
+textarea {
+  transition: all 180ms ease;
+}
+
+::selection {
+  background: rgba(250, 204, 21, 0.35);
+  color: white;
+}
+
+@layer utilities {
+  .glass-panel {
+    background: linear-gradient(
+      180deg,
+      rgba(17, 24, 39, 0.8),
+      rgba(9, 12, 18, 0.9)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+    backdrop-filter: blur(14px);
+  }
+
+  .soft-ring {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.02),
+      0 10px 25px rgba(0, 0, 0, 0.32);
+  }
 }
