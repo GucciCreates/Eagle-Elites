@@ -36,13 +36,31 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
-      router.push('/dashboard');
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('status')
+        .eq('id', data.user.id)
+        .single();
+
+      if (!profile || profile.status === 'incomplete') {
+        router.push('/onboarding/profile');
+      } else if (profile.status === 'payment_pending') {
+        router.push('/onboarding/payment');
+      } else if (
+        profile.status === 'pending' ||
+        profile.status === 'rejected'
+      ) {
+        router.push('/onboarding/pending');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {

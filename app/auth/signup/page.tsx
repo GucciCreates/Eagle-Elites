@@ -11,6 +11,7 @@ export default function SignUp() {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
   const router = useRouter();
   const supabase = createClient();
 
@@ -34,6 +35,7 @@ export default function SignUp() {
             email,
             full_name: name,
             role: 'student',
+            status: 'incomplete',
           },
           { onConflict: 'id' },
         );
@@ -41,7 +43,7 @@ export default function SignUp() {
         if (profileError) throw profileError;
       }
 
-      router.push('/dashboard');
+      router.push('/onboarding/profile');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign up failed');
     } finally {
