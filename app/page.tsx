@@ -17,20 +17,6 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !counted) {
-        setCounted(true);
-        animateCount(setVehicles, 35, 1500);
-        animateCount(setStudents, 500, 2000);
-        animateCount(setYears, 8, 1000);
-      }
-    });
-    const el = document.getElementById('stats');
-    if (el) observer.observe(el);
-    return () => observer.disconnect();
-  }, [counted]);
-
   const animateCount = (
     setter: (n: number) => void,
     target: number,
@@ -44,9 +30,30 @@ export default function LandingPage() {
       if (current >= target) {
         setter(target);
         clearInterval(timer);
-      } else setter(Math.floor(current));
+      } else {
+        setter(Math.floor(current));
+      }
     }, duration / steps);
   };
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !counted) {
+          setCounted(true);
+          animateCount(setVehicles, 35, 1400);
+          animateCount(setStudents, 500, 1800);
+          animateCount(setYears, 8, 1200);
+        }
+      },
+      { threshold: 0.35 },
+    );
+
+    const el = document.getElementById('stats');
+    if (el) observer.observe(el);
+
+    return () => observer.disconnect();
+  }, [counted]);
 
   const whatsappNumber = '923225166580';
   const whatsappLink = `https://wa.me/${whatsappNumber}?text=Hi%20Eagle%20Elites%2C%20I%27m%20interested%20in%20your%20transport%20service.`;
@@ -55,80 +62,108 @@ export default function LandingPage() {
     {
       icon: '🛡️',
       title: 'Safe & Secure',
-      desc: 'Every vehicle is regularly maintained and inspected. Student safety is our first priority on every trip.',
+      desc: 'Every trip is backed by strict vehicle checks, professional drivers, and a safety-first mindset.',
     },
     {
       icon: '⏱️',
       title: 'Always On Time',
-      desc: 'Punctuality is built into how we operate. Your schedule is respected, every single day.',
+      desc: 'We design routes around real schedules so your commute starts and ends without stress.',
     },
     {
       icon: '🚐',
-      title: 'Premium Vehicles',
-      desc: 'Modern, air-conditioned coasters and vans. Comfortable seating for students and faculty alike.',
+      title: 'Premium Fleet',
+      desc: 'Clean, modern coasters and vans built for comfort, convenience, and consistent daily service.',
     },
     {
       icon: '📱',
       title: 'Smart Portal',
-      desc: 'Book your seat, check your driver, track your schedule and manage payments — all from your phone.',
+      desc: 'Track your route, driver, and schedule right from your phone with zero hassle.',
     },
     {
       icon: '👨‍✈️',
       title: 'Professional Drivers',
-      desc: 'Experienced, vetted drivers who know the routes and treat every passenger with respect.',
+      desc: 'Experienced, calm, and courteous drivers who make every ride smooth and reliable.',
     },
     {
       icon: '🏫',
-      title: 'University & Faculty',
-      desc: 'Serving students, teachers and faculty across Islamabad and Rawalpindi routes daily.',
+      title: 'Campus Ready',
+      desc: 'Trusted by students, faculty, and daily commuters moving between Islamabad and Rawalpindi.',
     },
+  ];
+
+  const routeHighlights = [
+    { name: 'Bahria Town', time: '6:40 AM', status: 'Most booked' },
+    { name: 'G-11 / F-11', time: '7:15 AM', status: 'High demand' },
+    { name: 'FAST & NUST', time: '8:00 AM', status: 'Daily route' },
   ];
 
   const testimonials = [
     {
       name: 'Ayesha K.',
       role: 'Student, Bahria University',
-      text: 'Eagle Elites completely changed my daily commute. The driver is always on time and the coaster is clean and comfortable.',
+      text: 'Eagle Elites is the first transport service that feels truly premium. The rides are smooth, punctual, and stress-free.',
     },
     {
       name: 'Dr. Tariq M.',
       role: 'Faculty Member',
-      text: 'Reliable, professional and convenient. I have been using Eagle Elites for two years and have never been disappointed.',
+      text: 'Reliable, professional and consistent. I have depended on them for years and they never disappointed me.',
     },
     {
       name: 'Hassan R.',
       role: 'Student, FAST University',
-      text: "The new portal makes everything so easy. I can see my driver's name and vehicle number before I even leave home.",
+      text: 'Everything is so easy now. I get updates, know my vehicle, and plan my day without worrying about transport.',
     },
   ];
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#080808] text-white">
+    <div className="min-h-screen overflow-x-hidden bg-[#070b10] text-white">
       <nav
-        className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${scrolled ? 'border-b border-zinc-800 bg-zinc-900/95 shadow-xl backdrop-blur-md' : 'bg-transparent'}`}
+        className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${
+          scrolled
+            ? 'border-b border-zinc-800/90 bg-[#0a0f14]/85 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl'
+            : 'bg-transparent'
+        }`}
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-400 shadow-lg shadow-yellow-400/20">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#facc15] via-[#fbbf24] to-[#f59e0b] shadow-[0_18px_32px_rgba(250,204,21,0.35)]">
               <span className="text-sm font-black text-black">EE</span>
             </div>
             <div>
-              <p className="text-sm font-bold leading-none text-white">
+              <p className="text-sm font-black leading-none text-white">
                 Eagle Elites
               </p>
-              <p className="text-xs text-zinc-500">Premium Transport</p>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-zinc-500">
+                Premium Transport
+              </p>
             </div>
           </div>
+
+          <div className="hidden items-center gap-7 md:flex">
+            <button className="text-sm text-zinc-400 transition hover:text-white">
+              About
+            </button>
+            <button className="text-sm text-zinc-400 transition hover:text-white">
+              Routes
+            </button>
+            <button className="text-sm text-zinc-400 transition hover:text-white">
+              Reviews
+            </button>
+            <button className="text-sm text-zinc-400 transition hover:text-white">
+              Contact
+            </button>
+          </div>
+
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push('/auth/login')}
-              className="px-4 py-2 text-sm font-medium text-zinc-400 transition hover:text-white"
+              className="px-3 py-2 text-sm font-medium text-zinc-300 transition hover:text-white md:px-4"
             >
               Log In
             </button>
             <button
               onClick={() => router.push('/auth/signup')}
-              className="rounded-xl bg-yellow-400 px-4 py-2 text-sm font-bold text-black transition shadow-lg shadow-yellow-400/20 hover:bg-yellow-300"
+              className="rounded-xl bg-gradient-to-r from-[#facc15] to-[#fbbf24] px-4 py-2.5 text-sm font-bold text-black shadow-[0_12px_30px_rgba(250,204,21,0.24)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_36px_rgba(250,204,21,0.32)]"
             >
               Sign Up
             </button>
@@ -136,288 +171,367 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      <section className="relative flex min-h-screen items-center justify-center px-6 pt-20">
-        <div className="pointer-events-none absolute left-[5%] top-[10%] h-[600px] w-[600px] rounded-full bg-yellow-400 opacity-[0.04] blur-[150px]" />
-        <div className="pointer-events-none absolute bottom-[10%] right-[5%] h-[400px] w-[400px] rounded-full bg-yellow-400 opacity-[0.03] blur-[120px]" />
-        <div
-          className="absolute inset-0 opacity-[0.02]"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
-            backgroundSize: '60px 60px',
-          }}
-        />
+      <main>
+        <section className="relative isolate overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(250,204,21,0.12),transparent_24%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.11),transparent_26%)]" />
+          <div className="absolute left-[8%] top-[18%] h-[420px] w-[420px] rounded-full bg-[#facc15]/8 blur-[110px]" />
+          <div className="absolute right-[10%] top-[14%] h-[360px] w-[360px] rounded-full bg-[#38bdf8]/8 blur-[120px]" />
 
-        <div className="relative z-10 mx-auto max-w-5xl text-center">
-          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-yellow-400/20 bg-yellow-400/10 px-4 py-2">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-yellow-400" />
-            <span className="text-sm font-medium text-yellow-400">
-              Islamabad & Rawalpindi&apos;s Trusted Transport
-            </span>
-          </div>
+          <div className="relative mx-auto grid max-w-6xl gap-10 px-6 pb-20 pt-28 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:pt-32">
+            <div>
+              <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-[#facc15]/20 bg-[#facc15]/8 px-4 py-2 text-sm font-medium text-[#fef3c7]">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#facc15] shadow-[0_0_12px_rgba(250,204,21,0.9)]" />
+                Premium daily transport for students & professionals
+              </div>
 
-          <h1 className="mb-6 text-5xl font-extrabold leading-tight tracking-tight text-white md:text-7xl">
-            Eagle<span className="text-yellow-400"> Elites</span>
-            <br />
-            <span className="text-3xl font-bold text-zinc-400 md:text-5xl">
-              Transport Services
-            </span>
-          </h1>
+              <h1 className="max-w-xl text-5xl font-black leading-[0.98] tracking-[-0.06em] text-white md:text-6xl xl:text-7xl">
+                Smooth rides.
+                <span className="block text-[#facc15]">Smarter commutes.</span>
+              </h1>
 
-          <p className="mx-auto mb-4 max-w-2xl text-xl font-medium text-zinc-400 md:text-2xl">
-            Your Journey.{' '}
-            <span className="text-white">Our Responsibility.</span>
-          </p>
+              <p className="mt-6 max-w-xl text-lg leading-8 text-zinc-400 md:text-xl">
+                Eagle Elites delivers trusted, comfortable transport across
+                Islamabad and Rawalpindi with a premium service experience from
+                pickup to drop-off.
+              </p>
 
-          <p className="mx-auto mb-10 max-w-xl text-base leading-relaxed text-zinc-500 md:text-lg">
-            Premium transport for students, faculty and delegations across
-            Islamabad and Rawalpindi. Safe, punctual and professional — every
-            single day.
-          </p>
+              <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row">
+                <button
+                  onClick={() => router.push('/auth/signup')}
+                  className="rounded-2xl bg-gradient-to-r from-[#facc15] to-[#fbbf24] px-7 py-4 text-base font-bold text-black shadow-[0_20px_40px_rgba(250,204,21,0.28)] transition hover:-translate-y-0.5"
+                >
+                  Book your seat →
+                </button>
+                <a
+                  href={whatsappLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 rounded-2xl border border-zinc-700 bg-zinc-900/80 px-7 py-4 text-base font-semibold text-white transition hover:border-zinc-500 hover:bg-zinc-800"
+                >
+                  <span className="text-xl">💬</span>
+                  WhatsApp us
+                </a>
+              </div>
 
-          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <button
-              onClick={() => router.push('/auth/signup')}
-              className="w-full rounded-2xl bg-yellow-400 px-8 py-4 text-lg font-bold text-black shadow-2xl shadow-yellow-400/25 transition hover:-translate-y-0.5 hover:bg-yellow-300 sm:w-auto"
-            >
-              Book Your Seat →
-            </button>
-            <a
-              href={whatsappLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-700 bg-zinc-800 px-8 py-4 text-lg font-bold text-white transition hover:border-zinc-500 hover:bg-zinc-700 sm:w-auto"
-            >
-              <span>💬</span> WhatsApp Us
-            </a>
-          </div>
+              <div className="mt-8 flex flex-wrap items-center gap-4 text-sm text-zinc-400">
+                <div className="flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/70 px-3 py-2">
+                  <span className="text-[#22c55e]">●</span>
+                  Verified drivers
+                </div>
+                <div className="flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/70 px-3 py-2">
+                  <span className="text-[#22c55e]">●</span>
+                  Safe every day
+                </div>
+              </div>
+            </div>
 
-          <div className="mt-16 flex flex-col items-center gap-2 animate-bounce">
-            <p className="text-xs text-zinc-600">Scroll to explore</p>
-            <div className="flex h-8 w-5 items-start justify-center rounded-full border-2 border-zinc-700 pt-1.5">
-              <div className="h-2 w-1 rounded-full bg-yellow-400" />
+            <div className="relative">
+              <div className="absolute -left-6 top-8 h-32 w-32 rounded-full bg-[#facc15]/10 blur-3xl" />
+              <div className="absolute -right-4 bottom-4 h-32 w-32 rounded-full bg-[#60a5fa]/10 blur-3xl" />
+
+              <div className="relative overflow-hidden rounded-[30px] border border-zinc-800 bg-[linear-gradient(160deg,_rgba(15,23,42,0.92),_rgba(9,12,18,0.96))] p-4 shadow-[0_30px_90px_rgba(0,0,0,0.45)]">
+                <div className="rounded-[24px] border border-zinc-800 bg-zinc-950/80 p-4">
+                  <div className="mb-5 flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.28em] text-zinc-500">
+                        Live route
+                      </p>
+                      <h3 className="mt-1 text-2xl font-bold text-white">
+                        Islamabad to Bahria
+                      </h3>
+                    </div>
+                    <div className="rounded-full border border-[#22c55e]/30 bg-[#22c55e]/10 px-2.5 py-1.5 text-xs font-semibold text-[#86efac]">
+                      On time
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {routeHighlights.map((route) => (
+                      <div
+                        key={route.name}
+                        className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/80 px-4 py-3"
+                      >
+                        <div>
+                          <p className="font-semibold text-white">
+                            {route.name}
+                          </p>
+                          <p className="text-xs text-zinc-500">
+                            {route.status}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                            Pickup
+                          </p>
+                          <p className="font-bold text-[#facc15]">
+                            {route.time}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-5 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4">
+                    <div className="flex items-center justify-between text-sm text-[#fef3c7]">
+                      <span>Next departure</span>
+                      <span className="font-bold text-white">6:40 AM</span>
+                    </div>
+                    <div className="mt-3 h-2.5 w-full rounded-full bg-zinc-800">
+                      <div className="h-full w-[72%] rounded-full bg-gradient-to-r from-[#facc15] to-[#f59e0b]" />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section id="stats" className="px-6 py-20">
-        <div className="mx-auto max-w-6xl">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-            {[
-              {
-                value: vehicles,
-                suffix: '+',
-                label: 'Premium Vehicles',
-                icon: '🚐',
-                sub: 'Coasters & vans in our fleet',
-              },
-              {
-                value: students,
-                suffix: '+',
-                label: 'Students & Faculty',
-                icon: '👥',
-                sub: 'Served daily across all routes',
-              },
-              {
-                value: years,
-                suffix: '+',
-                label: 'Years of Service',
-                icon: '🏆',
-                sub: 'Trusted by Islamabad families',
-              },
-            ].map((stat, i) => (
-              <div
-                key={i}
-                className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-8 text-center transition hover:border-yellow-400/30 group"
-              >
-                <div className="mb-4 text-4xl">{stat.icon}</div>
-                <p className="mb-2 text-5xl font-extrabold text-yellow-400">
-                  {stat.value}
-                  {stat.suffix}
-                </p>
-                <p className="mb-1 text-lg font-bold text-white">
-                  {stat.label}
-                </p>
-                <p className="text-sm text-zinc-500">{stat.sub}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="px-6 py-20">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-14 text-center">
-            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.25em] text-yellow-400">
-              Why Choose Eagle Elites
-            </p>
-            <h2 className="mb-4 text-4xl font-extrabold text-white md:text-5xl">
-              Built Around <span className="text-yellow-400">Your Needs</span>
-            </h2>
-            <p className="mx-auto max-w-xl text-lg text-zinc-500">
-              Everything we do is designed to make your daily commute safe,
-              comfortable and stress-free.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {features.map((feature, index) => (
-              <div
-                key={index}
-                className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 transition hover:border-yellow-400/30 hover:bg-zinc-900 group"
-              >
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-yellow-400/20 bg-yellow-400/10 text-2xl transition group-hover:bg-yellow-400/20">
-                  {feature.icon}
-                </div>
-                <h3 className="mb-2 text-lg font-bold text-white">
-                  {feature.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-zinc-500">
-                  {feature.desc}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="px-6 py-20">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-14 text-center">
-            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.25em] text-yellow-400">
-              What People Say
-            </p>
-            <h2 className="mb-4 text-4xl font-extrabold text-white md:text-5xl">
-              Trusted by <span className="text-yellow-400">Hundreds</span>
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-            {testimonials.map((testimonial, index) => (
-              <div
-                key={index}
-                className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 transition hover:border-yellow-400/30"
-              >
-                <div className="mb-4 flex gap-1">
-                  {[...Array(5)].map((_, starIndex) => (
-                    <span key={starIndex} className="text-sm text-yellow-400">
-                      ★
-                    </span>
-                  ))}
-                </div>
-                <p className="mb-6 text-sm leading-relaxed text-zinc-300">
-                  &quot;{testimonial.text}&quot;
-                </p>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-yellow-400/30 bg-yellow-400/20">
-                    <span className="text-sm font-bold text-yellow-400">
-                      {testimonial.name[0]}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-white">
-                      {testimonial.name}
-                    </p>
-                    <p className="text-xs text-zinc-500">{testimonial.role}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="px-6 py-20">
-        <div className="mx-auto max-w-4xl">
-          <div className="relative overflow-hidden rounded-3xl border border-yellow-400/20 bg-gradient-to-br from-yellow-400/10 to-yellow-400/5 p-12 text-center">
-            <div className="absolute left-1/2 top-0 h-[200px] w-[400px] -translate-x-1/2 rounded-full bg-yellow-400 opacity-[0.05] blur-[80px]" />
-            <div className="relative z-10">
-              <p className="mb-3 text-sm font-semibold uppercase tracking-[0.25em] text-yellow-400">
-                Ready to Ride?
+        <section id="stats" className="px-6 py-20">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-8 text-center">
+              <p className="text-sm font-semibold uppercase tracking-[0.26em] text-[#facc15]">
+                Trusted service
               </p>
-              <h2 className="mb-4 text-4xl font-extrabold text-white md:text-5xl">
-                Join Eagle Elites Today
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-4">
+              {[
+                {
+                  value: vehicles,
+                  suffix: '+',
+                  label: 'Premium vehicles',
+                  icon: '🚐',
+                },
+                {
+                  value: students,
+                  suffix: '+',
+                  label: 'Passengers served',
+                  icon: '👥',
+                },
+                {
+                  value: years,
+                  suffix: '+',
+                  label: 'Years of experience',
+                  icon: '🏆',
+                },
+                {
+                  value: 24,
+                  suffix: '/7',
+                  label: 'Support access',
+                  icon: '📞',
+                },
+              ].map((stat, index) => (
+                <div
+                  key={index}
+                  className="rounded-[26px] border border-zinc-800 bg-[linear-gradient(180deg,_rgba(17,24,39,0.88),_rgba(9,12,18,0.92))] p-6 text-left shadow-[0_18px_45px_rgba(0,0,0,0.22)]"
+                >
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="text-3xl">{stat.icon}</span>
+                    <span className="text-[10px] uppercase tracking-[0.28em] text-zinc-500">
+                      Live
+                    </span>
+                  </div>
+                  <p className="text-4xl font-black text-white">
+                    {stat.value}
+                    {stat.suffix}
+                  </p>
+                  <p className="mt-2 text-sm text-zinc-400">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="px-6 py-20">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-12 text-center">
+              <p className="mb-3 text-sm font-semibold uppercase tracking-[0.28em] text-[#facc15]">
+                Why choose us
+              </p>
+              <h2 className="text-4xl font-black tracking-[-0.05em] text-white md:text-5xl">
+                Built for comfort,{' '}
+                <span className="text-[#facc15]">confidence</span>, and daily
+                ease.
               </h2>
-              <p className="mx-auto mb-8 max-w-lg text-lg text-zinc-400">
-                Sign up in minutes and get access to premium transport with
-                real-time updates on your phone.
-              </p>
-              <button
-                onClick={() => router.push('/auth/signup')}
-                className="rounded-2xl bg-yellow-400 px-10 py-4 text-lg font-bold text-black shadow-2xl shadow-yellow-400/25 transition hover:-translate-y-0.5 hover:bg-yellow-300"
-              >
-                Get Started — It&apos;s Free →
-              </button>
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {features.map((feature, index) => (
+                <div
+                  key={index}
+                  className="group rounded-[26px] border border-zinc-800 bg-zinc-900/75 p-6 transition hover:-translate-y-1 hover:border-[#facc15]/40 hover:bg-zinc-900"
+                >
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#facc15]/10 text-2xl ring-1 ring-[#facc15]/15 transition group-hover:bg-[#facc15]/15">
+                    {feature.icon}
+                  </div>
+                  <h3 className="mb-3 text-xl font-bold text-white">
+                    {feature.title}
+                  </h3>
+                  <p className="text-sm leading-7 text-zinc-400">
+                    {feature.desc}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="border-t border-zinc-800 px-6 py-20">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-12 text-center">
-            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.25em] text-yellow-400">
-              Get In Touch
-            </p>
-            <h2 className="mb-4 text-4xl font-extrabold text-white">
-              Have Questions?
-            </h2>
-            <p className="text-lg text-zinc-500">
-              Reach out to us directly on WhatsApp. We respond fast.
-            </p>
+        <section className="px-6 py-20">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-12 text-center">
+              <p className="mb-3 text-sm font-semibold uppercase tracking-[0.28em] text-[#facc15]">
+                Simple process
+              </p>
+              <h2 className="text-4xl font-black tracking-[-0.05em] text-white md:text-5xl">
+                How it works
+              </h2>
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-3">
+              {[
+                {
+                  step: '01',
+                  title: 'Choose your route',
+                  desc: 'Select your pickup point, destination, and commute timing in minutes.',
+                },
+                {
+                  step: '02',
+                  title: 'Confirm your seat',
+                  desc: 'Register quickly and lock in your transport schedule with ease.',
+                },
+                {
+                  step: '03',
+                  title: 'Ride with confidence',
+                  desc: 'Enjoy on-time pickups, smooth travel, and a driver you can trust.',
+                },
+              ].map((item) => (
+                <div
+                  key={item.step}
+                  className="rounded-[28px] border border-zinc-800 bg-[linear-gradient(180deg,_rgba(15,23,42,0.86),_rgba(9,12,18,0.96))] p-6"
+                >
+                  <p className="mb-4 text-sm font-bold tracking-[0.28em] text-[#facc15]">
+                    {item.step}
+                  </p>
+                  <h3 className="mb-3 text-2xl font-bold text-white">
+                    {item.title}
+                  </h3>
+                  <p className="text-sm leading-7 text-zinc-400">{item.desc}</p>
+                </div>
+              ))}
+            </div>
           </div>
+        </section>
 
-          <div className="mx-auto flex max-w-lg flex-col items-center justify-center gap-4 sm:flex-row">
-            <a
-              href={whatsappLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex w-full items-center justify-center gap-3 rounded-2xl bg-green-600 px-8 py-4 text-lg font-bold text-white shadow-xl shadow-green-900/30 transition hover:bg-green-500 sm:w-auto"
-            >
-              <span className="text-2xl">💬</span>
-              Chat on WhatsApp
-            </a>
-            <button
-              onClick={() => router.push('/auth/signup')}
-              className="w-full rounded-2xl bg-yellow-400 px-8 py-4 text-lg font-bold text-black shadow-xl shadow-yellow-400/20 transition hover:bg-yellow-300 sm:w-auto"
-            >
-              Sign Up Now →
-            </button>
+        <section className="px-6 py-20">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-12 text-center">
+              <p className="mb-3 text-sm font-semibold uppercase tracking-[0.28em] text-[#facc15]">
+                Reviews
+              </p>
+              <h2 className="text-4xl font-black tracking-[-0.05em] text-white md:text-5xl">
+                People love the{' '}
+                <span className="text-[#facc15]">Eagle Elites</span> experience.
+              </h2>
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-3">
+              {testimonials.map((testimonial, index) => (
+                <div
+                  key={index}
+                  className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-6 shadow-[0_18px_45px_rgba(0,0,0,0.18)]"
+                >
+                  <div className="mb-4 flex gap-1 text-xl text-[#facc15]">
+                    {Array.from({ length: 5 }).map((_, starIndex) => (
+                      <span key={starIndex}>★</span>
+                    ))}
+                  </div>
+                  <p className="mb-6 text-sm leading-7 text-zinc-300">
+                    “{testimonial.text}”
+                  </p>
+                  <div className="flex items-center gap-3 border-t border-zinc-800 pt-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#facc15]/15 text-sm font-black text-[#facc15]">
+                      {testimonial.name[0]}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-white">
+                        {testimonial.name}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        {testimonial.role}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
+        </section>
 
-          <p className="mt-6 text-center text-sm text-zinc-600">
-            📞 +92 322 5166580 · Available Mon–Sat, 7am–9pm
-          </p>
-        </div>
-      </section>
+        <section className="px-6 pb-20 pt-10">
+          <div className="mx-auto max-w-5xl">
+            <div className="overflow-hidden rounded-[30px] border border-[#facc15]/20 bg-[linear-gradient(135deg,rgba(250,204,21,0.12),rgba(15,23,42,0.92),rgba(9,12,18,0.96))] p-8 shadow-[0_30px_80px_rgba(250,204,21,0.08)] md:p-12">
+              <div className="flex flex-col items-center text-center md:text-left">
+                <p className="mb-2 text-sm font-semibold uppercase tracking-[0.28em] text-[#facc15]">
+                  Ready to ride?
+                </p>
+                <h2 className="text-4xl font-black tracking-[-0.05em] text-white md:text-5xl">
+                  Move smarter with Eagle Elites.
+                </h2>
+                <p className="mt-4 max-w-2xl text-lg leading-8 text-zinc-300">
+                  Enjoy a safer, smoother, and more comfortable travel
+                  experience every day.
+                </p>
+
+                <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+                  <button
+                    onClick={() => router.push('/auth/signup')}
+                    className="rounded-2xl bg-[#facc15] px-8 py-4 text-base font-bold text-black shadow-[0_16px_38px_rgba(250,204,21,0.3)] transition hover:-translate-y-0.5"
+                  >
+                    Join now
+                  </button>
+                  <a
+                    href={whatsappLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 rounded-2xl border border-zinc-700 bg-zinc-900/70 px-8 py-4 text-base font-semibold text-white transition hover:border-zinc-500 hover:bg-zinc-800"
+                  >
+                    <span>💬</span>
+                    Chat on WhatsApp
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
 
       <footer className="border-t border-zinc-800 px-6 py-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-yellow-400">
-              <span className="text-xs font-black text-black">EE</span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#facc15] to-[#f59e0b] text-xs font-black text-black">
+              EE
             </div>
             <p className="text-sm text-zinc-500">
               Eagle Elites Transport © 2026
             </p>
           </div>
-          <div className="flex items-center gap-6">
+
+          <div className="flex items-center gap-5 text-sm text-zinc-500">
             <button
               onClick={() => router.push('/auth/login')}
-              className="text-sm text-zinc-500 transition hover:text-white"
+              className="transition hover:text-white"
             >
               Student Login
             </button>
             <button
               onClick={() => router.push('/auth/signup')}
-              className="text-sm text-zinc-500 transition hover:text-white"
+              className="transition hover:text-white"
             >
               Sign Up
             </button>
             <button
               onClick={() => router.push('/admin/login')}
-              className="text-xs text-zinc-600 transition hover:text-zinc-400"
+              className="transition hover:text-white"
             >
               Admin
             </button>

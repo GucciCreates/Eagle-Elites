@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
@@ -55,7 +55,11 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
 
-  const [assignDate, setAssignDate] = useState('');
+  const [assignDate, setAssignDate] = useState(() =>
+    typeof window === 'undefined'
+      ? ''
+      : new Date().toISOString().split('T')[0],
+  );
   const [groupAssignments, setGroupAssignments] = useState<
     Record<string, AssignmentGroup>
   >({});
@@ -82,10 +86,6 @@ export default function AdminDashboard() {
 
   const router = useRouter();
   const supabase = createClient();
-
-  useEffect(() => {
-    setAssignDate(new Date().toISOString().split('T')[0]);
-  }, []);
 
   useEffect(() => {
     const init = async () => {

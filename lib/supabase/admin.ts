@@ -17,9 +17,5 @@ export async function isAdmin(): Promise<boolean> {
 }
 
 export async function requireAdmin(): Promise<boolean> {
-  const admin = await isAdmin();
-  if (!admin && typeof window !== 'undefined') {
-    window.location.href = '/admin/login';
-  }
-  return admin;
+  return isAdmin();
 }

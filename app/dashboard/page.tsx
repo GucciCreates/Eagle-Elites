@@ -56,6 +56,14 @@ type Holiday = {
 };
 
 type PickupPoint = { id: string; name: string; route_id: string };
+type DashboardTab =
+  | 'home'
+  | 'schedule'
+  | 'payments'
+  | 'timetable'
+  | 'help'
+  | 'profile';
+type ScheduleView = 'overview' | 'change' | 'timetable';
 
 const DAYS = [
   'Monday',
@@ -142,20 +150,10 @@ export default function Dashboard() {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [classDays, setClassDays] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<
-    | 'home'
-    | 'schedule'
-    | 'change'
-    | 'payments'
-    | 'timetable'
-    | 'help'
-    | 'profile'
-  >('home');
+  const [activeTab, setActiveTab] = useState<DashboardTab>('home');
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [scheduleView, setScheduleView] = useState<
-    'overview' | 'change' | 'timetable'
-  >('overview');
+  const [scheduleView, setScheduleView] = useState<ScheduleView>('overview');
 
   const [scheduleForm, setScheduleForm] = useState<
     Record<
@@ -189,13 +187,32 @@ export default function Dashboard() {
   const [passwordError, setPasswordError] = useState('');
 
   const [confirmingSeat, setConfirmingSeat] = useState(false);
-  const [todayName, setTodayName] = useState('Monday');
-  const [nextWeekRange, setNextWeekRange] = useState('');
-  const [isSundayToday, setIsSundayToday] = useState(false);
-  const [isFridaySaturdayToday, setIsFridaySaturdayToday] = useState(false);
 
   const router = useRouter();
   const supabase = createClient();
+  const [todayInfo] = useState(() => {
+    if (typeof window === 'undefined') {
+      return {
+        todayName: 'Monday',
+        nextWeekRange: '—',
+        isSundayToday: false,
+        isFridaySaturdayToday: false,
+      };
+    }
+
+    const now = new Date();
+    const weekdayIndex = now.getDay() === 0 ? 6 : now.getDay() - 1;
+
+    return {
+      todayName: DAYS[weekdayIndex],
+      nextWeekRange: getNextWeekRange(),
+      isSundayToday: now.getDay() === 0,
+      isFridaySaturdayToday: [5, 6].includes(now.getDay()),
+    };
+  });
+
+  const { todayName, nextWeekRange, isSundayToday, isFridaySaturdayToday } =
+    todayInfo;
 
   useEffect(() => {
     const init = async () => {
@@ -387,14 +404,7 @@ export default function Dashboard() {
       setLoading(false);
     };
     init();
-
-    const now = new Date();
-    const weekdayIndex = now.getDay() === 0 ? 6 : now.getDay() - 1;
-    setTodayName(DAYS[weekdayIndex]);
-    setNextWeekRange(getNextWeekRange());
-    setIsSundayToday(now.getDay() === 0);
-    setIsFridaySaturdayToday([5, 6].includes(now.getDay()));
-  }, []);
+  }, [router, supabase]);
 
   const handleScheduleSubmit = async () => {
     const {
@@ -587,12 +597,17 @@ export default function Dashboard() {
     },
   ];
 
-  const tabs = [
+  const tabs: Array<{ key: DashboardTab; label: string }> = [
     { key: 'home', label: 'Home' },
     { key: 'schedule', label: 'Schedule' },
     { key: 'payments', label: 'Payments' },
+    { key: 'timetable', label: 'Timetable' },
     { key: 'help', label: 'Help' },
     { key: 'profile', label: 'Profile' },
+  ];
+  const scheduleTabs: Array<{ key: ScheduleView; label: string }> = [
+    { key: 'overview', label: 'Overview' },
+    { key: 'change', label: 'Request Time Change' },
   ];
 
   if (loading)
@@ -775,7 +790,7 @@ export default function Dashboard() {
           {tabs.map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key as any)}
+              onClick={() => setActiveTab(tab.key)}
               className={`rounded-xl px-3 py-2 text-sm font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.key
                   ? 'bg-yellow-400 text-black shadow-[0_8px_18px_rgba(250,204,21,0.35)]'
@@ -1013,13 +1028,10 @@ export default function Dashboard() {
           <div className="space-y-5">
             <div className="rounded-2xl border border-white/10 bg-[#0d131c] p-2">
               <div className="flex flex-wrap gap-2">
-                {[
-                  { key: 'overview', label: 'Overview' },
-                  { key: 'change', label: 'Request Time Change' },
-                ].map((item) => (
+                {scheduleTabs.map((item) => (
                   <button
                     key={item.key}
-                    onClick={() => setScheduleView(item.key as any)}
+                    onClick={() => setScheduleView(item.key)}
                     className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
                       scheduleView === item.key
                         ? 'bg-yellow-400 text-black'
