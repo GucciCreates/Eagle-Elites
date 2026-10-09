@@ -733,25 +733,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <div className="rounded-3xl border border-yellow-500/20 bg-gradient-to-r from-yellow-500/10 via-transparent to-cyan-500/10 p-3.5 shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-400">
-                Service snapshot
-              </p>
-              <h3 className="mt-1 text-lg font-bold text-white">
-                {profile?.fee_status === 'paid'
-                  ? 'All tuition and service checks are clear.'
-                  : 'Fee action is still required before the next trip.'}
-              </h3>
-            </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300">
-              <span className="h-2 w-2 rounded-full bg-emerald-400" />
-              {profile?.fee_status === 'paid' ? 'Ready' : 'Needs attention'}
-            </div>
-          </div>
-        </div>
-
         <div className="flex gap-1 overflow-x-auto rounded-2xl border border-white/8 bg-white/3 p-1">
           {tabs.map((tab) => (
             <button
