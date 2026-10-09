@@ -122,6 +122,9 @@ export default function Dashboard() {
   >('home');
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [scheduleView, setScheduleView] = useState<
+    'overview' | 'change' | 'timetable'
+  >('overview');
 
   const [scheduleForm, setScheduleForm] = useState<
     Record<
@@ -528,34 +531,35 @@ export default function Dashboard() {
 
   const summaryCards = [
     {
-      label: 'Trips this week',
-      value: `${schedules.length || 0}`,
-      hint: 'Schedule entries',
-      accent: 'text-yellow-300',
-    },
-    {
       label: 'Fee status',
       value: profile?.fee_status === 'paid' ? 'Paid' : 'Pending',
       hint: profile?.fee_status === 'paid' ? 'All clear' : 'Action needed',
       accent:
         profile?.fee_status === 'paid' ? 'text-emerald-300' : 'text-red-300',
+      featured: true,
+    },
+    {
+      label: 'Trips this week',
+      value: `${schedules.length || 0}`,
+      hint: 'Schedule entries',
+      accent: 'text-yellow-300',
+      featured: false,
     },
     {
       label: 'Class days',
       value: `${classDays.length || 0}`,
       hint: 'Selected days',
       accent: 'text-cyan-300',
+      featured: false,
     },
   ];
 
   const tabs = [
-    { key: 'home', label: '🏠', title: 'Home' },
-    { key: 'schedule', label: '📅', title: 'Schedule' },
-    { key: 'change', label: '✏️', title: 'Change Time' },
-    { key: 'payments', label: '💳', title: 'Payments' },
-    { key: 'timetable', label: '🎓', title: 'Timetable' },
-    { key: 'help', label: '💬', title: 'Help' },
-    { key: 'profile', label: '👤', title: 'Profile' },
+    { key: 'home', label: 'Home' },
+    { key: 'schedule', label: 'Schedule' },
+    { key: 'payments', label: 'Payments' },
+    { key: 'help', label: 'Help' },
+    { key: 'profile', label: 'Profile' },
   ];
 
   if (loading)
@@ -581,17 +585,14 @@ export default function Dashboard() {
       </div>
 
       <nav className="sticky top-0 z-50 border-b border-white/5 bg-[#0b0f14]/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-yellow-300 to-yellow-500 shadow-[0_8px_24px_rgba(250,204,21,0.35)]">
-              <span className="text-sm font-black text-black">EE</span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-yellow-400/20 bg-gradient-to-br from-yellow-300/20 to-yellow-500/10 text-[11px] font-black tracking-[0.12em] text-yellow-200">
+              EE
             </div>
             <div>
-              <p className="text-sm font-bold leading-none text-white">
+              <p className="text-[13px] font-semibold tracking-[0.18em] text-white uppercase">
                 Eagle Elites
-              </p>
-              <p className="mt-1 text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-                Student Portal
               </p>
             </div>
           </div>
@@ -603,9 +604,9 @@ export default function Dashboard() {
                   setShowNotifications(!showNotifications);
                   setUnreadCount(0);
                 }}
-                className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/3 transition hover:bg-white/6"
+                className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/8 bg-white/[0.02] text-sm text-zinc-300 transition hover:border-yellow-400/20 hover:text-yellow-200"
               >
-                <span className="text-sm">🔔</span>
+                <span>🔔</span>
                 {unreadCount > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-yellow-400 text-[10px] font-bold text-black">
                     {unreadCount > 9 ? '9+' : unreadCount}
@@ -650,19 +651,24 @@ export default function Dashboard() {
               )}
             </div>
 
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium leading-none text-white">
-                {profile?.full_name}
-              </p>
-              <span
-                className={`mt-1 inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-medium uppercase tracking-[0.12em] ${
-                  profile?.fee_status === 'paid'
-                    ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
-                    : 'border-red-500/20 bg-red-500/10 text-red-300'
-                }`}
-              >
-                {profile?.fee_status === 'paid' ? 'Paid' : 'Unpaid'}
-              </span>
+            <div className="hidden items-center gap-2 rounded-xl border border-white/8 bg-white/[0.02] px-2.5 py-1.5 sm:flex">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-white/10 to-yellow-400/10 text-[11px] font-semibold text-white">
+                {profile?.full_name?.charAt(0)?.toUpperCase() || 'S'}
+              </div>
+              <div className="text-left">
+                <p className="text-[11px] font-medium leading-none text-white">
+                  {profile?.full_name}
+                </p>
+                <span
+                  className={`mt-1 inline-flex items-center rounded-full border px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.12em] ${
+                    profile?.fee_status === 'paid'
+                      ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+                      : 'border-red-500/20 bg-red-500/10 text-red-300'
+                  }`}
+                >
+                  {profile?.fee_status === 'paid' ? 'Paid' : 'Unpaid'}
+                </span>
+              </div>
             </div>
 
             <button
@@ -671,7 +677,7 @@ export default function Dashboard() {
                 await supabase.auth.signOut();
                 router.push('/auth/login');
               }}
-              className="rounded-xl border border-white/10 bg-white/3 px-3 py-2 text-xs font-medium text-zinc-200 transition hover:bg-white/6 hover:text-white"
+              className="rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2 text-[11px] font-medium tracking-[0.08em] text-zinc-200 uppercase transition hover:border-yellow-400/20 hover:text-yellow-200"
             >
               Log out
             </button>
@@ -710,7 +716,11 @@ export default function Dashboard() {
           {summaryCards.map((item) => (
             <div
               key={item.label}
-              className="rounded-2xl border border-white/8 bg-gradient-to-br from-white/5 to-white/[0.02] p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_18px_32px_rgba(0,0,0,0.18)]"
+              className={`rounded-2xl border p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_18px_32px_rgba(0,0,0,0.18)] ${
+                item.featured
+                  ? 'border-yellow-500/20 bg-gradient-to-br from-yellow-500/12 via-transparent to-emerald-500/10 sm:col-span-2'
+                  : 'border-white/8 bg-gradient-to-br from-white/5 to-white/[0.02]'
+              }`}
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                 {item.label}
@@ -727,15 +737,17 @@ export default function Dashboard() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-400">
-                Operations overview
+                Service snapshot
               </p>
               <h3 className="mt-1 text-lg font-bold text-white">
-                Student mobility is running smoothly
+                {profile?.fee_status === 'paid'
+                  ? 'All tuition and service checks are clear.'
+                  : 'Fee action is still required before the next trip.'}
               </h3>
             </div>
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300">
               <span className="h-2 w-2 rounded-full bg-emerald-400" />
-              Live status: ready
+              {profile?.fee_status === 'paid' ? 'Ready' : 'Needs attention'}
             </div>
           </div>
         </div>
@@ -745,14 +757,13 @@ export default function Dashboard() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as any)}
-              className={`px-3 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+              className={`rounded-xl px-3 py-2 text-sm font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.key
                   ? 'bg-yellow-400 text-black shadow-[0_8px_18px_rgba(250,204,21,0.35)]'
                   : 'text-zinc-400 hover:text-white hover:bg-white/4'
               }`}
             >
-              <span>{tab.label}</span>
-              <span className="hidden sm:inline">{tab.title}</span>
+              {tab.label}
             </button>
           ))}
         </div>
@@ -768,7 +779,9 @@ export default function Dashboard() {
                   <h2 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">
                     {profile?.full_name} 👋
                   </h2>
-                  <p className="mt-2 text-sm text-zinc-400">{profile?.email}</p>
+                  <p className="mt-2 text-sm leading-6 text-zinc-400">
+                    {profile?.email}
+                  </p>
                   {profile?.destination && (
                     <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-yellow-500/20 bg-yellow-500/10 px-3 py-1.5 text-sm text-yellow-200">
                       <span>📍</span>
@@ -802,9 +815,11 @@ export default function Dashboard() {
                   <h3 className="text-lg font-bold text-white">
                     Today&apos;s trip
                   </h3>
-                  <span className="rounded-full border border-yellow-500/20 bg-yellow-500/10 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-yellow-300">
-                    live
-                  </span>
+                  {todaySchedule && (
+                    <span className="rounded-full border border-yellow-500/20 bg-yellow-500/10 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-yellow-300">
+                      live
+                    </span>
+                  )}
                 </div>
 
                 {todaySchedule ? (
@@ -883,24 +898,24 @@ export default function Dashboard() {
                     </div>
                   </>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 p-8 text-center">
-                    <p className="text-4xl mb-3">🚌</p>
-                    <p className="font-medium text-zinc-300">
+                  <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 p-5 text-center sm:p-6">
+                    <p className="mb-3 text-3xl">🚌</p>
+                    <p className="text-base font-medium text-zinc-300">
                       No trip scheduled for today
                     </p>
-                    <p className="mt-1 text-sm text-zinc-500">
-                      Submit your schedule every Sunday
+                    <p className="mt-2 text-sm leading-6 text-zinc-500">
+                      Submit your schedule every Sunday for the next week.
                     </p>
                   </div>
                 )}
               </div>
 
-              <div className="space-y-4">
-                <div className="rounded-[28px] border border-white/10 bg-[#0d131c] p-5">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                    Driver & vehicle
-                  </p>
-                  {assignment ? (
+              {todaySchedule && assignment && (
+                <div className="space-y-4">
+                  <div className="rounded-[28px] border border-white/10 bg-[#0d131c] p-5">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                      Driver & vehicle
+                    </p>
                     <div className="mt-4 space-y-4">
                       <div>
                         <p className="text-zinc-500 text-xs">Vehicle</p>
@@ -918,41 +933,37 @@ export default function Dashboard() {
                         </p>
                       </div>
                     </div>
-                  ) : (
-                    <p className="mt-4 text-sm text-zinc-500">
-                      Not assigned yet
-                    </p>
+                  </div>
+
+                  {assignment && (
+                    <div
+                      className={`rounded-[28px] border p-5 ${
+                        assignment.seat_confirmed
+                          ? 'border-emerald-500/20 bg-emerald-500/10'
+                          : 'border-white/10 bg-[#0d131c]'
+                      }`}
+                    >
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                        Seat status
+                      </p>
+                      <p className="mt-3 text-sm font-medium text-white">
+                        {assignment.seat_confirmed
+                          ? `Confirmed on ${formatDate(assignment.confirmed_at)}`
+                          : 'Seat not confirmed yet'}
+                      </p>
+                      {!assignment.seat_confirmed && (
+                        <button
+                          onClick={handleConfirmSeat}
+                          disabled={confirmingSeat}
+                          className="mt-4 w-full rounded-xl bg-yellow-400 px-4 py-2.5 text-sm font-bold text-black transition hover:bg-yellow-300 disabled:opacity-45"
+                        >
+                          {confirmingSeat ? 'Confirming...' : 'Confirm Seat'}
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
-
-                {assignment && (
-                  <div
-                    className={`rounded-[28px] border p-5 ${
-                      assignment.seat_confirmed
-                        ? 'border-emerald-500/20 bg-emerald-500/10'
-                        : 'border-white/10 bg-[#0d131c]'
-                    }`}
-                  >
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                      Seat status
-                    </p>
-                    <p className="mt-3 text-sm font-medium text-white">
-                      {assignment.seat_confirmed
-                        ? `Confirmed on ${formatDate(assignment.confirmed_at)}`
-                        : 'Seat not confirmed yet'}
-                    </p>
-                    {!assignment.seat_confirmed && (
-                      <button
-                        onClick={handleConfirmSeat}
-                        disabled={confirmingSeat}
-                        className="mt-4 w-full rounded-xl bg-yellow-400 px-4 py-2.5 text-sm font-bold text-black transition hover:bg-yellow-300 disabled:opacity-45"
-                      >
-                        {confirmingSeat ? 'Confirming...' : 'Confirm Seat'}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+              )}
             </div>
 
             {holidays.length > 0 && (
@@ -979,169 +990,386 @@ export default function Dashboard() {
         )}
 
         {activeTab === 'schedule' && (
-          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 space-y-5">
-            <div>
-              <h3 className="text-white font-bold text-lg">Weekly Schedule</h3>
-              <p className="text-zinc-500 text-sm mt-1">
-                {isSundayToday
-                  ? '✅ Today is Sunday — submit your schedule for next week'
-                  : '⚠️ Submission opens every Sunday'}
-              </p>
+          <div className="space-y-5">
+            <div className="rounded-2xl border border-white/10 bg-[#0d131c] p-2">
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { key: 'overview', label: 'Overview' },
+                  { key: 'change', label: 'Change time' },
+                  { key: 'timetable', label: 'Timetable' },
+                ].map((item) => (
+                  <button
+                    key={item.key}
+                    onClick={() => setScheduleView(item.key as any)}
+                    className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
+                      scheduleView === item.key
+                        ? 'bg-yellow-400 text-black'
+                        : 'text-zinc-400 hover:bg-white/4 hover:text-white'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {schedules.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-zinc-400 text-xs uppercase tracking-widest font-semibold">
-                  Next Week&apos;s Schedule
-                </p>
-                {schedules.map((s) => (
-                  <div
-                    key={s.id}
-                    className="bg-zinc-800 rounded-xl p-3 flex items-center justify-between"
-                  >
-                    <div>
-                      <p className="text-white font-medium text-sm">
-                        {s.day_of_week}
-                      </p>
-                      <p className="text-zinc-500 text-xs">
-                        📍 {s.pickup_points?.name}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-zinc-300 text-xs">
-                        🌅 Pickup: {formatTime(s.arrival_time)}
-                      </p>
-                      <p className="text-zinc-300 text-xs">
-                        🌆 Return: {formatTime(s.departure_time)}
-                      </p>
-                    </div>
+            {scheduleView === 'overview' && (
+              <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 space-y-5">
+                <div>
+                  <h3 className="text-white font-bold text-lg">
+                    Weekly Schedule
+                  </h3>
+                  <p className="text-zinc-500 text-sm mt-1">
+                    {isSundayToday
+                      ? '✅ Today is Sunday — submit your schedule for next week'
+                      : '⚠️ Submission opens every Sunday'}
+                  </p>
+                </div>
+
+                {schedules.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-zinc-400 text-xs uppercase tracking-widest font-semibold">
+                      Next Week&apos;s Schedule
+                    </p>
+                    {schedules.map((s) => (
+                      <div
+                        key={s.id}
+                        className="bg-zinc-800 rounded-xl p-3 flex items-center justify-between"
+                      >
+                        <div>
+                          <p className="text-white font-medium text-sm">
+                            {s.day_of_week}
+                          </p>
+                          <p className="text-zinc-500 text-xs">
+                            📍 {s.pickup_points?.name}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-zinc-300 text-xs">
+                            🌅 Pickup: {formatTime(s.arrival_time)}
+                          </p>
+                          <p className="text-zinc-300 text-xs">
+                            🌆 Return: {formatTime(s.departure_time)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
+
+                {isSundayToday ? (
+                  <div className="space-y-4">
+                    <p className="text-zinc-400 text-xs uppercase tracking-widest font-semibold">
+                      Submit Next Week
+                    </p>
+                    {DAYS.map((day) => (
+                      <div
+                        key={day}
+                        className="bg-zinc-800/60 border border-zinc-700 rounded-xl p-4 space-y-3"
+                      >
+                        <p className="text-white font-semibold text-sm">
+                          {day}
+                        </p>
+                        <select
+                          value={scheduleForm[day]?.pickup_point_id || ''}
+                          onChange={(e) =>
+                            setScheduleForm((prev) => ({
+                              ...prev,
+                              [day]: {
+                                ...prev[day],
+                                pickup_point_id: e.target.value,
+                              },
+                            }))
+                          }
+                          className="w-full px-3 py-2.5 bg-zinc-700 border border-zinc-600 rounded-lg text-white text-sm focus:outline-none focus:border-yellow-400 transition"
+                        >
+                          <option value="">No class / skip this day</option>
+                          {pickupPoints.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <p className="text-zinc-500 text-xs mb-1">
+                              🌅 Pickup time
+                            </p>
+                            <input
+                              type="time"
+                              value={scheduleForm[day]?.arrival_time || ''}
+                              onChange={(e) =>
+                                setScheduleForm((prev) => ({
+                                  ...prev,
+                                  [day]: {
+                                    ...prev[day],
+                                    arrival_time: e.target.value,
+                                  },
+                                }))
+                              }
+                              className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded-lg text-white text-sm focus:outline-none focus:border-yellow-400 transition"
+                            />
+                          </div>
+                          <div>
+                            <p className="text-zinc-500 text-xs mb-1">
+                              🌆 Return time
+                            </p>
+                            <input
+                              type="time"
+                              value={scheduleForm[day]?.departure_time || ''}
+                              onChange={(e) =>
+                                setScheduleForm((prev) => ({
+                                  ...prev,
+                                  [day]: {
+                                    ...prev[day],
+                                    departure_time: e.target.value,
+                                  },
+                                }))
+                              }
+                              className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded-lg text-white text-sm focus:outline-none focus:border-yellow-400 transition"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {scheduleSuccess && (
+                      <div className="bg-green-950/60 border border-green-800 text-green-400 px-4 py-3 rounded-xl text-sm">
+                        ✅ Schedule submitted!
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleScheduleSubmit}
+                      disabled={submittingSchedule}
+                      className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold py-3.5 rounded-xl transition disabled:opacity-40 flex items-center justify-center gap-2"
+                    >
+                      {submittingSchedule ? (
+                        <>
+                          <svg
+                            className="animate-spin h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8v8z"
+                            />
+                          </svg>
+                          Submitting...
+                        </>
+                      ) : (
+                        'Submit Schedule →'
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-zinc-800/40 border border-zinc-700 rounded-xl p-6 text-center">
+                    <p className="text-3xl mb-3">📅</p>
+                    <p className="text-zinc-400 font-medium">
+                      Schedule submission opens on Sunday
+                    </p>
+                    <p className="text-zinc-600 text-sm mt-1">
+                      Come back this Sunday to submit next week&apos;s schedule
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
-            {isSundayToday ? (
-              <div className="space-y-4">
-                <p className="text-zinc-400 text-xs uppercase tracking-widest font-semibold">
-                  Submit Next Week
-                </p>
-                {DAYS.map((day) => (
-                  <div
-                    key={day}
-                    className="bg-zinc-800/60 border border-zinc-700 rounded-xl p-4 space-y-3"
-                  >
-                    <p className="text-white font-semibold text-sm">{day}</p>
-                    <select
-                      value={scheduleForm[day]?.pickup_point_id || ''}
-                      onChange={(e) =>
-                        setScheduleForm((prev) => ({
-                          ...prev,
-                          [day]: {
-                            ...prev[day],
-                            pickup_point_id: e.target.value,
-                          },
-                        }))
-                      }
-                      className="w-full px-3 py-2.5 bg-zinc-700 border border-zinc-600 rounded-lg text-white text-sm focus:outline-none focus:border-yellow-400 transition"
-                    >
-                      <option value="">No class / skip this day</option>
-                      {pickupPoints.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <p className="text-zinc-500 text-xs mb-1">
-                          🌅 Pickup time
-                        </p>
-                        <input
-                          type="time"
-                          value={scheduleForm[day]?.arrival_time || ''}
-                          onChange={(e) =>
-                            setScheduleForm((prev) => ({
-                              ...prev,
-                              [day]: {
-                                ...prev[day],
-                                arrival_time: e.target.value,
-                              },
-                            }))
-                          }
-                          className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded-lg text-white text-sm focus:outline-none focus:border-yellow-400 transition"
-                        />
-                      </div>
-                      <div>
-                        <p className="text-zinc-500 text-xs mb-1">
-                          🌆 Return time
-                        </p>
-                        <input
-                          type="time"
-                          value={scheduleForm[day]?.departure_time || ''}
-                          onChange={(e) =>
-                            setScheduleForm((prev) => ({
-                              ...prev,
-                              [day]: {
-                                ...prev[day],
-                                departure_time: e.target.value,
-                              },
-                            }))
-                          }
-                          className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded-lg text-white text-sm focus:outline-none focus:border-yellow-400 transition"
-                        />
+            {scheduleView === 'change' && (
+              <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 space-y-5">
+                <div>
+                  <h3 className="text-white font-bold text-lg">
+                    Change Trip Time
+                  </h3>
+                  <p className="text-zinc-500 text-sm mt-1">
+                    One change per day, at least 8 hours before the trip
+                  </p>
+                </div>
+
+                {schedules.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-3xl mb-3">📅</p>
+                    <p className="text-zinc-400">
+                      No schedule found for this week
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest">
+                        Select Day
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {schedules.map((s) => (
+                          <button
+                            key={s.id}
+                            onClick={() =>
+                              s.change_count < 1 && setChangeDay(s.day_of_week)
+                            }
+                            className={`px-3 py-2.5 rounded-xl text-xs font-medium border transition-all ${
+                              changeDay === s.day_of_week
+                                ? 'bg-yellow-400 text-black border-yellow-400'
+                                : s.change_count >= 1
+                                  ? 'bg-zinc-800 text-zinc-600 border-zinc-700 cursor-not-allowed'
+                                  : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:border-zinc-500'
+                            }`}
+                          >
+                            <p>{s.day_of_week.slice(0, 3)}</p>
+                            <p
+                              className={`text-xs mt-0.5 ${s.change_count >= 1 ? 'text-red-500' : 'text-green-500'}`}
+                            >
+                              {s.change_count >= 1 ? 'Used' : 'Available'}
+                            </p>
+                          </button>
+                        ))}
                       </div>
                     </div>
-                  </div>
-                ))}
 
-                {scheduleSuccess && (
-                  <div className="bg-green-950/60 border border-green-800 text-green-400 px-4 py-3 rounded-xl text-sm">
-                    ✅ Schedule submitted!
+                    {changeDay && (
+                      <>
+                        <div className="space-y-2">
+                          <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest">
+                            Which Trip
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {(['arrival', 'departure'] as const).map((type) => (
+                              <button
+                                key={type}
+                                onClick={() => setChangeType(type)}
+                                className={`px-4 py-3 rounded-xl text-sm font-medium border transition-all ${changeType === type ? 'bg-yellow-400 text-black border-yellow-400' : 'bg-zinc-800 text-zinc-400 border-zinc-700'}`}
+                              >
+                                {type === 'arrival'
+                                  ? '🌅 Pickup (Arrival)'
+                                  : '🌆 Return (Departure)'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest">
+                            New Time
+                          </label>
+                          <input
+                            type="time"
+                            value={changeTime}
+                            onChange={(e) => setChangeTime(e.target.value)}
+                            className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white focus:outline-none focus:border-yellow-400 transition"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {changeError && (
+                      <div className="bg-red-950/60 border border-red-800 text-red-400 px-4 py-3 rounded-xl text-sm">
+                        ⚠️ {changeError}
+                      </div>
+                    )}
+                    {changeSuccess && (
+                      <div className="bg-green-950/60 border border-green-800 text-green-400 px-4 py-3 rounded-xl text-sm">
+                        ✅ Time updated successfully!
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleTimeChange}
+                      disabled={!changeDay || !changeTime || changingTime}
+                      className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold py-3.5 rounded-xl transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {changingTime ? (
+                        <>
+                          <svg
+                            className="animate-spin h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8v8z"
+                            />
+                          </svg>
+                          Updating...
+                        </>
+                      ) : (
+                        'Confirm Change →'
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {scheduleView === 'timetable' && (
+              <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 space-y-5">
+                <div>
+                  <h3 className="text-white font-bold text-lg">
+                    University Timetable
+                  </h3>
+                  <p className="text-zinc-500 text-sm mt-1">
+                    Select your class days so admin can plan your schedule
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {DAYS.map((day) => (
+                    <button
+                      key={day}
+                      onClick={() =>
+                        setClassDays((prev) =>
+                          prev.includes(day)
+                            ? prev.filter((d) => d !== day)
+                            : [...prev, day],
+                        )
+                      }
+                      className={`px-4 py-3 rounded-xl text-sm font-medium border transition-all text-left ${
+                        classDays.includes(day)
+                          ? 'bg-yellow-400 text-black border-yellow-400'
+                          : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:border-zinc-500'
+                      }`}
+                    >
+                      <span className="mr-2">
+                        {classDays.includes(day) ? '✓' : '○'}
+                      </span>
+                      {day}
+                    </button>
+                  ))}
+                </div>
+
+                {classDays.length > 0 && (
+                  <div className="bg-zinc-800 rounded-xl p-3">
+                    <p className="text-zinc-400 text-xs mb-1">Selected days</p>
+                    <p className="text-white font-medium text-sm">
+                      {classDays.join(', ')}
+                    </p>
                   </div>
                 )}
 
                 <button
-                  onClick={handleScheduleSubmit}
-                  disabled={submittingSchedule}
-                  className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold py-3.5 rounded-xl transition disabled:opacity-40 flex items-center justify-center gap-2"
+                  onClick={handleSaveTimetable}
+                  className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold py-3.5 rounded-xl transition"
                 >
-                  {submittingSchedule ? (
-                    <>
-                      <svg
-                        className="animate-spin h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8v8z"
-                        />
-                      </svg>
-                      Submitting...
-                    </>
-                  ) : (
-                    'Submit Schedule →'
-                  )}
+                  Save Timetable →
                 </button>
-              </div>
-            ) : (
-              <div className="bg-zinc-800/40 border border-zinc-700 rounded-xl p-6 text-center">
-                <p className="text-3xl mb-3">📅</p>
-                <p className="text-zinc-400 font-medium">
-                  Schedule submission opens on Sunday
-                </p>
-                <p className="text-zinc-600 text-sm mt-1">
-                  Come back this Sunday to submit next week&apos;s schedule
-                </p>
               </div>
             )}
           </div>
