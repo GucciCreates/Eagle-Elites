@@ -1,8 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+
+type DepartureGroup = {
+  id: string;
+  university: string;
+  department: string;
+  description: string;
+};
 
 const PICKUP_AREAS = [
   'B-17',
@@ -22,7 +29,9 @@ const PICKUP_AREAS = [
 
 export default function OnboardingProfile() {
   const [userType, setUserType] = useState('student');
-  const [institution, setInstitution] = useState('');
+  const [departureGroups, setDepartureGroups] = useState<DepartureGroup[]>([]);
+  const [selectedUniversity, setSelectedUniversity] = useState('');
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState('');
   const [idNumber, setIdNumber] = useState('');
   const [phone, setPhone] = useState('');
   const [pickupArea, setPickupArea] = useState('');
@@ -30,13 +39,42 @@ export default function OnboardingProfile() {
   const [preferredEvening, setPreferredEvening] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [groupsLoading, setGroupsLoading] = useState(true);
 
   const router = useRouter();
   const supabase = createClient();
 
+  useEffect(() => {
+    const fetchGroups = async () => {
+      const { data } = await supabase
+        .from('departure_groups')
+        .select('*')
+        .eq('active', true)
+        .order('university');
+
+      if (data) setDepartureGroups(data as DepartureGroup[]);
+      setGroupsLoading(false);
+    };
+
+    void fetchGroups();
+  }, [supabase]);
+
+  const universities = Array.from(
+    new Set(departureGroups.map((group) => group.university)),
+  );
+  const departments = departureGroups.filter(
+    (group) => group.university === selectedUniversity,
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!selectedDepartmentId) {
+      setError('Please select your university and department.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -49,16 +87,21 @@ export default function OnboardingProfile() {
         return;
       }
 
+      const selectedGroup = departureGroups.find(
+        (group) => group.id === selectedDepartmentId,
+      );
+
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
           user_type: userType,
-          institution,
+          institution: selectedGroup?.university || '',
           cnic_last4: idNumber,
           phone,
           pickup_area: pickupArea,
           preferred_morning: preferredMorning || null,
           preferred_evening: preferredEvening || null,
+          departure_group_id: selectedDepartmentId,
           status: 'payment_pending',
         })
         .eq('id', session.user.id);
@@ -92,8 +135,8 @@ export default function OnboardingProfile() {
                 Complete your profile.
               </h1>
               <p className="mt-4 max-w-sm text-sm leading-6 text-zinc-300">
-                Tell us where you travel from and how we can assign the best
-                route for you.
+                Select your university and department to unlock the correct
+                departure slots.
               </p>
             </div>
 
@@ -157,33 +200,83 @@ export default function OnboardingProfile() {
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="institution"
-                    className="mb-2 block text-sm font-medium text-zinc-300"
-                  >
-                    {userType === 'student'
-                      ? 'University Name'
-                      : 'Institution / Hospital Name'}
+                  <label className="mb-2 block text-sm font-medium text-zinc-300">
+                    University / Institution
                   </label>
-                  <div className="relative">
-                    <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-500">
-                      🏫
-                    </span>
-                    <input
-                      id="institution"
-                      type="text"
-                      value={institution}
-                      onChange={(e) => setInstitution(e.target.value)}
+                  {groupsLoading ? (
+                    <div className="rounded-xl border border-zinc-700 bg-zinc-800 p-3 text-sm text-zinc-400">
+                      Loading universities...
+                    </div>
+                  ) : universities.length === 0 ? (
+                    <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm text-yellow-200">
+                      No universities added yet. Please contact admin to add
+                      your institution.
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedUniversity}
+                      onChange={(event) => {
+                        setSelectedUniversity(event.target.value);
+                        setSelectedDepartmentId('');
+                      }}
                       required
-                      className="w-full rounded-2xl border border-zinc-700/80 bg-zinc-900/80 pl-10 pr-4 py-3.5 text-white placeholder-zinc-500 focus:border-yellow-400/80 focus:outline-none focus:ring-2 focus:ring-yellow-400/20"
-                      placeholder={
-                        userType === 'student'
-                          ? 'e.g. Bahria University'
-                          : 'e.g. PIMS Hospital'
-                      }
-                    />
-                  </div>
+                      className="w-full rounded-2xl border border-zinc-700/80 bg-zinc-900/80 px-4 py-3.5 text-white focus:border-yellow-400/80 focus:outline-none focus:ring-2 focus:ring-yellow-400/20"
+                    >
+                      <option value="">Select your university...</option>
+                      {universities.map((university) => (
+                        <option key={university} value={university}>
+                          {university}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
+
+                {selectedUniversity && departments.length > 0 && (
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-zinc-300">
+                      Department / Program
+                    </label>
+                    <div className="space-y-2">
+                      {departments.map((dept) => (
+                        <button
+                          key={dept.id}
+                          type="button"
+                          onClick={() => setSelectedDepartmentId(dept.id)}
+                          className={`flex w-full items-start justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
+                            selectedDepartmentId === dept.id
+                              ? 'border-yellow-400/50 bg-yellow-400/10'
+                              : 'border-zinc-700/80 bg-zinc-800/80 hover:border-zinc-500'
+                          }`}
+                        >
+                          <div>
+                            <div className="font-medium text-white">
+                              {dept.department}
+                            </div>
+                            {dept.description && (
+                              <div className="mt-1 text-xs text-zinc-400">
+                                {dept.description}
+                              </div>
+                            )}
+                          </div>
+                          {selectedDepartmentId === dept.id && (
+                            <span className="text-lg text-yellow-300">✓</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+
+                    {selectedDepartmentId && (
+                      <div className="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+                        ✓ You will be assigned to: {selectedUniversity} —{' '}
+                        {
+                          departments.find((d) => d.id === selectedDepartmentId)
+                            ?.department
+                        }
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <label
@@ -212,9 +305,6 @@ export default function OnboardingProfile() {
                       }
                     />
                   </div>
-                  <p className="mt-2 text-xs text-zinc-500">
-                    Used to verify your identity. Keep this safe.
-                  </p>
                 </div>
 
                 <div>
@@ -298,8 +388,7 @@ export default function OnboardingProfile() {
                 </div>
 
                 <p className="text-xs text-zinc-500">
-                  Preferred times help admin assign you to the right route. Not
-                  final.
+                  Preferred times help admin assign you to the right route.
                 </p>
 
                 <button

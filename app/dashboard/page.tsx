@@ -12,6 +12,31 @@ type Profile = {
   fee_status: string;
   destination: string;
   route_id: string;
+  departure_group_id?: string | null;
+};
+
+type DepartureGroup = {
+  id: string;
+  university: string;
+  department: string;
+};
+
+type DepartureSlot = {
+  id: string;
+  group_id: string;
+  slot_date: string;
+  slot_number: number;
+  pickup_time: string;
+  departure_time: string;
+  notes: string;
+  status: string;
+};
+
+type DepartureSelection = {
+  id: string;
+  student_id: string;
+  slot_id: string;
+  selection_date: string;
 };
 
 type DailyAssignment = {
@@ -154,6 +179,15 @@ export default function Dashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [scheduleView, setScheduleView] = useState<ScheduleView>('overview');
+  const [myDepartureGroup, setMyDepartureGroup] =
+    useState<DepartureGroup | null>(null);
+  const [todaySlots, setTodaySlots] = useState<DepartureSlot[]>([]);
+  const [mySelection, setMySelection] = useState<DepartureSelection | null>(
+    null,
+  );
+  const [selectedSlotId, setSelectedSlotId] = useState('');
+  const [savingSelection, setSavingSelection] = useState(false);
+  const [selectionSuccess, setSelectionSuccess] = useState(false);
 
   const [scheduleForm, setScheduleForm] = useState<
     Record<
@@ -388,6 +422,43 @@ export default function Dashboard() {
       if (holidaysData) setHolidays(holidaysData);
       if (timetableData) setClassDays(timetableData.class_days);
 
+      if (profileData?.departure_group_id) {
+        const { data: groupData } = await supabase
+          .from('departure_groups')
+          .select('id, university, department')
+          .eq('id', profileData.departure_group_id)
+          .single();
+
+        if (groupData) setMyDepartureGroup(groupData as DepartureGroup);
+
+        const today = new Date().toISOString().split('T')[0];
+        const { data: slotsData } = await supabase
+          .from('departure_slots')
+          .select('*')
+          .eq('group_id', profileData.departure_group_id)
+          .eq('slot_date', today)
+          .order('slot_number');
+
+        if (slotsData) setTodaySlots(slotsData as DepartureSlot[]);
+
+        const { data: selectionData } = await supabase
+          .from('departure_selections')
+          .select('*')
+          .eq('student_id', session.user.id)
+          .eq('selection_date', today)
+          .single();
+
+        if (selectionData) {
+          setMySelection(selectionData as DepartureSelection);
+          setSelectedSlotId(selectionData.slot_id);
+        }
+      } else {
+        setMyDepartureGroup(null);
+        setTodaySlots([]);
+        setMySelection(null);
+        setSelectedSlotId('');
+      }
+
       if (profileData?.route_id) {
         const { data: pickups } = await supabase
           .from('pickup_points')
@@ -517,6 +588,42 @@ export default function Dashboard() {
       .eq('id', assignment.id);
     setAssignment((prev) => (prev ? { ...prev, seat_confirmed: true } : prev));
     setConfirmingSeat(false);
+  };
+
+  const handleSaveDepartureSelection = async () => {
+    if (!selectedSlotId) return;
+    setSavingSelection(true);
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      setSavingSelection(false);
+      return;
+    }
+
+    const selectionDate = new Date().toISOString().split('T')[0];
+
+    const { data: savedSelection } = await supabase
+      .from('departure_selections')
+      .upsert(
+        {
+          student_id: session.user.id,
+          slot_id: selectedSlotId,
+          selection_date: selectionDate,
+        },
+        { onConflict: 'student_id,selection_date' },
+      )
+      .select()
+      .single();
+
+    if (savedSelection) {
+      setMySelection(savedSelection as DepartureSelection);
+      setSelectionSuccess(true);
+      setTimeout(() => setSelectionSuccess(false), 3000);
+    }
+
+    setSavingSelection(false);
   };
 
   const handleSendHelp = async () => {
@@ -942,6 +1049,146 @@ export default function Dashboard() {
                       Submit your schedule every Sunday for the next week.
                     </p>
                   </div>
+                )}
+              </div>
+
+              <div className="rounded-[28px] border border-white/10 bg-[#0d131c] p-5 shadow-[0_24px_50px_rgba(0,0,0,0.2)]">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                      Departure selection
+                    </p>
+                    <h3 className="mt-1 text-lg font-bold text-white">
+                      Today&apos;s departure slots
+                    </h3>
+                  </div>
+                  {mySelection && (
+                    <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[10px] font-medium text-emerald-300">
+                      ✓ Slot selected
+                    </span>
+                  )}
+                </div>
+
+                {!myDepartureGroup ? (
+                  <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 p-5 text-center">
+                    <div className="mb-3 text-3xl">🎓</div>
+                    <p className="text-base font-medium text-zinc-300">
+                      No department group assigned yet
+                    </p>
+                    <p className="mt-2 text-sm text-zinc-500">
+                      Contact admin or complete your profile setup.
+                    </p>
+                  </div>
+                ) : todaySlots.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 p-5 text-center">
+                    <div className="mb-3 text-3xl">🕐</div>
+                    <p className="text-base font-medium text-zinc-300">
+                      No slots posted yet for today
+                    </p>
+                    <p className="mt-2 text-sm text-zinc-500">
+                      Admin posts slots before 10:00 AM every morning.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mb-4 rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-3">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-yellow-200/80">
+                        Assigned group
+                      </p>
+                      <p className="mt-1 text-lg font-bold text-white">
+                        {myDepartureGroup.university}
+                      </p>
+                      <p className="text-sm text-zinc-300">
+                        {myDepartureGroup.department}
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      {todaySlots.map((slot) => (
+                        <button
+                          key={slot.id}
+                          type="button"
+                          disabled={
+                            slot.status !== 'available' ||
+                            new Date().getHours() >= 10
+                          }
+                          onClick={() => setSelectedSlotId(slot.id)}
+                          className={`w-full rounded-2xl border p-3 text-left transition ${
+                            selectedSlotId === slot.id
+                              ? 'border-yellow-400 bg-yellow-500/10'
+                              : slot.status === 'available'
+                                ? 'border-zinc-700 bg-zinc-900 hover:border-zinc-500'
+                                : 'border-red-800 bg-red-950/40 opacity-80'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                                Slot {slot.slot_number}
+                              </p>
+                              <p className="mt-1 text-base font-bold text-white">
+                                Pickup: {slot.pickup_time}
+                              </p>
+                              <p className="mt-1 text-sm text-zinc-300">
+                                Departs: {slot.departure_time}
+                              </p>
+                              {slot.status === 'unavailable' && (
+                                <p className="mt-1 text-xs text-red-300">
+                                  — Unavailable
+                                </p>
+                              )}
+                              {slot.notes && (
+                                <p className="mt-2 text-xs text-zinc-400">
+                                  {slot.notes}
+                                </p>
+                              )}
+                            </div>
+
+                            {selectedSlotId === slot.id && (
+                              <span className="text-lg text-yellow-300">✓</span>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    {selectionSuccess && (
+                      <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+                        ✅ Departure slot confirmed! Be at your stop 5–7 minutes
+                        early.
+                      </div>
+                    )}
+
+                    {new Date().getHours() >= 10 ? (
+                      <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                        🔒 Selection closed at 10:00 AM
+                        {mySelection &&
+                          todaySlots.find(
+                            (slot) => slot.id === mySelection.slot_id,
+                          ) && (
+                            <div className="mt-2 text-xs text-red-100">
+                              Your confirmed slot:{' '}
+                              {
+                                todaySlots.find(
+                                  (slot) => slot.id === mySelection.slot_id,
+                                )?.departure_time
+                              }
+                            </div>
+                          )}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSaveDepartureSelection}
+                        disabled={savingSelection || !selectedSlotId}
+                        className="mt-4 w-full rounded-xl bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 px-4 py-3 text-sm font-bold text-black transition hover:brightness-105 disabled:opacity-60"
+                      >
+                        {savingSelection
+                          ? 'Confirming...'
+                          : 'Confirm This Slot →'}
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
 

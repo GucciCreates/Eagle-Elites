@@ -50,6 +50,30 @@ type Application = {
   applied_at: string;
   status: string;
 };
+type DepartureGroup = {
+  id: string;
+  university: string;
+  department: string;
+  description: string;
+  active: boolean;
+};
+type DepartureSlot = {
+  id: string;
+  group_id: string;
+  slot_date: string;
+  slot_number: number;
+  pickup_time: string;
+  departure_time: string;
+  notes: string;
+  status: string;
+};
+type SlotDraft = {
+  slot_number: number;
+  pickup_time: string;
+  departure_time: string;
+  notes: string;
+  status: string;
+};
 type DailyGroup = {
   route_id: string;
   route_name: string;
@@ -106,6 +130,58 @@ export default function AdminDashboard() {
   const [addingVehicle, setAddingVehicle] = useState(false);
   const [newRouteName, setNewRouteName] = useState('');
   const [newRoutePrice, setNewRoutePrice] = useState('');
+  const [departureGroups, setDepartureGroups] = useState<DepartureGroup[]>([]);
+  const [departureSlots, setDepartureSlots] = useState<DepartureSlot[]>([]);
+  const [slotDate, setSlotDate] = useState(() =>
+    typeof window === 'undefined' ? '' : new Date().toISOString().split('T')[0],
+  );
+  const [selectedGroupId, setSelectedGroupId] = useState('');
+  const [slotInputs, setSlotInputs] = useState<Record<number, SlotDraft>>({
+    1: {
+      slot_number: 1,
+      pickup_time: '',
+      departure_time: '',
+      notes: '',
+      status: 'available',
+    },
+    2: {
+      slot_number: 2,
+      pickup_time: '',
+      departure_time: '',
+      notes: '',
+      status: 'available',
+    },
+    3: {
+      slot_number: 3,
+      pickup_time: '',
+      departure_time: '',
+      notes: '',
+      status: 'available',
+    },
+    4: {
+      slot_number: 4,
+      pickup_time: '',
+      departure_time: '',
+      notes: '',
+      status: 'available',
+    },
+    5: {
+      slot_number: 5,
+      pickup_time: '',
+      departure_time: '',
+      notes: '',
+      status: 'available',
+    },
+  });
+  const [savingSlots, setSavingSlots] = useState(false);
+  const [slotsSuccess, setSlotsSuccess] = useState(false);
+  const [newGroup, setNewGroup] = useState({
+    university: '',
+    department: '',
+    description: '',
+  });
+  const [addingGroup, setAddingGroup] = useState(false);
+  const [groupSuccess, setGroupSuccess] = useState(false);
 
   const router = useRouter();
   const supabase = createClient();
@@ -140,6 +216,8 @@ export default function AdminDashboard() {
         { data: holidaysData },
         { data: notificationsData },
         { data: applicationsData },
+        { data: departureGroupsData },
+        { data: departureSlotsData },
       ] = await Promise.all([
         supabase
           .from('profiles')
@@ -162,6 +240,16 @@ export default function AdminDashboard() {
           .select('*')
           .eq('status', 'pending')
           .order('applied_at', { ascending: false }),
+        supabase
+          .from('departure_groups')
+          .select('*')
+          .eq('active', true)
+          .order('university'),
+        supabase
+          .from('departure_slots')
+          .select('*')
+          .order('slot_date', { ascending: false })
+          .order('slot_number', { ascending: true }),
       ]);
 
       if (studentsData) setStudents(studentsData as Student[]);
@@ -172,6 +260,10 @@ export default function AdminDashboard() {
       if (notificationsData)
         setNotifications(notificationsData as Notification[]);
       if (applicationsData) setApplications(applicationsData as Application[]);
+      if (departureGroupsData)
+        setDepartureGroups(departureGroupsData as DepartureGroup[]);
+      if (departureSlotsData)
+        setDepartureSlots(departureSlotsData as DepartureSlot[]);
       setLoading(false);
     };
 
@@ -243,6 +335,91 @@ export default function AdminDashboard() {
     );
     setEditingStudent(null);
     setSavingStudent(false);
+  };
+
+  const handleAddDepartureGroup = async () => {
+    if (!newGroup.university || !newGroup.department) return;
+    setAddingGroup(true);
+
+    const { data, error } = await supabase
+      .from('departure_groups')
+      .insert({
+        university: newGroup.university,
+        department: newGroup.department,
+        description: newGroup.description,
+        active: true,
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      setDepartureGroups((prev) => [data as DepartureGroup, ...prev]);
+      setSelectedGroupId(data.id);
+      setNewGroup({ university: '', department: '', description: '' });
+      setGroupSuccess(true);
+      setTimeout(() => setGroupSuccess(false), 3000);
+    }
+
+    setAddingGroup(false);
+  };
+
+  const handleSaveDepartureSlots = async () => {
+    if (!selectedGroupId || !slotDate) return;
+    setSavingSlots(true);
+
+    const entries = Array.from({ length: 5 }, (_, index) => index + 1)
+      .map((slotNumber) => slotInputs[slotNumber])
+      .filter(
+        (entry) =>
+          Boolean(entry?.pickup_time) ||
+          Boolean(entry?.departure_time) ||
+          Boolean(entry?.notes),
+      )
+      .map((entry) => ({
+        group_id: selectedGroupId,
+        slot_date: slotDate,
+        slot_number: entry.slot_number,
+        pickup_time: entry.pickup_time || '08:00',
+        departure_time: entry.departure_time || '09:00',
+        notes: entry.notes || '',
+        status: entry.status || 'available',
+      }));
+
+    if (entries.length > 0) {
+      await supabase
+        .from('departure_slots')
+        .upsert(entries, { onConflict: 'group_id,slot_date,slot_number' });
+    }
+
+    const { data } = await supabase
+      .from('departure_slots')
+      .select('*')
+      .order('slot_date', { ascending: false })
+      .order('slot_number', { ascending: true });
+
+    if (data) setDepartureSlots(data as DepartureSlot[]);
+
+    setSlotsSuccess(true);
+    setTimeout(() => setSlotsSuccess(false), 3000);
+    setSavingSlots(false);
+  };
+
+  const handleToggleDepartureSlotStatus = async (
+    slotId: string,
+    currentStatus: string,
+  ) => {
+    const nextStatus =
+      currentStatus === 'available' ? 'unavailable' : 'available';
+    await supabase
+      .from('departure_slots')
+      .update({ status: nextStatus })
+      .eq('id', slotId);
+
+    setDepartureSlots((prev) =>
+      prev.map((slot) =>
+        slot.id === slotId ? { ...slot, status: nextStatus } : slot,
+      ),
+    );
   };
 
   const handleSendReply = async (messageId: string) => {
@@ -421,6 +598,7 @@ export default function AdminDashboard() {
     { key: 'students', label: '👥', title: 'Students' },
     { key: 'applications', label: '📋', title: 'Applications' },
     { key: 'assignments', label: '🚐', title: 'Daily Assignments' },
+    { key: 'departures', label: '🚍', title: 'Departures' },
     { key: 'fees', label: '💳', title: 'Fees' },
     {
       key: 'messages',
@@ -1102,6 +1280,275 @@ export default function AdminDashboard() {
                 >
                   {savingAssignment ? 'Saving...' : 'Save All Assignments →'}
                 </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'departures' && (
+          <div className="space-y-6">
+            <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+              <h2 className="mb-3 text-xl font-semibold text-white">
+                Departure Groups
+              </h2>
+
+              <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]">
+                <input
+                  value={newGroup.university}
+                  onChange={(event) =>
+                    setNewGroup((prev) => ({
+                      ...prev,
+                      university: event.target.value,
+                    }))
+                  }
+                  placeholder="University"
+                  className="rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-white placeholder:text-zinc-600 outline-none focus:border-yellow-400"
+                />
+                <input
+                  value={newGroup.department}
+                  onChange={(event) =>
+                    setNewGroup((prev) => ({
+                      ...prev,
+                      department: event.target.value,
+                    }))
+                  }
+                  placeholder="Department"
+                  className="rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-white placeholder:text-zinc-600 outline-none focus:border-yellow-400"
+                />
+                <input
+                  value={newGroup.description}
+                  onChange={(event) =>
+                    setNewGroup((prev) => ({
+                      ...prev,
+                      description: event.target.value,
+                    }))
+                  }
+                  placeholder="Optional note"
+                  className="rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-white placeholder:text-zinc-600 outline-none focus:border-yellow-400"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddDepartureGroup}
+                  disabled={addingGroup}
+                  className="rounded-xl bg-gradient-to-r from-[#facc15] via-[#fbbf24] to-[#f59e0b] px-4 py-3 text-sm font-semibold text-slate-950"
+                >
+                  {addingGroup ? 'Adding...' : 'Add'}
+                </button>
+              </div>
+
+              {groupSuccess && (
+                <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+                  ✅ Departure group added successfully.
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+              <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-white">
+                    Post Departure Slots
+                  </h2>
+                  <p className="text-sm text-zinc-400">
+                    Assign slot times by university and department group.
+                  </p>
+                </div>
+
+                <div className="w-full max-w-[220px]">
+                  <label className="mb-1 block text-sm text-zinc-300">
+                    Slot Date
+                  </label>
+                  <input
+                    type="date"
+                    value={slotDate}
+                    onChange={(event) => setSlotDate(event.target.value)}
+                    className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-white outline-none focus:border-yellow-400"
+                  />
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="mb-2 block text-sm text-zinc-300">
+                  Select Group
+                </label>
+                <select
+                  value={selectedGroupId}
+                  onChange={(event) => setSelectedGroupId(event.target.value)}
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-white outline-none focus:border-yellow-400"
+                >
+                  <option value="">Choose a department group...</option>
+                  {departureGroups.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.university} — {group.department}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedGroupId && (
+                <div className="space-y-3">
+                  {Array.from({ length: 5 }, (_, index) => index + 1).map(
+                    (slotNumber) => {
+                      const draft = slotInputs[slotNumber] ?? {
+                        slot_number: slotNumber,
+                        pickup_time: '',
+                        departure_time: '',
+                        notes: '',
+                        status: 'available',
+                      };
+
+                      return (
+                        <div
+                          key={slotNumber}
+                          className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-3"
+                        >
+                          <div className="mb-2 flex items-center justify-between gap-3">
+                            <h3 className="font-semibold text-white">
+                              Slot {slotNumber}
+                            </h3>
+                            <select
+                              value={draft.status}
+                              onChange={(event) =>
+                                setSlotInputs((prev) => ({
+                                  ...prev,
+                                  [slotNumber]: {
+                                    ...draft,
+                                    status: event.target.value,
+                                  },
+                                }))
+                              }
+                              className="rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs text-white outline-none"
+                            >
+                              <option value="available">Available</option>
+                              <option value="unavailable">Unavailable</option>
+                            </select>
+                          </div>
+
+                          <div className="grid gap-3 md:grid-cols-3">
+                            <input
+                              type="time"
+                              value={draft.pickup_time}
+                              onChange={(event) =>
+                                setSlotInputs((prev) => ({
+                                  ...prev,
+                                  [slotNumber]: {
+                                    ...draft,
+                                    pickup_time: event.target.value,
+                                  },
+                                }))
+                              }
+                              className="rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-white outline-none focus:border-yellow-400"
+                            />
+                            <input
+                              type="time"
+                              value={draft.departure_time}
+                              onChange={(event) =>
+                                setSlotInputs((prev) => ({
+                                  ...prev,
+                                  [slotNumber]: {
+                                    ...draft,
+                                    departure_time: event.target.value,
+                                  },
+                                }))
+                              }
+                              className="rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-white outline-none focus:border-yellow-400"
+                            />
+                            <input
+                              value={draft.notes}
+                              onChange={(event) =>
+                                setSlotInputs((prev) => ({
+                                  ...prev,
+                                  [slotNumber]: {
+                                    ...draft,
+                                    notes: event.target.value,
+                                  },
+                                }))
+                              }
+                              placeholder="Notes"
+                              className="rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-yellow-400"
+                            />
+                          </div>
+                        </div>
+                      );
+                    },
+                  )}
+
+                  {slotsSuccess && (
+                    <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+                      ✅ Departure slots posted for the selected date.
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleSaveDepartureSlots}
+                    disabled={savingSlots}
+                    className="rounded-xl bg-gradient-to-r from-[#facc15] via-[#fbbf24] to-[#f59e0b] px-5 py-3 text-sm font-semibold text-slate-950 shadow-[0_15px_30px_rgba(250,204,21,0.3)]"
+                  >
+                    {savingSlots ? 'Posting...' : 'Post Slots for This Group →'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {selectedGroupId && (
+              <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+                <h2 className="mb-4 text-xl font-semibold text-white">
+                  Posted Slots
+                </h2>
+
+                {departureSlots.filter(
+                  (slot) =>
+                    slot.group_id === selectedGroupId &&
+                    slot.slot_date === slotDate,
+                ).length === 0 ? (
+                  <p className="text-zinc-400">
+                    No slots posted for this group yet.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {departureSlots
+                      .filter(
+                        (slot) =>
+                          slot.group_id === selectedGroupId &&
+                          slot.slot_date === slotDate,
+                      )
+                      .map((slot) => (
+                        <div
+                          key={slot.id}
+                          className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/70 px-4 py-3"
+                        >
+                          <div>
+                            <p className="font-medium text-white">
+                              Slot {slot.slot_number}
+                            </p>
+                            <p className="text-xs text-zinc-400">
+                              {slot.pickup_time} → {slot.departure_time}
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleToggleDepartureSlotStatus(
+                                slot.id,
+                                slot.status,
+                              )
+                            }
+                            className={`rounded-full px-2 py-1 text-[10px] font-medium ${
+                              slot.status === 'available'
+                                ? 'bg-emerald-500/15 text-emerald-300'
+                                : 'bg-red-500/15 text-red-300'
+                            }`}
+                          >
+                            {slot.status === 'available'
+                              ? 'Available'
+                              : 'Hidden'}
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
