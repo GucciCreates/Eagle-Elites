@@ -117,9 +117,12 @@ export default function OnboardingPayment() {
               <div className="mt-4 space-y-3 text-sm text-zinc-200">
                 {[
                   { label: 'Bank', value: 'Meezan Bank' },
-                  { label: 'Account Title', value: 'Eagle Elites Transport' },
-                  { label: 'Account Number', value: '0123-4567890-001' },
-                  { label: 'IBAN', value: 'PK00MEZN0001234567890001' },
+                  {
+                    label: 'Account Title',
+                    value: 'Eagles Elite Transport Service & Tour Planners',
+                  },
+                  { label: 'A/C No', value: '98370114507755' },
+                  { label: 'IBAN', value: 'PK31MEZN0098370114507755' },
                 ].map((item) => (
                   <div key={item.label} className="flex justify-between gap-4">
                     <span className="text-zinc-400">{item.label}</span>

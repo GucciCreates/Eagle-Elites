@@ -83,6 +83,10 @@ export default function AdminDashboard() {
   const [savingAssignment, setSavingAssignment] = useState(false);
   const [assignSuccess, setAssignSuccess] = useState(false);
 
+  const [editingPrice, setEditingPrice] = useState<Record<string, string>>({});
+  const [savingPrice, setSavingPrice] = useState<string | null>(null);
+  const [priceSuccess, setPriceSuccess] = useState<string | null>(null);
+
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [savingStudent, setSavingStudent] = useState(false);
 
@@ -100,6 +104,8 @@ export default function AdminDashboard() {
 
   const [newVehicle, setNewVehicle] = useState('');
   const [addingVehicle, setAddingVehicle] = useState(false);
+  const [newRouteName, setNewRouteName] = useState('');
+  const [newRoutePrice, setNewRoutePrice] = useState('');
 
   const router = useRouter();
   const supabase = createClient();
@@ -329,6 +335,52 @@ export default function AdminDashboard() {
     setAddingVehicle(false);
   };
 
+  const handleUpdatePrice = async (routeId: string) => {
+    const rawValue = editingPrice[routeId];
+    const newPrice = Number(rawValue);
+
+    if (!rawValue || !Number.isFinite(newPrice) || newPrice <= 0) {
+      return;
+    }
+
+    setSavingPrice(routeId);
+
+    const { error } = await supabase
+      .from('routes')
+      .update({ price: newPrice })
+      .eq('id', routeId);
+
+    if (!error) {
+      setRoutes((prev) =>
+        prev.map((route) =>
+          route.id === routeId ? { ...route, price: newPrice } : route,
+        ),
+      );
+      setPriceSuccess(routeId);
+      setTimeout(() => setPriceSuccess(null), 3000);
+    }
+
+    setSavingPrice(null);
+  };
+
+  const handleAddRoute = async () => {
+    if (!newRouteName.trim() || !newRoutePrice.trim()) return;
+
+    const parsedPrice = Number(newRoutePrice);
+    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) return;
+
+    const { data } = await supabase
+      .from('routes')
+      .insert({ name: newRouteName.trim(), price: parsedPrice })
+      .select()
+      .single();
+
+    if (data) setRoutes((prev) => [...prev, data as Route]);
+
+    setNewRouteName('');
+    setNewRoutePrice('');
+  };
+
   const handleApprove = async (studentId: string) => {
     setProcessingApp(studentId);
     await supabase
@@ -378,6 +430,7 @@ export default function AdminDashboard() {
     { key: 'announcements', label: '📢', title: 'Announcements' },
     { key: 'holidays', label: '📆', title: 'Holidays' },
     { key: 'vehicles', label: '🚌', title: 'Vehicles' },
+    { key: 'pricing', label: '💰', title: 'Pricing' },
   ];
 
   if (loading) {
@@ -1407,6 +1460,132 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'pricing' && (
+          <div className="space-y-6">
+            <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+              <h2 className="mb-2 text-2xl font-semibold text-white">
+                Route Pricing
+              </h2>
+              <p className="mb-4 text-sm text-zinc-400">
+                Update prices here and they reflect instantly on the landing
+                page and student portal.
+              </p>
+
+              <div className="mb-5 flex items-start gap-3 rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-3 text-sm text-yellow-100">
+                <span className="mt-0.5 text-base">⚠️</span>
+                <p>
+                  Price changes are live immediately. Students will see updated
+                  prices on the landing page right away.
+                </p>
+              </div>
+
+              {routes.length === 0 ? (
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-6 text-center">
+                  <div className="mb-2 text-3xl">🗺️</div>
+                  <p className="text-zinc-400">No routes found</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {routes.map((route) => (
+                    <div
+                      key={route.id}
+                      className="rounded-2xl border border-zinc-800 bg-zinc-950/80 p-4"
+                    >
+                      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <h3 className="text-lg font-semibold text-white">
+                            {route.name}
+                          </h3>
+                          <p className="text-sm text-zinc-400">
+                            Current price:{' '}
+                            <span className="font-medium text-yellow-300">
+                              PKR {route.price.toLocaleString()}
+                            </span>{' '}
+                            / month
+                          </p>
+                        </div>
+
+                        {priceSuccess === route.id && (
+                          <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-300">
+                            ✅ Updated!
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                        <div className="relative flex-1">
+                          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-400">
+                            PKR
+                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={editingPrice[route.id] ?? route.price}
+                            onChange={(event) =>
+                              setEditingPrice((prev) => ({
+                                ...prev,
+                                [route.id]: event.target.value,
+                              }))
+                            }
+                            className="w-full rounded-xl border border-zinc-700 bg-zinc-800 pl-12 pr-4 py-2.5 text-white placeholder:text-zinc-600 outline-none focus:border-yellow-400"
+                            placeholder="Enter new price"
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleUpdatePrice(route.id)}
+                          disabled={savingPrice === route.id}
+                          className="rounded-xl bg-gradient-to-r from-[#facc15] via-[#fbbf24] to-[#f59e0b] px-5 py-2.5 text-sm font-bold text-slate-950 transition hover:brightness-105 disabled:opacity-40"
+                        >
+                          {savingPrice === route.id ? '...' : 'Update →'}
+                        </button>
+                      </div>
+
+                      <p className="mt-3 text-xs text-zinc-500">
+                        AC price auto-calculated as PKR{' '}
+                        {(
+                          Number(editingPrice[route.id] ?? route.price) + 500
+                        ).toLocaleString()}{' '}
+                        (base + PKR 500)
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+              <h2 className="mb-4 text-xl font-semibold text-white">
+                Add New Route
+              </h2>
+
+              <div className="grid gap-3 md:grid-cols-[1fr_200px_auto]">
+                <input
+                  value={newRouteName}
+                  onChange={(event) => setNewRouteName(event.target.value)}
+                  placeholder="Route name"
+                  className="rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-white placeholder:text-zinc-600 outline-none focus:border-yellow-400"
+                />
+                <input
+                  type="number"
+                  value={newRoutePrice}
+                  onChange={(event) => setNewRoutePrice(event.target.value)}
+                  placeholder="Price"
+                  className="rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-white placeholder:text-zinc-600 outline-none focus:border-yellow-400"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddRoute}
+                  className="rounded-xl bg-zinc-700 px-4 py-3 text-sm font-bold text-white transition hover:bg-zinc-600"
+                >
+                  Add
+                </button>
+              </div>
             </div>
           </div>
         )}
