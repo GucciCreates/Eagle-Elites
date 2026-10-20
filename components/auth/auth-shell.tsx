@@ -84,6 +84,10 @@ type AuthShellProps = {
   subtitle?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
+  /** Wider single column for multi-field forms (onboarding). */
+  wide?: boolean;
+  /** Rendered above the title, e.g. a progress stepper. */
+  top?: ReactNode;
 };
 
 /** Shared, minimal layout for every auth page. */
@@ -94,6 +98,8 @@ export default function AuthShell({
   children,
   footer,
   panel,
+  wide,
+  top,
 }: AuthShellProps) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#05070b] text-white">
@@ -104,7 +110,7 @@ export default function AuthShell({
 
       <div
         className={`relative mx-auto flex min-h-screen w-full flex-col px-4 py-6 sm:py-10 ${
-          panel ? 'max-w-md lg:max-w-5xl' : 'max-w-md'
+          panel ? 'max-w-md lg:max-w-5xl' : wide ? 'max-w-2xl' : 'max-w-md'
         }`}
       >
         <Link
@@ -121,6 +127,7 @@ export default function AuthShell({
         >
           {panel && <SidePanel variant={panel} />}
           <div className="flex flex-col justify-center lg:py-6">
+            {top}
             <div className="mb-6 text-center">
               <Link
                 href="/"

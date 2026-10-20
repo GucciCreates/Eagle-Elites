@@ -52,6 +52,7 @@ Opted-in students receive WhatsApp template messages for:
 | Event | When | Template (default name) | Body variables |
 |---|---|---|---|
 | Approval | Admin approves an application | `ee_application_approved` | `{{1}}` name |
+| Rejection | Admin rejects an application (needs fix) | `ee_application_needs_fix` | `{{1}}` name, `{{2}}` reason |
 | Fee due | 1st of the month, unpaid students (cron) | `ee_fee_due` | `{{1}}` name, `{{2}}` amount, `{{3}}` due date |
 | Fee overdue | 10th of the month, still unpaid (cron) | `ee_fee_overdue` | `{{1}}` name, `{{2}}` amount |
 | Holiday | Admin adds a no-service day | `ee_holiday_notice` | `{{1}}` date, `{{2}}` reason |
@@ -84,7 +85,7 @@ logged as `skipped`.
    | `CRON_SECRET` | yes | Any long random string; Vercel Cron sends it automatically |
    | `WHATSAPP_TEMPLATE_LANG` | no | Default `en` |
    | `WHATSAPP_API_VERSION` | no | Default `v21.0` |
-   | `WHATSAPP_TEMPLATE_APPROVAL`, `_FEE_DUE`, `_FEE_OVERDUE`, `_HOLIDAY`, `_ASSIGNMENT`, `_ANNOUNCEMENT`, `_TEST` | no | Override template names |
+   | `WHATSAPP_TEMPLATE_APPROVAL`, `_REJECTION`, `_FEE_DUE`, `_FEE_OVERDUE`, `_HOLIDAY`, `_ASSIGNMENT`, `_ANNOUNCEMENT`, `_TEST` | no | Override template names |
 
 4. Cron jobs are defined in `vercel.json` (09:00 PKT on the 1st and 10th).
 5. Admin → WhatsApp shows which variables are set and lets you send a test.

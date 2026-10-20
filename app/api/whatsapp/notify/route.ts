@@ -8,6 +8,7 @@ import { sendToRecipients, type Recipient } from '@/lib/whatsapp/send';
 
 type Body =
   | { event: 'approval'; studentId: string }
+  | { event: 'rejection'; studentId: string }
   | { event: 'holiday'; date: string; reason: string }
   | { event: 'assignment'; date: string; studentIds: string[] }
   | { event: 'announcement'; title: string; message: string }
@@ -97,6 +98,28 @@ export async function POST(request: Request) {
         recipients,
         (r) => [r.full_name || 'Student'],
         (r) => `approval:${r.id}`,
+      );
+      break;
+    }
+
+    case 'rejection': {
+      // Email: no transactional provider is configured (Supabase Auth only
+      // sends auth emails), so rejection is WhatsApp + log only.
+      const { data } = await service
+        .from('profiles')
+        .select('id, phone, full_name, whatsapp_opt_in, rejected_reason')
+        .eq('id', body.studentId)
+        .maybeSingle();
+      const recipients = data?.whatsapp_opt_in ? [data as Recipient] : [];
+      const reason =
+        (data?.rejected_reason as string | null) ||
+        'Please check your application.';
+      summary = await sendToRecipients(
+        service,
+        'rejection',
+        recipients,
+        (r) => [r.full_name || 'Student', reason.slice(0, 200)],
+        (r) => `rejection:${r.id}:${Date.now()}`,
       );
       break;
     }

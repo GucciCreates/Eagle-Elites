@@ -7,7 +7,7 @@ import { getPakistanDate } from '@/lib/date/pakistan';
 import PaymentSettingsTab from '@/components/admin/payment-settings-tab';
 import TimeOptionsTab from '@/components/admin/time-options-tab';
 import WhatsAppTab from '@/components/admin/whatsapp-tab';
-import ProofViewer from '@/components/admin/proof-viewer';
+import ApplicationsTab, { type ApplicationRow } from '@/components/admin/applications-tab';
 import { notifyWhatsApp, type NotifyResponse } from '@/lib/whatsapp/client';
 
 function describeWhatsApp(result: NotifyResponse) {
@@ -47,22 +47,7 @@ type Notification = {
   message: string;
   created_at: string;
 };
-type Application = {
-  id: string;
-  full_name: string;
-  email: string;
-  user_type: string;
-  institution: string;
-  cnic_last4: string;
-  phone: string;
-  pickup_area: string;
-  preferred_morning: string;
-  preferred_evening: string;
-  payment_transaction_id: string;
-  payment_proof_url: string;
-  applied_at: string;
-  status: string;
-};
+type Application = ApplicationRow;
 type DepartureGroup = {
   id: string;
   university: string;
@@ -106,8 +91,6 @@ export default function AdminDashboard() {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
-  const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
-  const [processingApp, setProcessingApp] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -238,7 +221,7 @@ export default function AdminDashboard() {
       ] = await Promise.all([
         supabase
           .from('profiles')
-          .select('*, routes(name)')
+          .select('*, routes!profiles_route_id_fkey(name)')
           .eq('role', 'student')
           .order('full_name'),
         supabase.from('routes').select('*'),
@@ -256,7 +239,7 @@ export default function AdminDashboard() {
           .from('profiles')
           .select('*')
           .eq('status', 'pending')
-          .order('applied_at', { ascending: false }),
+          .order('applied_at', { ascending: true }),
         supabase
           .from('departure_groups')
           .select('*')
@@ -618,37 +601,6 @@ export default function AdminDashboard() {
     setNewRoutePrice('');
   };
 
-  const handleApprove = async (studentId: string) => {
-    setProcessingApp(studentId);
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        status: 'active',
-        approved_at: new Date().toISOString(),
-      })
-      .eq('id', studentId);
-    if (!error) {
-      void notifyWhatsApp({ event: 'approval', studentId }).then((result) =>
-        setWhatsAppNotice(describeWhatsApp(result)),
-      );
-    }
-    setApplications((prev) => prev.filter((a) => a.id !== studentId));
-    setProcessingApp(null);
-  };
-
-  const handleReject = async (studentId: string) => {
-    setProcessingApp(studentId);
-    await supabase
-      .from('profiles')
-      .update({
-        status: 'rejected',
-        rejected_reason: rejectReason[studentId] || 'Application not approved.',
-      })
-      .eq('id', studentId);
-    setApplications((prev) => prev.filter((a) => a.id !== studentId));
-    setProcessingApp(null);
-  };
-
   const unpaidCount = students.filter(
     (student) => student.fee_status !== 'paid',
   ).length;
@@ -661,7 +613,11 @@ export default function AdminDashboard() {
   const tabs = [
     { key: 'overview', label: '📊', title: 'Overview' },
     { key: 'students', label: '👥', title: 'Students' },
-    { key: 'applications', label: '📋', title: 'Applications' },
+    {
+      key: 'applications',
+      label: '📋',
+      title: `Applications${applications.length > 0 ? ` (${applications.length})` : ''}`,
+    },
     { key: 'assignments', label: '🚐', title: 'Daily Assignments' },
     { key: 'departures', label: '🚍', title: 'Departures' },
     { key: 'fees', label: '💳', title: 'Fees' },
@@ -1072,137 +1028,16 @@ export default function AdminDashboard() {
         )}
 
         {activeTab === 'applications' && (
-          <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
-            <div className="mb-5">
-              <h2 className="text-xl font-semibold text-white">
-                New Applications
-              </h2>
-              <p className="text-sm text-zinc-400">
-                {applications.length} pending approval
-              </p>
-            </div>
-
-            {applications.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-950/60 p-8 text-center text-zinc-400">
-                <p className="text-3xl">📋</p>
-                <p className="mt-3 text-lg text-white">
-                  No pending applications
-                </p>
-              </div>
-            ) : (
-              applications.map((app) => (
-                <div
-                  key={app.id}
-                  className="mb-4 rounded-[24px] border border-zinc-800 bg-zinc-950/70 p-4"
-                >
-                  <div className="mb-4 flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-xl font-semibold text-white">
-                        {app.full_name}
-                      </h3>
-                      <p className="text-sm text-zinc-400">{app.email}</p>
-                      <p className="mt-1 text-xs text-zinc-500">
-                        Applied:{' '}
-                        {new Date(app.applied_at).toLocaleDateString('en-PK', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </p>
-                    </div>
-
-                    <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2 py-1 text-[10px] font-medium text-yellow-300">
-                      {app.user_type === 'student'
-                        ? '🎓 Student'
-                        : '👨‍🏫 Faculty'}
-                    </span>
-                  </div>
-
-                  <div className="mb-4 grid gap-3 md:grid-cols-2">
-                    {[
-                      { label: 'Institution', value: app.institution },
-                      {
-                        label:
-                          app.user_type === 'student'
-                            ? 'Enrollment No.'
-                            : 'Employee Code',
-                        value: app.cnic_last4,
-                      },
-                      { label: 'Phone', value: app.phone },
-                      { label: 'Pickup Area', value: app.pickup_area },
-                      {
-                        label: 'Morning',
-                        value: app.preferred_morning?.slice(0, 5) || '—',
-                      },
-                      {
-                        label: 'Evening',
-                        value: app.preferred_evening?.slice(0, 5) || '—',
-                      },
-                    ].map((item) => (
-                      <div
-                        key={item.label}
-                        className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3"
-                      >
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                          {item.label}
-                        </p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {item.value}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mb-4 rounded-xl border border-zinc-800 bg-zinc-900/80 p-3">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                      Transaction ID
-                    </p>
-                    <p className="mt-1 text-sm font-medium text-white">
-                      {app.payment_transaction_id}
-                    </p>
-                  </div>
-
-                  {app.payment_proof_url && (
-                    <div className="mb-4">
-                      <ProofViewer value={app.payment_proof_url} />
-                    </div>
-                  )}
-
-                  <textarea
-                    value={rejectReason[app.id] ?? ''}
-                    onChange={(event) =>
-                      setRejectReason((prev) => ({
-                        ...prev,
-                        [app.id]: event.target.value,
-                      }))
-                    }
-                    placeholder="Rejection reason (optional)"
-                    className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-red-400 transition"
-                  />
-
-                  <div className="mt-4 flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => handleReject(app.id)}
-                      disabled={processingApp === app.id}
-                      className="flex-1 rounded-xl border border-red-800 bg-red-950 px-3 py-3 text-sm font-semibold text-red-400 transition hover:bg-red-900 disabled:opacity-40"
-                    >
-                      {processingApp === app.id ? '...' : '❌ Reject'}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleApprove(app.id)}
-                      disabled={processingApp === app.id}
-                      className="flex-1 rounded-xl bg-yellow-400 px-3 py-3 text-sm font-bold text-black transition hover:bg-yellow-300 disabled:opacity-40"
-                    >
-                      {processingApp === app.id ? '...' : '✅ Approve'}
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+          <ApplicationsTab
+            applications={applications}
+            onRemove={(ids) =>
+              setApplications((prev) => prev.filter((a) => !ids.includes(a.id)))
+            }
+            routes={routes}
+            groups={departureGroups}
+            allTransactions={students as unknown as { id: string; payment_transaction_id: string | null }[]}
+            onWhatsApp={(result) => setWhatsAppNotice(describeWhatsApp(result))}
+          />
         )}
 
         {activeTab === 'assignments' && (

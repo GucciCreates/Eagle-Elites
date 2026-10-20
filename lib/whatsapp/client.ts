@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client';
 
 export type NotifyPayload =
   | { event: 'approval'; studentId: string }
+  | { event: 'rejection'; studentId: string }
   | { event: 'holiday'; date: string; reason: string }
   | { event: 'assignment'; date: string; studentIds: string[] }
   | { event: 'announcement'; title: string; message: string }
