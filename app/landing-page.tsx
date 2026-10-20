@@ -253,7 +253,19 @@ const UNIVERSITIES = [
   'NDU',
   'Islamic International University',
 ];
-const STAT_TARGETS = { years: 7, students: 500, zones: 9 };
+const STAT_TARGETS = {
+  years: 7,
+  students: 500,
+  zones: PICKUP_ZONES.length,
+};
+
+const NAV_LINKS = [
+  { href: '#pricing', label: 'Pricing' },
+  { href: '#routes', label: 'Routes' },
+  { href: '#fleet', label: 'Fleet' },
+  { href: '#features', label: 'Why Us' },
+  { href: '#contact', label: 'Contact' },
+];
 const FALLBACK_PRICE = 14000;
 const SKELETON_CLASS = 'inline-block animate-pulse rounded-lg bg-zinc-800';
 
@@ -269,6 +281,7 @@ export default function LandingPage({
 }) {
   const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   // Counters render their final values on the server so the page never
   // shows "0+" if JS is slow or the stats section is already in view.
   const [yearsCount, setYearsCount] = useState(STAT_TARGETS.years);
@@ -317,6 +330,22 @@ export default function LandingPage({
 
     return () => clearInterval(interval);
   }, [supabase]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    const handleResize = () => {
+      if (window.innerWidth >= 768) setMenuOpen(false);
+    };
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -416,36 +445,15 @@ export default function LandingPage({
           </div>
 
           <div className="hidden items-center gap-7 md:flex">
-            <a
-              href="#pricing"
-              className="text-sm text-zinc-400 transition hover:text-white"
-            >
-              Pricing
-            </a>
-            <a
-              href="#routes"
-              className="text-sm text-zinc-400 transition hover:text-white"
-            >
-              Routes
-            </a>
-            <a
-              href="#fleet"
-              className="text-sm text-zinc-400 transition hover:text-white"
-            >
-              Fleet
-            </a>
-            <a
-              href="#features"
-              className="text-sm text-zinc-400 transition hover:text-white"
-            >
-              Why Us
-            </a>
-            <a
-              href="#contact"
-              className="text-sm text-zinc-400 transition hover:text-white"
-            >
-              Contact
-            </a>
+            {NAV_LINKS.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="text-sm text-zinc-400 transition hover:text-white"
+              >
+                {link.label}
+              </a>
+            ))}
           </div>
 
           <div className="flex items-center gap-3">
@@ -463,8 +471,64 @@ export default function LandingPage({
             >
               Book Seat
             </button>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((open) => !open)}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-menu"
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/80 text-zinc-300 transition hover:text-white md:hidden"
+            >
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                className="h-5 w-5"
+              >
+                {menuOpen ? (
+                  <path d="M6 6l12 12M18 6L6 18" />
+                ) : (
+                  <path d="M4 7h16M4 12h16M4 17h16" />
+                )}
+              </svg>
+            </button>
           </div>
         </div>
+        {menuOpen && (
+          <div
+            id="mobile-menu"
+            className="border-t border-zinc-800/90 bg-[#0a0f14]/95 px-6 pb-5 pt-2 backdrop-blur-xl md:hidden"
+          >
+            <ul className="flex flex-col">
+              {NAV_LINKS.map((link) => (
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    onClick={() => setMenuOpen(false)}
+                    className="block py-3 text-sm text-zinc-300 transition hover:text-white"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+              <li className="mt-2 border-t border-zinc-800 pt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    router.push('/auth/login');
+                  }}
+                  className="block w-full py-3 text-left text-sm font-medium text-zinc-300 transition hover:text-white"
+                >
+                  Log In
+                </button>
+              </li>
+            </ul>
+          </div>
+        )}
       </nav>
 
       <main>
@@ -952,7 +1016,7 @@ export default function LandingPage({
                 📍 Pickup Zones
               </p>
               <h2 className="text-4xl font-black tracking-[-0.05em] text-white md:text-5xl">
-                We cover 9 major zones across Islamabad, Rawalpindi and Wah
+                We cover {PICKUP_ZONES.length} major zones across Islamabad, Rawalpindi and Wah
                 Cantt
               </h2>
             </div>
