@@ -7,7 +7,8 @@ export function getPakistanDate(date = new Date()) {
     month: '2-digit',
     day: '2-digit',
   }).formatToParts(date);
-  const part = (type: string) => parts.find((item) => item.type === type)?.value;
+  const part = (type: string) =>
+    parts.find((item) => item.type === type)?.value;
   return `${part('year')}-${part('month')}-${part('day')}`;
 }
 

@@ -872,10 +872,18 @@ export default function LandingPage({
                           className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-4 shadow-[0_18px_45px_rgba(0,0,0,0.18)]"
                         >
                           <span className={`${SKELETON_CLASS} h-3 w-16`} />
-                          <span className={`${SKELETON_CLASS} mt-3 block h-6 w-3/4`} />
-                          <span className={`${SKELETON_CLASS} mt-5 block h-8 w-32`} />
-                          <span className={`${SKELETON_CLASS} mt-5 block h-5 w-full`} />
-                          <span className={`${SKELETON_CLASS} mt-4 block h-4 w-28`} />
+                          <span
+                            className={`${SKELETON_CLASS} mt-3 block h-6 w-3/4`}
+                          />
+                          <span
+                            className={`${SKELETON_CLASS} mt-5 block h-8 w-32`}
+                          />
+                          <span
+                            className={`${SKELETON_CLASS} mt-5 block h-5 w-full`}
+                          />
+                          <span
+                            className={`${SKELETON_CLASS} mt-4 block h-4 w-28`}
+                          />
                         </div>
                       );
                     }
@@ -1016,8 +1024,8 @@ export default function LandingPage({
                 📍 Pickup Zones
               </p>
               <h2 className="text-4xl font-black tracking-[-0.05em] text-white md:text-5xl">
-                We cover {PICKUP_ZONES.length} major zones across Islamabad, Rawalpindi and Wah
-                Cantt
+                We cover {PICKUP_ZONES.length} major zones across Islamabad,
+                Rawalpindi and Wah Cantt
               </h2>
             </div>
 

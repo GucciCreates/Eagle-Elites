@@ -213,8 +213,7 @@ export default function AccountingDashboard() {
       category: 'Fuel',
       amount: '',
       description: '',
-      expense_date:
-        current.expense_date || getPakistanDate(),
+      expense_date: current.expense_date || getPakistanDate(),
       month:
         current.month ||
         new Date().toLocaleString('en-PK', {

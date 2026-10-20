@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import TimeSelect from '@/components/time-select';
+import { normalizePkPhone } from '@/lib/phone';
+import { fetchTimeOptionsForGroup, type TimeOption } from '@/lib/time-options';
 
 type DepartureGroup = {
   id: string;
@@ -37,12 +40,23 @@ export default function OnboardingProfile() {
   const [pickupArea, setPickupArea] = useState('');
   const [preferredMorning, setPreferredMorning] = useState('');
   const [preferredEvening, setPreferredEvening] = useState('');
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
+  const [timeOptions, setTimeOptions] = useState<{
+    arrival: TimeOption[];
+    departure: TimeOption[];
+  }>({ arrival: [], departure: [] });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [groupsLoading, setGroupsLoading] = useState(true);
 
   const router = useRouter();
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
+
+  useEffect(() => {
+    void fetchTimeOptionsForGroup(supabase, selectedDepartmentId || null).then(
+      setTimeOptions,
+    );
+  }, [supabase, selectedDepartmentId]);
 
   useEffect(() => {
     const fetchGroups = async () => {
@@ -75,6 +89,14 @@ export default function OnboardingProfile() {
       return;
     }
 
+    const normalizedPhone = normalizePkPhone(phone);
+    if (!normalizedPhone) {
+      setError(
+        'Please enter a valid Pakistani phone number, e.g. 0300 1234567.',
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -91,20 +113,33 @@ export default function OnboardingProfile() {
         (group) => group.id === selectedDepartmentId,
       );
 
-      const { error: updateError } = await supabase
+      const updates: Record<string, unknown> = {
+        user_type: userType,
+        institution: selectedGroup?.university || '',
+        cnic_last4: idNumber,
+        phone: `+${normalizedPhone}`,
+        whatsapp_opt_in: whatsappOptIn,
+        pickup_area: pickupArea,
+        preferred_morning: preferredMorning || null,
+        preferred_evening: preferredEvening || null,
+        departure_group_id: selectedDepartmentId,
+        status: 'payment_pending',
+      };
+
+      let { error: updateError } = await supabase
         .from('profiles')
-        .update({
-          user_type: userType,
-          institution: selectedGroup?.university || '',
-          cnic_last4: idNumber,
-          phone,
-          pickup_area: pickupArea,
-          preferred_morning: preferredMorning || null,
-          preferred_evening: preferredEvening || null,
-          departure_group_id: selectedDepartmentId,
-          status: 'payment_pending',
-        })
+        .update(updates)
         .eq('id', session.user.id);
+
+      // Until the WhatsApp migration is applied the column doesn't exist;
+      // save the rest of the profile instead of blocking onboarding.
+      if (updateError?.message?.includes('whatsapp_opt_in')) {
+        delete updates.whatsapp_opt_in;
+        ({ error: updateError } = await supabase
+          .from('profiles')
+          .update(updates)
+          .eq('id', session.user.id));
+      }
 
       if (updateError) throw updateError;
 
@@ -361,11 +396,11 @@ export default function OnboardingProfile() {
                     >
                       🌅 Morning Pickup
                     </label>
-                    <input
+                    <TimeSelect
                       id="preferredMorning"
-                      type="time"
                       value={preferredMorning}
-                      onChange={(e) => setPreferredMorning(e.target.value)}
+                      onChange={setPreferredMorning}
+                      options={timeOptions.arrival}
                       className="w-full rounded-2xl border border-zinc-700/80 bg-zinc-900/80 px-3 py-3 text-white focus:border-yellow-400/80 focus:outline-none focus:ring-2 focus:ring-yellow-400/20"
                     />
                   </div>
@@ -377,11 +412,11 @@ export default function OnboardingProfile() {
                     >
                       🌆 Evening Return
                     </label>
-                    <input
+                    <TimeSelect
                       id="preferredEvening"
-                      type="time"
                       value={preferredEvening}
-                      onChange={(e) => setPreferredEvening(e.target.value)}
+                      onChange={setPreferredEvening}
+                      options={timeOptions.departure}
                       className="w-full rounded-2xl border border-zinc-700/80 bg-zinc-900/80 px-3 py-3 text-white focus:border-yellow-400/80 focus:outline-none focus:ring-2 focus:ring-yellow-400/20"
                     />
                   </div>
@@ -390,6 +425,20 @@ export default function OnboardingProfile() {
                 <p className="text-xs text-zinc-500">
                   Preferred times help admin assign you to the right route.
                 </p>
+
+                <label className="flex items-start gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={whatsappOptIn}
+                    onChange={(e) => setWhatsappOptIn(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-yellow-400"
+                  />
+                  <span>
+                    Send me WhatsApp updates on this number (approval, fee
+                    reminders, holidays and vehicle changes). You can turn this
+                    off anytime in your profile.
+                  </span>
+                </label>
 
                 <button
                   type="submit"
