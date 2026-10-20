@@ -7,7 +7,12 @@ import { getPostLoginPath } from '@/lib/auth/post-login-path';
 import { createClient } from '@/lib/supabase/client';
 
 type ProfileStatus =
-  'incomplete' | 'payment_pending' | 'pending' | 'active' | 'rejected' | string;
+  | 'incomplete'
+  | 'payment_pending'
+  | 'pending'
+  | 'active'
+  | 'rejected'
+  | string;
 
 type Profile = {
   status: ProfileStatus;
