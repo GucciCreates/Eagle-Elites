@@ -101,15 +101,13 @@ export default function OnboardingPayment() {
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from('payment-proofs')
-        .getPublicUrl(filePath);
-
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
           payment_transaction_id: transactionId,
-          payment_proof_url: urlData.publicUrl,
+          // Store the storage path; the bucket is private and admins view it
+          // through a short-lived signed URL.
+          payment_proof_url: filePath,
           status: 'pending',
           applied_at: new Date().toISOString(),
         })

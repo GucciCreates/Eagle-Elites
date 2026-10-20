@@ -7,6 +7,7 @@ import { getPakistanDate } from '@/lib/date/pakistan';
 import PaymentSettingsTab from '@/components/admin/payment-settings-tab';
 import TimeOptionsTab from '@/components/admin/time-options-tab';
 import WhatsAppTab from '@/components/admin/whatsapp-tab';
+import ProofViewer from '@/components/admin/proof-viewer';
 import { notifyWhatsApp, type NotifyResponse } from '@/lib/whatsapp/client';
 
 function describeWhatsApp(result: NotifyResponse) {
@@ -1163,17 +1164,7 @@ export default function AdminDashboard() {
 
                   {app.payment_proof_url && (
                     <div className="mb-4">
-                      <a
-                        href={app.payment_proof_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center justify-between rounded-xl border border-zinc-700 bg-zinc-900/80 px-3 py-3 text-sm text-yellow-300 transition hover:border-yellow-400"
-                      >
-                        <span>Payment Proof</span>
-                        <span className="text-xs text-zinc-400">
-                          Tap to open full image
-                        </span>
-                      </a>
+                      <ProofViewer value={app.payment_proof_url} />
                     </div>
                   )}
 
