@@ -19,6 +19,19 @@ export default function OnboardingPayment() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('Choose a JPG, PNG, or WebP image.');
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Payment proof images must be 5 MB or smaller.');
+      e.target.value = '';
+      return;
+    }
+
+    setError('');
     setProofFile(file);
     const reader = new FileReader();
     reader.onload = () => setProofPreview(reader.result as string);
@@ -51,7 +64,12 @@ export default function OnboardingPayment() {
         return;
       }
 
-      const fileExt = proofFile.name.split('.').pop() ?? 'png';
+      const fileExt =
+        proofFile.type === 'image/jpeg'
+          ? 'jpg'
+          : proofFile.type === 'image/webp'
+            ? 'webp'
+            : 'png';
       const filePath = `${session.user.id}/payment-proof.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
@@ -220,7 +238,7 @@ export default function OnboardingPayment() {
                     <input
                       id="proof-upload"
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/webp"
                       onChange={handleFileChange}
                       className="hidden"
                     />

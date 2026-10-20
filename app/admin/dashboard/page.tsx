@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { getPakistanDate } from '@/lib/date/pakistan';
 
 type Student = {
   id: string;
@@ -99,7 +100,7 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
 
   const [assignDate, setAssignDate] = useState(() =>
-    typeof window === 'undefined' ? '' : new Date().toISOString().split('T')[0],
+    typeof window === 'undefined' ? '' : getPakistanDate(),
   );
   const [groupAssignments, setGroupAssignments] = useState<
     Record<string, AssignmentGroup>
@@ -133,7 +134,7 @@ export default function AdminDashboard() {
   const [departureGroups, setDepartureGroups] = useState<DepartureGroup[]>([]);
   const [departureSlots, setDepartureSlots] = useState<DepartureSlot[]>([]);
   const [slotDate, setSlotDate] = useState(() =>
-    typeof window === 'undefined' ? '' : new Date().toISOString().split('T')[0],
+    typeof window === 'undefined' ? '' : getPakistanDate(),
   );
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [slotInputs, setSlotInputs] = useState<Record<number, SlotDraft>>({

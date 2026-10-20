@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { getPakistanDate, getPakistanWeekStart } from '@/lib/date/pakistan';
 
 type Route = { id: string; name: string; price: number };
 type Expense = {
@@ -110,23 +111,21 @@ export default function AccountingDashboard() {
       d.setMonth(d.getMonth() - i);
       return d.toLocaleString('en-PK', { month: 'long', year: 'numeric' });
     });
-    const start = new Date(now);
-    const day = now.getDay();
-    start.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+    const start = new Date(`${getPakistanWeekStart()}T00:00:00Z`);
     const end = new Date(start);
-    end.setDate(start.getDate() + 6);
+    end.setUTCDate(start.getUTCDate() + 6);
 
     /* eslint-disable react-hooks/set-state-in-effect */
     setSelectedMonth((current) => current || monthName);
     setMonthOptions(monthList);
     setWeek({
-      start: start.toISOString().split('T')[0],
-      end: end.toISOString().split('T')[0],
+      start: start.toISOString().slice(0, 10),
+      end: end.toISOString().slice(0, 10),
       label: `${start.toLocaleDateString('en-PK', { day: 'numeric', month: 'short' })} – ${end.toLocaleDateString('en-PK', { day: 'numeric', month: 'short' })}`,
     });
     setExpenseForm((current) => ({
       ...current,
-      expense_date: current.expense_date || now.toISOString().split('T')[0],
+      expense_date: current.expense_date || getPakistanDate(),
       month: current.month || monthName,
     }));
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -215,7 +214,7 @@ export default function AccountingDashboard() {
       amount: '',
       description: '',
       expense_date:
-        current.expense_date || new Date().toISOString().split('T')[0],
+        current.expense_date || getPakistanDate(),
       month:
         current.month ||
         new Date().toLocaleString('en-PK', {

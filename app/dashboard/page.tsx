@@ -3,6 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPostLoginPath } from '@/lib/auth/post-login-path';
+import {
+  getPakistanDate,
+  getPakistanDateForWeekday,
+  getPakistanWeekStart,
+} from '@/lib/date/pakistan';
 import { createClient } from '@/lib/supabase/client';
 
 type Profile = {
@@ -102,21 +107,12 @@ const DAYS = [
 ];
 
 function getNextWeekStart() {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = day === 0 ? 1 : 8 - day;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + diff);
-  monday.setHours(0, 0, 0, 0);
-  return monday.toISOString().split('T')[0];
+  return getPakistanWeekStart(1);
 }
 
-function canChangeTime(tripTime: string) {
-  const [h, m] = tripTime.split(':').map(Number);
-  const now = new Date();
-  const trip = new Date();
-  trip.setHours(h, m, 0, 0);
-  const diffHours = (trip.getTime() - now.getTime()) / (1000 * 60 * 60);
+function canChangeTime(tripDate: string, tripTime: string) {
+  const trip = new Date(`${tripDate}T${tripTime}:00+05:00`);
+  const diffHours = (trip.getTime() - Date.now()) / (1000 * 60 * 60);
   return diffHours >= 8
     ? { allowed: true, reason: '' }
     : {
@@ -154,19 +150,15 @@ function formatDate(d: string) {
 }
 
 function getNextWeekRange() {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = day === 0 ? 1 : 8 - day;
-  const start = new Date(now);
-  start.setDate(now.getDate() + diff);
-  start.setHours(0, 0, 0, 0);
+  const start = new Date(`${getNextWeekStart()}T00:00:00Z`);
   const end = new Date(start);
-  end.setDate(start.getDate() + 6);
+  end.setUTCDate(start.getUTCDate() + 6);
 
   const format = (date: Date) =>
     date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
+      timeZone: 'UTC',
     });
 
   return `${format(start)} – ${format(end)}`;
@@ -367,7 +359,7 @@ export default function Dashboard() {
         return;
       }
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = getPakistanDate();
       const weekStart = getNextWeekStart();
 
       const [
@@ -445,7 +437,7 @@ export default function Dashboard() {
 
         if (groupData) setMyDepartureGroup(groupData as DepartureGroup);
 
-        const today = new Date().toISOString().split('T')[0];
+        const today = getPakistanDate();
         const { data: slotsData } = await supabase
           .from('departure_slots')
           .select('*')
@@ -556,7 +548,8 @@ export default function Dashboard() {
       changeType === 'arrival'
         ? schedule.arrival_time
         : schedule.departure_time;
-    const { allowed, reason } = canChangeTime(tripTime);
+    const tripDate = getPakistanDateForWeekday(weekStart, changeDay);
+    const { allowed, reason } = canChangeTime(tripDate, tripTime);
     if (!allowed) {
       setChangeError(reason);
       setChangingTime(false);
@@ -619,7 +612,7 @@ export default function Dashboard() {
       return;
     }
 
-    const selectionDate = new Date().toISOString().split('T')[0];
+    const selectionDate = getPakistanDate();
 
     const { data: savedSelection } = await supabase
       .from('departure_selections')
