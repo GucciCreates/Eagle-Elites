@@ -2,6 +2,7 @@
 
 export type WhatsAppEvent =
   | 'approval'
+  | 'rejection'
   | 'fee_due'
   | 'fee_overdue'
   | 'holiday'
@@ -12,6 +13,7 @@ export type WhatsAppEvent =
 /** Template name per event; override with env vars. */
 export const TEMPLATE_ENV: Record<WhatsAppEvent, [string, string]> = {
   approval: ['WHATSAPP_TEMPLATE_APPROVAL', 'ee_application_approved'],
+  rejection: ['WHATSAPP_TEMPLATE_REJECTION', 'ee_application_needs_fix'],
   fee_due: ['WHATSAPP_TEMPLATE_FEE_DUE', 'ee_fee_due'],
   fee_overdue: ['WHATSAPP_TEMPLATE_FEE_OVERDUE', 'ee_fee_overdue'],
   holiday: ['WHATSAPP_TEMPLATE_HOLIDAY', 'ee_holiday_notice'],

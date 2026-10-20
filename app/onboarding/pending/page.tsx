@@ -5,218 +5,243 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getPostLoginPath } from '@/lib/auth/post-login-path';
 import { createClient } from '@/lib/supabase/client';
-
-type ProfileStatus =
-  | 'incomplete'
-  | 'payment_pending'
-  | 'pending'
-  | 'active'
-  | 'rejected'
-  | string;
+import AuthShell from '@/components/auth/auth-shell';
+import Stepper from '@/components/onboarding/stepper';
+import { EXPECTED_REVIEW_HOURS, formatPkr } from '@/lib/onboarding/pricing';
+import { findRejectionReason } from '@/lib/onboarding/rejection-reasons';
 
 type Profile = {
-  status: ProfileStatus;
-  rejected_reason?: string | null;
+  status: string;
+  applied_at: string | null;
+  rejected_reason: string | null;
+  rejection_code: string | null;
+  payment_reference: string | null;
+  amount_due: number | null;
+  waitlisted: boolean | null;
 };
 
+function parseDbTime(iso: string) {
+  // DB timestamps without a zone are UTC.
+  return new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso : `${iso}Z`);
+}
+
+function formatWhen(iso: string | null) {
+  if (!iso) return '';
+  // DB timestamps without a zone are UTC.
+  const date = new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso : `${iso}Z`);
+  return (
+    date.toLocaleString('en-PK', {
+      timeZone: 'Asia/Karachi',
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }) + ' PKT'
+  );
+}
+
 export default function OnboardingPending() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [overdue, setOverdue] = useState(false);
 
   useEffect(() => {
-    const checkStatus = async () => {
+    const check = async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-
       if (!session) {
         router.push('/auth/login');
         return;
       }
-
       const { data } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', session.user.id)
-        .single();
-
-      if (data) {
-        setProfile(data as Profile);
-
-        const nextPath = getPostLoginPath(data.status);
-        if (nextPath !== '/onboarding/pending') {
-          router.push(nextPath);
-          return;
-        }
+        .maybeSingle();
+      if (!data) return;
+      const next = getPostLoginPath(data.status);
+      if (next !== '/onboarding/pending') {
+        router.push(next);
+        return;
       }
-
-      setLoading(false);
+      setProfile(data as Profile);
+      if (data.applied_at) {
+        const hours =
+          (Date.now() - parseDbTime(data.applied_at).getTime()) / 36e5;
+        setOverdue(hours > EXPECTED_REVIEW_HOURS);
+      }
     };
-
-    void checkStatus();
-
-    const interval = setInterval(() => {
-      void checkStatus();
-    }, 30000);
-
+    void check();
+    const interval = setInterval(() => void check(), 30000);
     return () => clearInterval(interval);
   }, [router, supabase]);
 
-  const handleLogout = async () => {
+  const logout = async () => {
     await supabase.auth.signOut();
     router.push('/');
   };
 
-  if (loading) {
+  if (!profile) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#05070b] px-4 text-white">
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-8 text-center shadow-2xl">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#facc15] via-[#fbbf24] to-[#f59e0b] text-xl font-black text-slate-950">
-            EE
-          </div>
-          <p className="text-lg font-medium text-zinc-200">
-            Checking your application status...
-          </p>
-        </div>
-      </div>
+      <AuthShell
+        wide
+        title="Checking your application…"
+        top={<Stepper current={5} />}
+      >
+        <div className="h-40 animate-pulse rounded-2xl bg-zinc-900" />
+      </AuthShell>
     );
   }
 
-  const isRejected = profile?.status === 'rejected';
+  const secondary =
+    'inline-flex flex-1 items-center justify-center rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-medium text-white transition hover:border-zinc-500';
+  const primary =
+    'inline-flex flex-1 items-center justify-center rounded-xl bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 px-4 py-3 text-sm font-semibold text-black';
+
+  if (profile.status === 'rejected') {
+    const reason = findRejectionReason(profile.rejection_code);
+    return (
+      <AuthShell
+        wide
+        eyebrow="Application update"
+        title="Your application needs a fix"
+        subtitle="Nothing is lost. Update the details below and resubmit."
+        top={<Stepper current={5} />}
+      >
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-100">
+            <p className="font-semibold text-red-200">
+              {reason?.label ?? 'Reason'}
+            </p>
+            <p className="mt-1">
+              {profile.rejected_reason ||
+                reason?.message ||
+                'Please contact us for details.'}
+            </p>
+            {reason?.fix && (
+              <p className="mt-2 text-red-100/80">What to do: {reason.fix}</p>
+            )}
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link href="/onboarding/profile" className={primary}>
+              Fix and resubmit →
+            </Link>
+            <a
+              href="https://wa.me/923225166580?text=Hi%20Eagle%20Elites%2C%20my%20application%20needs%20a%20fix."
+              target="_blank"
+              rel="noreferrer"
+              className={secondary}
+            >
+              💬 Ask on WhatsApp
+            </a>
+          </div>
+          <button
+            type="button"
+            onClick={logout}
+            className="w-full text-center text-xs text-zinc-500 hover:text-zinc-300"
+          >
+            Log out
+          </button>
+        </div>
+      </AuthShell>
+    );
+  }
+
+  const appliedAt = profile.applied_at;
+  const timeline = [
+    {
+      label: 'Application submitted',
+      detail: formatWhen(appliedAt),
+      state: 'done',
+    },
+    {
+      label: 'Payment check',
+      detail: `We match your transfer using reference ${profile.payment_reference ?? ''}`,
+      state: 'active',
+    },
+    {
+      label: 'Seat confirmed and account activated',
+      detail: profile.waitlisted
+        ? 'Your route is full. You’re on the waitlist.'
+        : 'You’ll get a WhatsApp message',
+      state: 'todo',
+    },
+  ];
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#05070b] text-white">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(250,204,21,0.12),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.12),_transparent_28%)]" />
+    <AuthShell
+      wide
+      eyebrow="Under review"
+      title="Application submitted 🎉"
+      subtitle={`Most applications are reviewed within ${EXPECTED_REVIEW_HOURS} hours (Mon–Sat).`}
+      top={<Stepper current={5} />}
+    >
+      <div className="space-y-6">
+        <ol className="relative space-y-5 border-l border-zinc-800 pl-6">
+          {timeline.map((step) => (
+            <li key={step.label} className="relative">
+              <span
+                className={`absolute -left-[31px] top-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 ${step.state === 'done' ? 'border-emerald-400 bg-emerald-400' : step.state === 'active' ? 'animate-pulse border-yellow-400 bg-yellow-400/30' : 'border-zinc-700 bg-zinc-900'}`}
+              />
+              <p
+                className={`text-sm font-medium ${step.state === 'todo' ? 'text-zinc-400' : 'text-white'}`}
+              >
+                {step.label}
+              </p>
+              {step.detail && (
+                <p className="mt-0.5 text-xs text-zinc-500">{step.detail}</p>
+              )}
+            </li>
+          ))}
+        </ol>
 
-      <div className="relative mx-auto flex min-h-screen max-w-5xl items-center justify-center px-4 py-10">
-        <div className="w-full overflow-hidden rounded-[30px] border border-white/10 bg-[#0b1018]/80 shadow-[0_30px_120px_rgba(0,0,0,0.55)] backdrop-blur-xl">
-          <div className="border-b border-white/10 bg-white/3 p-6 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-500 text-lg font-black text-black shadow-[0_18px_40px_rgba(250,204,21,0.45)]">
-              EE
-            </div>
+        {profile.waitlisted && (
+          <p className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-sm text-amber-100">
+            Your route is currently full, so you’re on the waitlist. We’ll
+            confirm a seat or offer another route. Your payment is refundable if
+            we can’t seat you.
+          </p>
+        )}
+        {overdue && (
+          <p className="rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-300">
+            Taking longer than usual? Message us on WhatsApp with your reference
+            code and we’ll check right away.
+          </p>
+        )}
+
+        <div className="grid grid-cols-2 gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4 text-sm">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+              Reference
+            </p>
+            <p className="font-mono text-white">{profile.payment_reference}</p>
           </div>
-
-          <div className="p-6 sm:p-8 lg:p-10">
-            {isRejected ? (
-              <div className="space-y-6 text-center">
-                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-red-500/10 text-4xl">
-                  ❌
-                </div>
-
-                <div>
-                  <h1 className="text-3xl font-black text-white">
-                    Application Rejected
-                  </h1>
-                  <p className="mt-3 text-zinc-300">
-                    Unfortunately your application was not approved. Please
-                    contact Eagle Elites for more information.
-                  </p>
-                </div>
-
-                {profile?.rejected_reason && (
-                  <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-left text-sm text-red-100">
-                    <p className="mb-1 font-semibold text-red-200">
-                      Reason given:
-                    </p>
-                    <p>{profile.rejected_reason}</p>
-                  </div>
-                )}
-
-                <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-                  <Link
-                    href="https://wa.me/923225166580?text=Hi%20Eagle%20Elites%2C%20my%20application%20was%20rejected."
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-900 px-5 py-3 text-sm font-medium text-white transition hover:border-zinc-500"
-                  >
-                    💬 Contact on WhatsApp
-                  </Link>
-
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="rounded-2xl bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 px-5 py-3 text-sm font-semibold text-black shadow-[0_14px_30px_rgba(250,204,21,0.35)] transition hover:translate-y-[-1px]"
-                  >
-                    Log Out
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-7 text-center">
-                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-yellow-500/10 text-4xl">
-                  ⏳
-                </div>
-
-                <div>
-                  <h1 className="text-3xl font-black text-white">
-                    Application Submitted!
-                  </h1>
-                  <p className="mt-3 text-zinc-300">
-                    Your application and payment proof are under review. Admin
-                    will verify and activate your account.
-                  </p>
-                </div>
-
-                <div className="grid gap-3 text-left sm:grid-cols-2 lg:grid-cols-5">
-                  {[
-                    { icon: '✅', label: 'Account created', done: true },
-                    { icon: '✅', label: 'Profile completed', done: true },
-                    {
-                      icon: '✅',
-                      label: 'Payment proof submitted',
-                      done: true,
-                    },
-                    { icon: '⏳', label: 'Admin verification', done: false },
-                    { icon: '🔒', label: 'Account activation', done: false },
-                  ].map((step) => (
-                    <div
-                      key={step.label}
-                      className={`rounded-2xl border p-3 ${
-                        step.done
-                          ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-200'
-                          : 'border-zinc-700 bg-zinc-900/80 text-zinc-300'
-                      }`}
-                    >
-                      <div className="mb-2 text-xl">{step.icon}</div>
-                      <p className="text-sm font-medium">{step.label}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <p className="text-sm text-zinc-400">
-                  This page checks automatically every 30 seconds. You will be
-                  redirected as soon as your account is activated.
-                </p>
-
-                <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-                  <Link
-                    href="https://wa.me/923225166580?text=Hi%20Eagle%20Elites%2C%20I%20have%20submitted%20my%20application."
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-900 px-5 py-3 text-sm font-medium text-white transition hover:border-zinc-500"
-                  >
-                    💬 Follow up on WhatsApp
-                  </Link>
-
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="rounded-2xl bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 px-5 py-3 text-sm font-semibold text-black shadow-[0_14px_30px_rgba(250,204,21,0.35)] transition hover:translate-y-[-1px]"
-                  >
-                    Log Out
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="mt-8 text-center text-xs text-zinc-600">
-              Eagle Elites Transport © 2026 · All rights reserved
-            </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+              Paid
+            </p>
+            <p className="text-white">{formatPkr(profile.amount_due)}</p>
           </div>
         </div>
+
+        <p className="text-center text-xs text-zinc-500">
+          This page refreshes automatically. You’ll be taken to your dashboard
+          as soon as you’re approved.
+        </p>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <a
+            href={`https://wa.me/923225166580?text=${encodeURIComponent(`Hi Eagle Elites, I submitted my application (ref ${profile.payment_reference ?? ''}).`)}`}
+            target="_blank"
+            rel="noreferrer"
+            className={secondary}
+          >
+            💬 Follow up on WhatsApp
+          </a>
+          <button type="button" onClick={logout} className={secondary}>
+            Log out
+          </button>
+        </div>
       </div>
-    </div>
+    </AuthShell>
   );
 }
