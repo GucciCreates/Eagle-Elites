@@ -4,6 +4,17 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { getPakistanDate } from '@/lib/date/pakistan';
+import PaymentSettingsTab from '@/components/admin/payment-settings-tab';
+import TimeOptionsTab from '@/components/admin/time-options-tab';
+import WhatsAppTab from '@/components/admin/whatsapp-tab';
+import { notifyWhatsApp, type NotifyResponse } from '@/lib/whatsapp/client';
+
+function describeWhatsApp(result: NotifyResponse) {
+  if (!result.ok) return `WhatsApp: ${result.error ?? 'failed'}`;
+  if (result.configured === false)
+    return 'WhatsApp is not configured; nothing sent.';
+  return `WhatsApp: ${result.sent ?? 0} sent, ${result.failed ?? 0} failed, ${result.skipped ?? 0} skipped.`;
+}
 
 type Student = {
   id: string;
@@ -122,6 +133,10 @@ export default function AdminDashboard() {
   const [announcementMessage, setAnnouncementMessage] = useState('');
   const [sendingAnnouncement, setSendingAnnouncement] = useState(false);
   const [announcementSuccess, setAnnouncementSuccess] = useState(false);
+  const [announcementWhatsApp, setAnnouncementWhatsApp] = useState(false);
+  const [holidayWhatsApp, setHolidayWhatsApp] = useState(true);
+  const [whatsAppNotice, setWhatsAppNotice] = useState('');
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   const [holidayDate, setHolidayDate] = useState('');
   const [holidayReason, setHolidayReason] = useState('');
@@ -304,9 +319,19 @@ export default function AdminDashboard() {
     }
 
     if (inserts.length > 0) {
-      await supabase
+      const { error } = await supabase
         .from('daily_assignments')
         .upsert(inserts, { onConflict: 'student_id,assignment_date' });
+
+      if (!error) {
+        // Only students whose vehicle/driver changed get a new message
+        // (the server de-duplicates identical assignments).
+        void notifyWhatsApp({
+          event: 'assignment',
+          date: assignDate,
+          studentIds: inserts.map((row) => String(row.student_id)),
+        }).then((result) => setWhatsAppNotice(describeWhatsApp(result)));
+      }
     }
 
     setAssignSuccess(true);
@@ -464,11 +489,37 @@ export default function AdminDashboard() {
 
     if (data) setNotifications((prev) => [data as Notification, ...prev]);
 
+    if (data && announcementWhatsApp) {
+      const result = await notifyWhatsApp({
+        event: 'announcement',
+        title: announcementTitle,
+        message: announcementMessage,
+      });
+      setWhatsAppNotice(describeWhatsApp(result));
+    }
+
     setAnnouncementTitle('');
     setAnnouncementMessage('');
     setAnnouncementSuccess(true);
     setTimeout(() => setAnnouncementSuccess(false), 3000);
     setSendingAnnouncement(false);
+  };
+
+  const handleResendAnnouncement = async (item: Notification) => {
+    if (
+      !window.confirm(
+        'Send this announcement to all opted-in students on WhatsApp?',
+      )
+    )
+      return;
+    setResendingId(item.id);
+    const result = await notifyWhatsApp({
+      event: 'announcement',
+      title: item.title,
+      message: item.message,
+    });
+    setWhatsAppNotice(describeWhatsApp(result));
+    setResendingId(null);
   };
 
   const handleAddHoliday = async () => {
@@ -485,6 +536,13 @@ export default function AdminDashboard() {
       setHolidays((prev) =>
         [...prev, data as Holiday].sort((a, b) => a.date.localeCompare(b.date)),
       );
+      if (holidayWhatsApp) {
+        void notifyWhatsApp({
+          event: 'holiday',
+          date: holidayDate,
+          reason: holidayReason,
+        }).then((result) => setWhatsAppNotice(describeWhatsApp(result)));
+      }
     }
 
     setHolidayDate('');
@@ -561,13 +619,18 @@ export default function AdminDashboard() {
 
   const handleApprove = async (studentId: string) => {
     setProcessingApp(studentId);
-    await supabase
+    const { error } = await supabase
       .from('profiles')
       .update({
         status: 'active',
         approved_at: new Date().toISOString(),
       })
       .eq('id', studentId);
+    if (!error) {
+      void notifyWhatsApp({ event: 'approval', studentId }).then((result) =>
+        setWhatsAppNotice(describeWhatsApp(result)),
+      );
+    }
     setApplications((prev) => prev.filter((a) => a.id !== studentId));
     setProcessingApp(null);
   };
@@ -610,6 +673,9 @@ export default function AdminDashboard() {
     { key: 'holidays', label: '📆', title: 'Holidays' },
     { key: 'vehicles', label: '🚌', title: 'Vehicles' },
     { key: 'pricing', label: '💰', title: 'Pricing' },
+    { key: 'times', label: '🕒', title: 'Times' },
+    { key: 'whatsapp', label: '🟢', title: 'WhatsApp' },
+    { key: 'settings', label: '⚙️', title: 'Settings' },
   ];
 
   if (loading) {
@@ -673,6 +739,27 @@ export default function AdminDashboard() {
             </button>
           ))}
         </div>
+
+        {whatsAppNotice && (
+          <div
+            role="status"
+            className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-zinc-300"
+          >
+            <span>{whatsAppNotice}</span>
+            <button
+              type="button"
+              aria-label="Dismiss"
+              onClick={() => setWhatsAppNotice('')}
+              className="text-zinc-500 hover:text-white"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'times' && <TimeOptionsTab groups={departureGroups} />}
+        {activeTab === 'whatsapp' && <WhatsAppTab />}
+        {activeTab === 'settings' && <PaymentSettingsTab />}
 
         {activeTab === 'overview' && (
           <div className="space-y-6">
@@ -1735,6 +1822,18 @@ export default function AdminDashboard() {
                   className="w-full resize-none rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-white placeholder:text-zinc-600 outline-none focus:border-yellow-400"
                 />
 
+                <label className="flex items-center gap-2 text-sm text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={announcementWhatsApp}
+                    onChange={(event) =>
+                      setAnnouncementWhatsApp(event.target.checked)
+                    }
+                    className="h-4 w-4 accent-yellow-400"
+                  />
+                  Also send on WhatsApp to opted-in students
+                </label>
+
                 {announcementSuccess && (
                   <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
                     ✅ Announcement sent to all students!
@@ -1771,13 +1870,28 @@ export default function AdminDashboard() {
                       <p className="mt-1 text-sm text-zinc-300">
                         {item.message}
                       </p>
-                      <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                        {new Date(item.created_at).toLocaleDateString('en-PK', {
-                          weekday: 'short',
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </p>
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                          {new Date(item.created_at).toLocaleDateString(
+                            'en-PK',
+                            {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                            },
+                          )}
+                        </p>
+                        <button
+                          type="button"
+                          disabled={resendingId === item.id}
+                          onClick={() => handleResendAnnouncement(item)}
+                          className="rounded-lg border border-zinc-700 px-2 py-1 text-[11px] text-zinc-300 transition hover:bg-zinc-800 hover:text-white disabled:opacity-50"
+                        >
+                          {resendingId === item.id
+                            ? 'Sending…'
+                            : 'Send on WhatsApp'}
+                        </button>
+                      </div>
                     </div>
                   ))
                 )}
@@ -1817,6 +1931,18 @@ export default function AdminDashboard() {
                     className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-yellow-400"
                   />
                 </div>
+
+                <label className="flex items-center gap-2 text-sm text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={holidayWhatsApp}
+                    onChange={(event) =>
+                      setHolidayWhatsApp(event.target.checked)
+                    }
+                    className="h-4 w-4 accent-yellow-400"
+                  />
+                  Notify opted-in students on WhatsApp
+                </label>
 
                 <button
                   type="button"

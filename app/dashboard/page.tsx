@@ -10,6 +10,13 @@ import {
   getPakistanWeekStart,
 } from '@/lib/date/pakistan';
 import { createClient } from '@/lib/supabase/client';
+import TimeSelect from '@/components/time-select';
+import WhatsAppOptInCard from '@/components/whatsapp-opt-in-card';
+import {
+  fetchTimeOptionsForGroup,
+  toHHMM,
+  type TimeOption,
+} from '@/lib/time-options';
 
 type Profile = {
   id: string;
@@ -21,6 +28,8 @@ type Profile = {
   route_id: string;
   status?: string;
   departure_group_id?: string | null;
+  phone?: string | null;
+  whatsapp_opt_in?: boolean | null;
 };
 
 type DepartureGroup = {
@@ -89,13 +98,26 @@ type Holiday = {
 };
 
 type PickupPoint = { id: string; name: string; route_id: string };
+
+// The weekly_schedules table stores times as morning_departure /
+// evening_departure; the UI calls them arrival_time / departure_time.
+type WeeklyScheduleRow = Omit<
+  WeeklySchedule,
+  'arrival_time' | 'departure_time'
+> & {
+  morning_departure: string | null;
+  evening_departure: string | null;
+};
+
+function fromScheduleRows(rows: WeeklyScheduleRow[]): WeeklySchedule[] {
+  return rows.map((row) => ({
+    ...row,
+    arrival_time: toHHMM(row.morning_departure),
+    departure_time: toHHMM(row.evening_departure),
+  }));
+}
 type DashboardTab =
-  | 'home'
-  | 'schedule'
-  | 'payments'
-  | 'timetable'
-  | 'help'
-  | 'profile';
+  'home' | 'schedule' | 'payments' | 'timetable' | 'help' | 'profile';
 type ScheduleView = 'overview' | 'change' | 'timetable';
 
 const DAYS = [
@@ -140,7 +162,11 @@ function formatTime(t: string) {
 function formatDate(d: string) {
   const dateOnly = d.match(/^(\d{4})-(\d{2})-(\d{2})/);
   const date = dateOnly
-    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    ? new Date(
+        Number(dateOnly[1]),
+        Number(dateOnly[2]) - 1,
+        Number(dateOnly[3]),
+      )
     : new Date(d);
 
   return date.toLocaleDateString('en-PK', {
@@ -221,6 +247,11 @@ export default function Dashboard() {
   const [passwordError, setPasswordError] = useState('');
 
   const [confirmingSeat, setConfirmingSeat] = useState(false);
+  const [scheduleError, setScheduleError] = useState('');
+  const [timeOptions, setTimeOptions] = useState<{
+    arrival: TimeOption[];
+    departure: TimeOption[];
+  }>({ arrival: [], departure: [] });
 
   const router = useRouter();
   const supabase = createClient();
@@ -420,7 +451,12 @@ export default function Dashboard() {
         }
       }
       if (assignmentData) setAssignment(assignmentData);
-      if (schedulesData) setSchedules(schedulesData);
+      if (schedulesData)
+        setSchedules(fromScheduleRows(schedulesData as WeeklyScheduleRow[]));
+      void fetchTimeOptionsForGroup(
+        supabase,
+        profileData?.departure_group_id ?? null,
+      ).then(setTimeOptions);
       if (paymentsData) setPayments(paymentsData);
       if (notificationsData) {
         setNotifications(notificationsData);
@@ -498,23 +534,35 @@ export default function Dashboard() {
       setSubmittingSchedule(false);
       return;
     }
-    await supabase.from('weekly_schedules').upsert(
-      entries.map(([day, vals]) => ({
-        student_id: session.user.id,
-        week_start: weekStart,
-        day_of_week: day,
-        pickup_point_id: vals.pickup_point_id,
-        arrival_time: vals.arrival_time,
-        departure_time: vals.departure_time,
-      })),
-      { onConflict: 'student_id,week_start,day_of_week' },
-    );
+    setScheduleError('');
+    const { error: upsertError } = await supabase
+      .from('weekly_schedules')
+      .upsert(
+        entries.map(([day, vals]) => ({
+          student_id: session.user.id,
+          week_start: weekStart,
+          day_of_week: day,
+          pickup_point_id: vals.pickup_point_id,
+          morning_departure: vals.arrival_time,
+          evening_departure: vals.departure_time,
+        })),
+        { onConflict: 'student_id,week_start,day_of_week' },
+      );
+    if (upsertError) {
+      setScheduleError(
+        upsertError.message.includes('not an available option')
+          ? 'One of the selected times is no longer available. Please pick again.'
+          : 'Could not save your schedule. Please try again.',
+      );
+      setSubmittingSchedule(false);
+      return;
+    }
     const { data } = await supabase
       .from('weekly_schedules')
       .select('*, pickup_points(name)')
       .eq('student_id', session.user.id)
       .eq('week_start', weekStart);
-    if (data) setSchedules(data);
+    if (data) setSchedules(fromScheduleRows(data as WeeklyScheduleRow[]));
     setScheduleSuccess(true);
     setTimeout(() => setScheduleSuccess(false), 3000);
     setSubmittingSchedule(false);
@@ -559,27 +607,36 @@ export default function Dashboard() {
     const updateData =
       changeType === 'arrival'
         ? {
-            arrival_time: changeTime,
+            morning_departure: changeTime,
             change_count: 1,
             last_changed_at: new Date().toISOString(),
           }
         : {
-            departure_time: changeTime,
+            evening_departure: changeTime,
             change_count: 1,
             last_changed_at: new Date().toISOString(),
           };
-    await supabase
+    const { error: updateError } = await supabase
       .from('weekly_schedules')
       .update(updateData)
       .eq('student_id', session.user.id)
       .eq('week_start', weekStart)
       .eq('day_of_week', changeDay);
+    if (updateError) {
+      setChangeError(
+        updateError.message.includes('not an available option')
+          ? 'That time is no longer available. Please pick another.'
+          : 'Could not change the time. Please try again.',
+      );
+      setChangingTime(false);
+      return;
+    }
     const { data } = await supabase
       .from('weekly_schedules')
       .select('*, pickup_points(name)')
       .eq('student_id', session.user.id)
       .eq('week_start', weekStart);
-    if (data) setSchedules(data);
+    if (data) setSchedules(fromScheduleRows(data as WeeklyScheduleRow[]));
     setChangeSuccess(true);
     setChangeDay('');
     setChangeTime('');
@@ -1605,18 +1662,23 @@ export default function Dashboard() {
                         </select>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <p className="text-zinc-500 text-xs mb-1">
+                            <label
+                              htmlFor={`${day}-arrival`}
+                              className="block text-zinc-500 text-xs mb-1"
+                            >
                               Pickup time
-                            </p>
-                            <input
-                              type="time"
+                            </label>
+                            <TimeSelect
+                              id={`${day}-arrival`}
+                              options={timeOptions.arrival}
+                              placeholder="Select…"
                               value={scheduleForm[day]?.arrival_time || ''}
-                              onChange={(e) =>
+                              onChange={(value) =>
                                 setScheduleForm((prev) => ({
                                   ...prev,
                                   [day]: {
                                     ...prev[day],
-                                    arrival_time: e.target.value,
+                                    arrival_time: value,
                                   },
                                 }))
                               }
@@ -1624,18 +1686,23 @@ export default function Dashboard() {
                             />
                           </div>
                           <div>
-                            <p className="text-zinc-500 text-xs mb-1">
+                            <label
+                              htmlFor={`${day}-departure`}
+                              className="block text-zinc-500 text-xs mb-1"
+                            >
                               Return time
-                            </p>
-                            <input
-                              type="time"
+                            </label>
+                            <TimeSelect
+                              id={`${day}-departure`}
+                              options={timeOptions.departure}
+                              placeholder="Select…"
                               value={scheduleForm[day]?.departure_time || ''}
-                              onChange={(e) =>
+                              onChange={(value) =>
                                 setScheduleForm((prev) => ({
                                   ...prev,
                                   [day]: {
                                     ...prev[day],
-                                    departure_time: e.target.value,
+                                    departure_time: value,
                                   },
                                 }))
                               }
@@ -1646,6 +1713,11 @@ export default function Dashboard() {
                       </div>
                     ))}
 
+                    {scheduleError && (
+                      <div className="bg-red-950/60 border border-red-800 text-red-400 px-4 py-3 rounded-xl text-sm">
+                        {scheduleError}
+                      </div>
+                    )}
                     {scheduleSuccess && (
                       <div className="bg-green-950/60 border border-green-800 text-green-400 px-4 py-3 rounded-xl text-sm">
                         Schedule submitted successfully.
@@ -1753,7 +1825,10 @@ export default function Dashboard() {
                             {(['arrival', 'departure'] as const).map((type) => (
                               <button
                                 key={type}
-                                onClick={() => setChangeType(type)}
+                                onClick={() => {
+                                  setChangeType(type);
+                                  setChangeTime('');
+                                }}
                                 className={`px-4 py-3 rounded-xl text-sm font-medium border transition-all ${changeType === type ? 'bg-yellow-400 text-black border-yellow-400' : 'bg-zinc-800 text-zinc-400 border-zinc-700'}`}
                               >
                                 {type === 'arrival' ? 'Pickup' : 'Return'}
@@ -1763,13 +1838,17 @@ export default function Dashboard() {
                         </div>
 
                         <div className="space-y-2">
-                          <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest">
+                          <label
+                            htmlFor="change-time"
+                            className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest"
+                          >
                             New time
                           </label>
-                          <input
-                            type="time"
+                          <TimeSelect
+                            id="change-time"
+                            options={timeOptions[changeType]}
                             value={changeTime}
-                            onChange={(e) => setChangeTime(e.target.value)}
+                            onChange={setChangeTime}
                             className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white focus:outline-none focus:border-yellow-400 transition"
                           />
                         </div>
@@ -2029,6 +2108,15 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
+
+            {profile && (
+              <WhatsAppOptInCard
+                profileId={profile.id}
+                phone={profile.phone}
+                optIn={profile.whatsapp_opt_in}
+                demo={profile.id === 'demo-user'}
+              />
+            )}
 
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="rounded-[28px] border border-white/10 bg-[#0d131c] p-5 sm:p-6">

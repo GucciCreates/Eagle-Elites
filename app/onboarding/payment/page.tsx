@@ -1,9 +1,25 @@
 'use client';
 
 import Image from 'next/image';
-import { ChangeEvent, FormEvent, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import {
+  DEFAULT_PAYMENT_SETTINGS,
+  fetchPaymentSettings,
+  type PaymentSettings,
+} from '@/lib/settings/payment';
+
+function paymentRows(settings: PaymentSettings) {
+  return [
+    { label: 'Bank', value: settings.bank_name },
+    { label: 'Account Title', value: settings.account_title },
+    ...(settings.account_number
+      ? [{ label: 'A/C No', value: settings.account_number }]
+      : []),
+    { label: 'IBAN', value: settings.iban },
+  ];
+}
 
 export default function OnboardingPayment() {
   const [transactionId, setTransactionId] = useState('');
@@ -13,7 +29,14 @@ export default function OnboardingPayment() {
   const [loading, setLoading] = useState(false);
 
   const router = useRouter();
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettings>(
+    DEFAULT_PAYMENT_SETTINGS,
+  );
+
+  useEffect(() => {
+    void fetchPaymentSettings(supabase).then(setPaymentSettings);
+  }, [supabase]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -133,21 +156,18 @@ export default function OnboardingPayment() {
                 Payment instructions
               </p>
               <div className="mt-4 space-y-3 text-sm text-zinc-200">
-                {[
-                  { label: 'Bank', value: 'Meezan Bank' },
-                  {
-                    label: 'Account Title',
-                    value: 'Eagles Elite Transport Service & Tour Planners',
-                  },
-                  { label: 'A/C No', value: '98370114507755' },
-                  { label: 'IBAN', value: 'PK31MEZN0098370114507755' },
-                ].map((item) => (
+                {paymentRows(paymentSettings).map((item) => (
                   <div key={item.label} className="flex justify-between gap-4">
                     <span className="text-zinc-400">{item.label}</span>
                     <span className="font-medium text-white">{item.value}</span>
                   </div>
                 ))}
               </div>
+              {paymentSettings.instructions && (
+                <p className="mt-4 text-xs leading-5 text-zinc-400">
+                  {paymentSettings.instructions}
+                </p>
+              )}
             </div>
           </div>
 
@@ -162,6 +182,27 @@ export default function OnboardingPayment() {
               <p className="mt-2 text-sm text-zinc-400">
                 Step 3 of 3 — Submit your payment proof
               </p>
+            </div>
+
+            <div className="mb-5 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm lg:hidden">
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                Transfer to
+              </p>
+              <dl className="mt-3 space-y-2">
+                {paymentRows(paymentSettings).map((item) => (
+                  <div key={item.label} className="flex justify-between gap-4">
+                    <dt className="text-zinc-400">{item.label}</dt>
+                    <dd className="break-all text-right font-medium text-white">
+                      {item.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              {paymentSettings.instructions && (
+                <p className="mt-3 text-xs leading-5 text-zinc-400">
+                  {paymentSettings.instructions}
+                </p>
+              )}
             </div>
 
             <div className="rounded-3xl border border-white/10 bg-[#0f1724]/80 p-5 shadow-[0_18px_40px_rgba(0,0,0,0.28)] sm:p-6">
