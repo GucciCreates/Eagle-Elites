@@ -13,7 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Eagle Elites | Student Portal',
+  title: {
+    default: 'Eagle Elites | Student Portal',
+    template: '%s | Eagle Elites',
+  },
   description:
     'Premium student transport portal for schedules, payments, and trip management.',
 };
