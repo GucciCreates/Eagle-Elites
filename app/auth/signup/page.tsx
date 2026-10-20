@@ -108,6 +108,7 @@ export default function SignUp() {
   if (sentTo) {
     return (
       <AuthShell
+        panel="signup"
         eyebrow="Almost there"
         title="Check your email"
         subtitle={
@@ -141,6 +142,7 @@ export default function SignUp() {
 
   return (
     <AuthShell
+      panel="signup"
       eyebrow="New account"
       title="Create your account"
       subtitle="Book your seat and manage your daily commute."

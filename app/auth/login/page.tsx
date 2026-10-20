@@ -88,6 +88,7 @@ export default function Login() {
 
   return (
     <AuthShell
+      panel="login"
       eyebrow="Welcome back"
       title="Log in to your account"
       subtitle="Manage your route, seat and payments."

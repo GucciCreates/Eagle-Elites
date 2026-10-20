@@ -74,6 +74,7 @@ export default function AdminLogin() {
 
   return (
     <AuthShell
+      panel="admin"
       eyebrow="Admin"
       title="Admin log in"
       subtitle="For Eagle Elites staff only."
