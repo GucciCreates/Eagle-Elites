@@ -17,7 +17,10 @@ export default function PasswordInput({
   // Leave room on the right for the toggle button.
   const inputClassName = className
     .replace(/(^|\s)pr-\d+(?=\s|$)/g, ' ')
-    .replace(/(^|\s)px-(\d+)(?=\s|$)/g, ' pl-$2 ')
+    // Literal class names so Tailwind generates them.
+    .replace(/(^|\s)px-3(?=\s|$)/g, ' pl-3 ')
+    .replace(/(^|\s)px-4(?=\s|$)/g, ' pl-4 ')
+    .replace(/(^|\s)px-5(?=\s|$)/g, ' pl-5 ')
     .concat(' pr-12')
     .replace(/\s+/g, ' ')
     .trim();
