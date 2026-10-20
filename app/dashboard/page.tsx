@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getPostLoginPath } from '@/lib/auth/post-login-path';
 import { createClient } from '@/lib/supabase/client';
 
 type Profile = {
@@ -12,6 +13,7 @@ type Profile = {
   fee_status: string;
   destination: string;
   route_id: string;
+  status?: string;
   departure_group_id?: string | null;
 };
 
@@ -139,7 +141,12 @@ function formatTime(t: string) {
 }
 
 function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('en-PK', {
+  const dateOnly = d.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const date = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(d);
+
+  return date.toLocaleDateString('en-PK', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -411,7 +418,14 @@ export default function Dashboard() {
           .single(),
       ]);
 
-      if (profileData) setProfile(profileData);
+      if (profileData) {
+        setProfile(profileData);
+        const nextPath = getPostLoginPath(profileData.status);
+        if (nextPath !== '/dashboard') {
+          router.push(nextPath);
+          return;
+        }
+      }
       if (assignmentData) setAssignment(assignmentData);
       if (schedulesData) setSchedules(schedulesData);
       if (paymentsData) setPayments(paymentsData);
@@ -520,7 +534,10 @@ export default function Dashboard() {
     const {
       data: { session },
     } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session) {
+      setChangingTime(false);
+      return;
+    }
     const weekStart = getNextWeekStart();
     const schedule = schedules.find((s) => s.day_of_week === changeDay);
     if (!schedule) {
@@ -632,7 +649,10 @@ export default function Dashboard() {
     const {
       data: { session },
     } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session) {
+      setSendingHelp(false);
+      return;
+    }
     await supabase
       .from('help_messages')
       .insert({ student_id: session.user.id, message: helpMessage });
@@ -1249,18 +1269,39 @@ export default function Dashboard() {
             </div>
 
             {holidays.length > 0 && (
-              <div className="rounded-[28px] border border-white/10 bg-[#0d131c] p-5">
-                <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                  Upcoming no-service days
-                </p>
-                <div className="mt-4 space-y-3">
+              <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5 shadow-[0_18px_35px_rgba(0,0,0,0.12)]">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-yellow-500/20 bg-yellow-500/10 text-sm text-yellow-300">
+                      ⏸
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+                        Service schedule
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-white">
+                        No-service days
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-full border border-zinc-700 bg-zinc-800 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-zinc-400">
+                    {holidays.length} dates
+                  </span>
+                </div>
+
+                <div className="space-y-3">
                   {holidays.map((h) => (
                     <div
                       key={h.id}
-                      className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/3 px-3 py-2.5"
+                      className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-[#0b1015] px-3 py-2.5"
                     >
-                      <span className="text-sm text-zinc-300">{h.reason}</span>
-                      <span className="text-xs font-semibold uppercase tracking-[0.12em] text-yellow-300">
+                      <div className="flex items-center gap-3">
+                        <span className="h-2 w-2 rounded-full bg-yellow-400" />
+                        <span className="text-sm text-zinc-300">
+                          {h.reason}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-yellow-300">
                         {formatDate(h.date)}
                       </span>
                     </div>

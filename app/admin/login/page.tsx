@@ -42,6 +42,13 @@ export default function AdminLogin() {
     }
   };
 
+  const handleResetPassword = () => {
+    setError('');
+    router.push(
+      `/admin/reset-password${email ? `?email=${encodeURIComponent(email)}` : ''}`,
+    );
+  };
+
   return (
     <div className="min-h-screen bg-[#05070b] text-white flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md overflow-hidden rounded-[28px] border border-zinc-800 bg-[#0c1016]/90 shadow-[0_30px_80px_rgba(0,0,0,0.5)] backdrop-blur-xl">
@@ -123,6 +130,14 @@ export default function AdminLogin() {
             className="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#facc15] via-[#fbbf24] to-[#f59e0b] px-5 py-3.5 text-base font-semibold text-slate-950 shadow-[0_18px_35px_rgba(250,204,21,0.35)] transition hover:translate-y-[-1px] hover:shadow-[0_22px_40px_rgba(250,204,21,0.42)] disabled:cursor-not-allowed disabled:opacity-70"
           >
             {loading ? 'Verifying...' : 'Access Admin Panel →'}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleResetPassword}
+            className="w-full rounded-xl border border-zinc-700 bg-zinc-800/70 px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800"
+          >
+            Reset password
           </button>
         </form>
 

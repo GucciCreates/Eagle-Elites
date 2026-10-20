@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { getPostLoginPath } from '@/lib/auth/post-login-path';
 import { createClient } from '@/lib/supabase/client';
 
 type ProfileStatus =
@@ -44,13 +45,9 @@ export default function OnboardingPending() {
       if (data) {
         setProfile(data as Profile);
 
-        if (data.status === 'active') {
-          router.push('/dashboard');
-          return;
-        }
-
-        if (data.status === 'incomplete' || data.status === 'payment_pending') {
-          router.push('/onboarding/profile');
+        const nextPath = getPostLoginPath(data.status);
+        if (nextPath !== '/onboarding/pending') {
+          router.push(nextPath);
           return;
         }
       }

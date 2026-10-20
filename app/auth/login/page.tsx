@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getPostLoginPath } from '@/lib/auth/post-login-path';
 import { createClient } from '@/lib/supabase/client';
 
 export default function Login() {
@@ -49,23 +50,19 @@ export default function Login() {
         .eq('id', data.user.id)
         .single();
 
-      if (!profile || profile.status === 'incomplete') {
-        router.push('/onboarding/profile');
-      } else if (profile.status === 'payment_pending') {
-        router.push('/onboarding/payment');
-      } else if (
-        profile.status === 'pending' ||
-        profile.status === 'rejected'
-      ) {
-        router.push('/onboarding/pending');
-      } else {
-        router.push('/dashboard');
-      }
+      router.push(getPostLoginPath(profile?.status));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResetPassword = () => {
+    setError('');
+    router.push(
+      `/auth/reset-password${email ? `?email=${encodeURIComponent(email)}` : ''}`,
+    );
   };
 
   return (
@@ -188,6 +185,14 @@ export default function Login() {
                       <span aria-hidden="true">→</span>
                     </>
                   )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResetPassword}
+                  className="w-full rounded-2xl border border-zinc-700 bg-zinc-900/70 px-4 py-2.5 font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800"
+                >
+                  Reset password
                 </button>
               </form>
 

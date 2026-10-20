@@ -511,33 +511,33 @@ export default function LandingPage() {
                   <div className="mb-5 flex items-center justify-between">
                     <div>
                       <p className="text-[11px] uppercase tracking-[0.28em] text-zinc-500">
-                        Live route
+                        Route coverage
                       </p>
                       <h3 className="mt-1 text-2xl font-bold text-white">
-                        Islamabad to Bahria
+                        Islamabad & Rawalpindi
                       </h3>
                     </div>
-                    <div className="rounded-full border border-[#22c55e]/30 bg-[#22c55e]/10 px-2.5 py-1.5 text-xs font-semibold text-[#86efac]">
-                      On time
+                    <div className="rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-1.5 text-xs font-semibold text-zinc-300">
+                      15+ campuses
                     </div>
                   </div>
 
                   <div className="space-y-3">
                     {[
                       {
-                        name: 'Bahria Town',
-                        time: '6:40 AM',
-                        status: 'Most booked',
+                        name: 'E-9 / G-11 / F-11',
+                        time: '6:40 AM – 8:00 AM',
+                        status: 'Morning corridor',
                       },
                       {
-                        name: 'G-11 / F-11',
-                        time: '7:15 AM',
-                        status: 'High demand',
+                        name: 'H-12 / NUST',
+                        time: '7:10 AM – 8:45 AM',
+                        status: 'Campus route',
                       },
                       {
-                        name: 'FAST & NUST',
-                        time: '8:00 AM',
-                        status: 'Daily route',
+                        name: 'H-11 / FAST',
+                        time: '6:40 AM – 9:00 AM',
+                        status: 'Academic schedule',
                       },
                     ].map((route) => (
                       <div
@@ -554,7 +554,7 @@ export default function LandingPage() {
                         </div>
                         <div className="text-right">
                           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                            Pickup
+                            Window
                           </p>
                           <p className="font-bold text-[#facc15]">
                             {route.time}
@@ -566,8 +566,10 @@ export default function LandingPage() {
 
                   <div className="mt-5 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4">
                     <div className="flex items-center justify-between text-sm text-[#fef3c7]">
-                      <span>Next departure</span>
-                      <span className="font-bold text-white">6:40 AM</span>
+                      <span>Daily coverage</span>
+                      <span className="font-bold text-white">
+                        AM & PM trips
+                      </span>
                     </div>
                     <div className="mt-3 h-2.5 w-full rounded-full bg-zinc-800">
                       <div className="h-full w-[72%] rounded-full bg-gradient-to-r from-[#facc15] to-[#f59e0b]" />
@@ -575,6 +577,45 @@ export default function LandingPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="px-6 pb-10 pt-2">
+          <div className="mx-auto max-w-6xl">
+            <div className="grid gap-4 md:grid-cols-3">
+              {[
+                {
+                  title: 'Campus routing',
+                  value: '15+ institutions',
+                  text: 'Tailored trips for the most active university corridors in Islamabad and Rawalpindi.',
+                },
+                {
+                  title: 'Comfort-first fleet',
+                  value: 'AC + WiFi',
+                  text: 'Modern vehicles with consistent service, clean interiors, and a reliable daily routine.',
+                },
+                {
+                  title: 'Fast support',
+                  value: '24/7 response',
+                  text: 'Quick communication through WhatsApp and direct admin support whenever you need it.',
+                },
+              ].map((item) => (
+                <div
+                  key={item.title}
+                  className="rounded-[24px] border border-zinc-800 bg-zinc-900/80 p-5 shadow-[0_18px_35px_rgba(0,0,0,0.12)]"
+                >
+                  <p className="text-[10px] uppercase tracking-[0.28em] text-zinc-500">
+                    {item.title}
+                  </p>
+                  <h3 className="mt-3 text-2xl font-black text-white">
+                    {item.value}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-zinc-400">
+                    {item.text}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -619,12 +660,12 @@ export default function LandingPage() {
               ].map((stat, index) => (
                 <div
                   key={index}
-                  className="rounded-[26px] border border-zinc-800 bg-[linear-gradient(180deg,_rgba(17,24,39,0.88),_rgba(9,12,18,0.92))] p-6 text-left shadow-[0_18px_45px_rgba(0,0,0,0.22)]"
+                  className="rounded-[26px] border border-zinc-800 bg-[linear-gradient(180deg,_rgba(17,24,39,0.9),_rgba(10,13,18,0.96))] p-6 text-left shadow-[0_14px_30px_rgba(0,0,0,0.14)]"
                 >
                   <div className="mb-4 flex items-center justify-between">
                     <span className="text-3xl">{stat.icon}</span>
                     <span className="text-[10px] uppercase tracking-[0.28em] text-zinc-500">
-                      Live
+                      Verified
                     </span>
                   </div>
                   <p className="text-4xl font-black text-white">
@@ -995,24 +1036,24 @@ export default function LandingPage() {
 
         <section className="px-6 pb-20 pt-10">
           <div className="mx-auto max-w-5xl">
-            <div className="overflow-hidden rounded-[30px] border border-[#facc15]/20 bg-[linear-gradient(135deg,rgba(250,204,21,0.12),rgba(15,23,42,0.92),rgba(9,12,18,0.96))] p-8 shadow-[0_30px_80px_rgba(250,204,21,0.08)] md:p-12">
+            <div className="overflow-hidden rounded-[30px] border border-zinc-800 bg-[linear-gradient(135deg,rgba(250,204,21,0.08),rgba(15,23,42,0.9),rgba(9,12,18,0.96))] p-8 shadow-[0_20px_60px_rgba(0,0,0,0.2)] md:p-12">
               <div className="flex flex-col items-center text-center">
                 <p className="mb-2 text-sm font-semibold uppercase tracking-[0.28em] text-[#facc15]">
-                  Ready to Ride?
+                  Ready to ride?
                 </p>
                 <h2 className="text-4xl font-black tracking-[-0.05em] text-white md:text-5xl">
-                  Reserve Your Seat Today
+                  Reserve your seat today
                 </h2>
                 <p className="mt-4 max-w-2xl text-lg leading-8 text-zinc-300">
-                  Experience the most comfortable campus commute in Islamabad
-                  and Rawalpindi.
+                  A cleaner, more comfortable campus commute for students across
+                  Islamabad, Rawalpindi and Wah Cantt.
                 </p>
 
                 <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row">
                   <button
                     type="button"
                     onClick={() => router.push('/auth/signup')}
-                    className="rounded-2xl bg-[#facc15] px-8 py-4 text-base font-bold text-black shadow-[0_16px_38px_rgba(250,204,21,0.3)] transition hover:-translate-y-0.5"
+                    className="rounded-2xl bg-[#facc15] px-8 py-4 text-base font-bold text-black shadow-[0_16px_38px_rgba(250,204,21,0.2)] transition hover:-translate-y-0.5"
                   >
                     Book Your Seat →
                   </button>
@@ -1028,7 +1069,7 @@ export default function LandingPage() {
                 </div>
 
                 <div className="mt-5 text-sm text-zinc-400">
-                  ⚡ Prices subject to change · Seat reservation PKR 1,000 · Fee
+                  Prices subject to change · Seat reservation PKR 1,000 · Fee
                   deadline 10th of every month
                 </div>
               </div>
