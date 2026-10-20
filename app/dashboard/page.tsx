@@ -16,7 +16,7 @@ type Profile = {
   email: string;
   role: string;
   fee_status: string;
-  destination: string;
+  institution?: string | null;
   route_id: string;
   status?: string;
   departure_group_id?: string | null;
@@ -260,7 +260,7 @@ export default function Dashboard() {
             email: demoSession.profile.email,
             role: demoSession.profile.role,
             fee_status: 'paid',
-            destination: 'North Campus',
+            institution: 'North Campus',
             route_id: 'demo-route',
           });
 
@@ -937,10 +937,10 @@ export default function Dashboard() {
                   <p className="mt-2 text-sm leading-6 text-zinc-400">
                     {profile?.email}
                   </p>
-                  {profile?.destination && (
+                  {profile?.institution && (
                     <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-yellow-500/20 bg-yellow-500/10 px-3 py-1.5 text-sm text-yellow-200 shadow-[0_0_20px_rgba(250,204,21,0.08)]">
                       <span>📍</span>
-                      <span>{profile.destination}</span>
+                      <span>{profile.institution}</span>
                     </div>
                   )}
                 </div>
@@ -995,7 +995,7 @@ export default function Dashboard() {
                         home
                       </div>
                       <div className="absolute right-3 top-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                        {profile?.destination || 'destination'}
+                        {profile?.institution || 'destination'}
                       </div>
                       <div
                         className="absolute top-1/2 -translate-y-1/2"
@@ -2045,7 +2045,7 @@ export default function Dashboard() {
                     { label: 'Role', value: profile?.role },
                     {
                       label: 'Destination',
-                      value: profile?.destination || 'Not assigned yet',
+                      value: profile?.institution || 'Not assigned yet',
                     },
                     {
                       label: 'Fee status',
