@@ -10,7 +10,7 @@ type Student = {
   full_name: string;
   email: string;
   fee_status: string;
-  destination: string;
+  institution: string | null;
   route_id: string | null;
   coaster_number?: string;
   driver_name?: string;
@@ -321,7 +321,7 @@ export default function AdminDashboard() {
     await supabase
       .from('profiles')
       .update({
-        destination: editingStudent.destination,
+        institution: editingStudent.institution,
         route_id: editingStudent.route_id,
         fee_status: editingStudent.fee_status,
       })
@@ -816,9 +816,9 @@ export default function AdminDashboard() {
                               <p className="text-xs text-zinc-400">
                                 {student.email}
                               </p>
-                              {student.destination && (
+                              {student.institution && (
                                 <p className="mt-1 text-xs text-zinc-500">
-                                  📍 {student.destination}
+                                  📍 {student.institution}
                                 </p>
                               )}
                             </div>
@@ -916,11 +916,11 @@ export default function AdminDashboard() {
                       Destination
                     </label>
                     <input
-                      value={editingStudent.destination}
+                      value={editingStudent.institution ?? ''}
                       onChange={(event) =>
                         setEditingStudent({
                           ...editingStudent,
-                          destination: event.target.value,
+                          institution: event.target.value,
                         })
                       }
                       className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-white outline-none focus:border-yellow-400"
