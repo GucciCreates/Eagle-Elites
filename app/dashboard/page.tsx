@@ -1,5 +1,6 @@
 'use client';
 
+import PasswordInput from '@/components/password-input';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPostLoginPath } from '@/lib/auth/post-login-path';
@@ -2080,11 +2081,11 @@ export default function Dashboard() {
 
                 <div className="space-y-4">
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm z-10">
                       🔒
                     </span>
-                    <input
-                      type="password"
+                    <PasswordInput
+                      autoComplete="new-password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="New password (min 6 characters)"

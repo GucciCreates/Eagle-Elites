@@ -1,5 +1,6 @@
 'use client';
 
+import PasswordInput from '@/components/password-input';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -154,12 +155,12 @@ export default function Login() {
                     Password
                   </label>
                   <div className="relative">
-                    <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-500">
+                    <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-500 z-10">
                       🔒
                     </span>
-                    <input
+                    <PasswordInput
+                      autoComplete="current-password"
                       id="password"
-                      type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required

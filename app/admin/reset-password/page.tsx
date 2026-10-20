@@ -1,5 +1,6 @@
 'use client';
 
+import PasswordInput from '@/components/password-input';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -159,9 +160,9 @@ export default function AdminResetPasswordPage() {
                 >
                   New password
                 </label>
-                <input
+                <PasswordInput
+                  autoComplete="new-password"
                   id="new-password"
-                  type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
@@ -177,9 +178,9 @@ export default function AdminResetPasswordPage() {
                 >
                   Confirm password
                 </label>
-                <input
+                <PasswordInput
+                  autoComplete="new-password"
                   id="confirm-password"
-                  type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required

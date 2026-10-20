@@ -1,5 +1,6 @@
 'use client';
 
+import PasswordInput from '@/components/password-input';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -109,12 +110,12 @@ export default function AdminLogin() {
               Password
             </label>
             <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 z-10">
                 🔒
               </span>
-              <input
+              <PasswordInput
+                autoComplete="current-password"
                 id="password"
-                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
