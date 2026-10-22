@@ -92,6 +92,7 @@ export default function OnboardingProfile() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [rejection, setRejection] = useState<{
     reason: string | null;
     code: string | null;
@@ -120,6 +121,7 @@ export default function OnboardingProfile() {
 
   useEffect(() => {
     const init = async () => {
+      try {
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -129,12 +131,12 @@ export default function OnboardingProfile() {
       }
       const uid = session.user.id;
       const [
-        { data: profile },
-        { data: groupRows },
-        { data: routeRows },
-        { data: pointRows },
-        { data: zoneRows },
-        { data: availRows },
+        { data: profile, error: profileError },
+        { data: groupRows, error: groupError },
+        { data: routeRows, error: routeError },
+        { data: pointRows, error: pointError },
+        { data: zoneRows, error: zoneError },
+        { data: availRows, error: availabilityError },
       ] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', uid).maybeSingle(),
         supabase
@@ -154,6 +156,10 @@ export default function OnboardingProfile() {
           .order('sort_order'),
         supabase.rpc('route_availability'),
       ]);
+
+      const queryError =
+        profileError ?? groupError ?? routeError ?? pointError ?? zoneError ?? availabilityError;
+      if (queryError) throw queryError;
 
       if (
         profile &&
@@ -237,6 +243,15 @@ export default function OnboardingProfile() {
       setForm(next);
       setUserId(uid);
       setReady(true);
+      } catch (err) {
+        setLoadError(
+          friendlyOnboardingError(
+            err,
+            'We couldn’t load your application details. Please try again.',
+          ),
+        );
+        setReady(true);
+      }
     };
     void init();
   }, [router, supabase]);
@@ -380,6 +395,21 @@ export default function OnboardingProfile() {
         top={<Stepper current={2} />}
       >
         <div className="h-48 animate-pulse rounded-2xl bg-zinc-900" />
+      </AuthShell>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <AuthShell wide eyebrow="Onboarding" title="We couldn’t load your profile">
+        <Alert tone="error">{loadError}</Alert>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-4 w-full rounded-xl bg-yellow-400 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-yellow-300"
+        >
+          Try again
+        </button>
       </AuthShell>
     );
   }

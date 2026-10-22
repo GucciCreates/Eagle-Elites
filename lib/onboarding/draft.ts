@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 
 const PREFIX = 'ee:onboarding:';
 
@@ -28,20 +28,13 @@ export function useSaveDraft(
   value: unknown,
   enabled = true,
 ) {
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const serialized = JSON.stringify(value);
   useEffect(() => {
     if (!key || !enabled) return;
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      try {
-        window.localStorage.setItem(PREFIX + key, serialized);
-      } catch {
-        /* quota or private mode */
-      }
-    }, 400);
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
+    try {
+      window.localStorage.setItem(PREFIX + key, serialized);
+    } catch {
+      /* quota or private mode */
+    }
   }, [key, serialized, enabled]);
 }

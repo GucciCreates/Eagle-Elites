@@ -1151,14 +1151,35 @@ export default function Dashboard() {
                     </p>
                   </div>
                 ) : todaySlots.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 p-5 text-center">
-                    <div className="mb-3 text-3xl">🕐</div>
-                    <p className="text-base font-medium text-zinc-300">
-                      No slots posted yet for today
-                    </p>
-                    <p className="mt-2 text-sm text-zinc-500">
-                      Admin posts slots before 10:00 AM every morning.
-                    </p>
+                  <div className="overflow-hidden rounded-2xl border border-sky-300/15 bg-[radial-gradient(circle_at_90%_0%,rgba(56,189,248,0.1),transparent_38%),#0b1119]">
+                    <div className="flex items-start gap-4 p-5">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-sky-300/15 bg-sky-300/10 text-sky-200" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="1.7">
+                          <circle cx="12" cy="12" r="9" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2" />
+                        </svg>
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-200/80">Daily schedule</p>
+                        <p className="mt-1 text-base font-semibold text-white">
+                          Today&apos;s departure times are being prepared
+                        </p>
+                        <p className="mt-2 text-sm leading-6 text-zinc-400">
+                          Your group&apos;s slots will appear here as soon as the transport team posts them. You can check back later or ask the team about today&apos;s schedule.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-3 border-t border-white/[0.06] bg-black/10 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+                      <span className="text-xs text-zinc-500">Your assigned group: {myDepartureGroup.university} · {myDepartureGroup.department}</span>
+                      <a
+                        href="https://wa.me/923225166580?text=Hi%20Eagle%20Elites%2C%20please%20share%20today%27s%20departure%20slots%20for%20my%20group."
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-10 items-center justify-center rounded-xl border border-white/10 px-3 py-2 text-sm font-medium text-zinc-200 transition hover:border-sky-300/30 hover:bg-white/[0.04] hover:text-white"
+                      >
+                        Ask about today&apos;s schedule <span className="ml-2" aria-hidden="true">↗</span>
+                      </a>
+                    </div>
                   </div>
                 ) : (
                   <>
