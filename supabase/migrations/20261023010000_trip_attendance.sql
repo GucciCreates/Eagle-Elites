@@ -3,7 +3,7 @@ BEGIN;
 ALTER TABLE public.daily_assignments
   ADD COLUMN IF NOT EXISTS attendance_status TEXT,
   ADD COLUMN IF NOT EXISTS attendance_marked_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS attendance_marked_by UUID REFERENCES public.admin_users(id) ON DELETE SET NULL;
+  ADD COLUMN IF NOT EXISTS attendance_marked_by UUID REFERENCES auth.users(id) ON DELETE SET NULL;
 
 ALTER TABLE public.daily_assignments
   DROP CONSTRAINT IF EXISTS daily_assignments_attendance_status_check;

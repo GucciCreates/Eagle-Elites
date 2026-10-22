@@ -38,6 +38,7 @@ type Student = {
 
 type Route = { id: string; name: string; price: number };
 type Coaster = { id: string; coaster_number: string };
+type Driver = { id: string; email: string; full_name: string; phone: string | null; active: boolean };
 type HelpMessage = {
   id: string;
   message: string;
@@ -56,7 +57,7 @@ type Notification = {
   target_value?: string | null;
 };
 type DepartureSelection = { student_id: string; slot_id: string; selection_date: string };
-type AttendanceRecord = { student_id: string; assignment_date: string; attendance_status: 'present' | 'absent' | null; attendance_marked_at?: string | null };
+type AttendanceRecord = { student_id: string; assignment_date: string; driver_id?: string | null; driver_name?: string | null; attendance_status: 'present' | 'absent' | null; attendance_marked_at?: string | null };
 type Application = ApplicationRow;
 type DepartureGroup = {
   id: string;
@@ -89,14 +90,14 @@ type DailyGroup = {
 };
 type AssignmentGroup = {
   coaster_id?: string;
-  driver_name?: string;
-  driver_contact?: string;
+  driver_id?: string;
 };
 
 export default function AdminDashboard() {
   const [students, setStudents] = useState<Student[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [coasters, setCoasters] = useState<Coaster[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [helpMessages, setHelpMessages] = useState<HelpMessage[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -104,7 +105,6 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [isTabPending, startTabTransition] = useTransition();
   const [adminReady, setAdminReady] = useState(false);
-  const [adminUserId, setAdminUserId] = useState('');
   const [departureStatusError, setDepartureStatusError] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const [studentSearch, setStudentSearch] = useState('');
@@ -126,7 +126,6 @@ export default function AdminDashboard() {
   const [attendanceRows, setAttendanceRows] = useState<AttendanceRecord[]>([]);
   const [attendanceMonthRows, setAttendanceMonthRows] = useState<AttendanceRecord[]>([]);
   const [attendanceError, setAttendanceError] = useState('');
-  const [savingAttendance, setSavingAttendance] = useState<string | null>(null);
 
   const [assignDate, setAssignDate] = useState(() =>
     typeof window === 'undefined' ? '' : getPakistanDate(),
@@ -135,6 +134,10 @@ export default function AdminDashboard() {
     Record<string, AssignmentGroup>
   >({});
   const [savingAssignment, setSavingAssignment] = useState(false);
+  const [assignmentError, setAssignmentError] = useState('');
+  const [driverForm, setDriverForm] = useState({ fullName: '', email: '', phone: '', password: '' });
+  const [creatingDriver, setCreatingDriver] = useState(false);
+  const [driverNotice, setDriverNotice] = useState('');
   const [assignSuccess, setAssignSuccess] = useState(false);
 
   const [editingPrice, setEditingPrice] = useState<Record<string, string>>({});
@@ -245,13 +248,13 @@ export default function AdminDashboard() {
         router.push('/admin/login');
         return;
       }
-      setAdminUserId(session.user.id);
       setAdminReady(true);
 
       const [
         { data: studentsData },
         { data: routesData },
         { data: coastersData },
+        { data: driversData },
         { data: helpData },
         { data: holidaysData },
         { data: notificationsData },
@@ -267,6 +270,7 @@ export default function AdminDashboard() {
           .order('full_name'),
         supabase.from('routes').select('*'),
         supabase.from('coasters').select('*'),
+        supabase.from('drivers').select('id, email, full_name, phone, active').order('full_name'),
         supabase
           .from('help_messages')
           .select('*, profiles(full_name, email)')
@@ -300,6 +304,7 @@ export default function AdminDashboard() {
       if (studentsData) setStudents(studentsData as Student[]);
       if (routesData) setRoutes(routesData as Route[]);
       if (coastersData) setCoasters(coastersData as Coaster[]);
+      if (driversData) setDrivers(driversData as Driver[]);
       if (helpData) setHelpMessages(helpData as HelpMessage[]);
       if (holidaysData) setHolidays(holidaysData as Holiday[]);
       if (notificationsData)
@@ -361,8 +366,8 @@ export default function AdminDashboard() {
     const [year, month] = attendanceMonth.split('-').map(Number);
     const nextMonth = new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10);
     void Promise.all([
-      supabase.from('daily_assignments').select('student_id, assignment_date, attendance_status, attendance_marked_at').eq('assignment_date', attendanceDate),
-      supabase.from('daily_assignments').select('student_id, assignment_date, attendance_status, attendance_marked_at').gte('assignment_date', monthStart).lt('assignment_date', nextMonth),
+      supabase.from('daily_assignments').select('student_id, assignment_date, driver_id, driver_name, attendance_status, attendance_marked_at').eq('assignment_date', attendanceDate),
+      supabase.from('daily_assignments').select('student_id, assignment_date, driver_id, driver_name, attendance_status, attendance_marked_at').gte('assignment_date', monthStart).lt('assignment_date', nextMonth),
     ]).then(([daily, monthly]) => {
       if (cancelled) return;
       const error = daily.error ?? monthly.error;
@@ -459,10 +464,13 @@ export default function AdminDashboard() {
 
   const handleSaveAssignments = async () => {
     setSavingAssignment(true);
+    setAssignmentError('');
     const inserts: Record<string, unknown>[] = [];
 
     for (const [routeId, assignment] of Object.entries(groupAssignments)) {
-      if (!assignment.coaster_id || !assignment.driver_name) continue;
+      if (!assignment.coaster_id || !assignment.driver_id) continue;
+      const driver = drivers.find((item) => item.id === assignment.driver_id);
+      if (!driver) continue;
 
       const group = dailyGroups.find((item) => item.route_id === routeId);
       if (!group) continue;
@@ -471,28 +479,36 @@ export default function AdminDashboard() {
         inserts.push({
           student_id: student.id,
           coaster_id: assignment.coaster_id,
-          driver_name: assignment.driver_name,
-          driver_contact: assignment.driver_contact || '',
+          driver_name: driver.full_name,
+          driver_contact: driver.phone || '',
+          driver_id: driver.id,
           assignment_date: assignDate,
           seat_confirmed: false,
         });
       }
     }
 
-    if (inserts.length > 0) {
+    if (inserts.length === 0) {
+      setAssignmentError('Choose an active vehicle and driver account for at least one route.');
+      setSavingAssignment(false);
+      return;
+    }
+    {
       const { error } = await supabase
         .from('daily_assignments')
         .upsert(inserts, { onConflict: 'student_id,assignment_date' });
 
-      if (!error) {
-        // Only students whose vehicle/driver changed get a new message
-        // (the server de-duplicates identical assignments).
-        void notifyWhatsApp({
-          event: 'assignment',
-          date: assignDate,
-          studentIds: inserts.map((row) => String(row.student_id)),
-        }).then((result) => setWhatsAppNotice(describeWhatsApp(result)));
+      if (error) {
+        setAssignmentError(`Could not save assignments: ${error.message}`);
+        setSavingAssignment(false);
+        return;
       }
+      // Only students whose vehicle/driver changed get a new message.
+      void notifyWhatsApp({
+        event: 'assignment',
+        date: assignDate,
+        studentIds: inserts.map((row) => String(row.student_id)),
+      }).then((result) => setWhatsAppNotice(describeWhatsApp(result)));
     }
 
     setAssignSuccess(true);
@@ -548,6 +564,36 @@ export default function AdminDashboard() {
       setStudentPage(0);
     }
     setBulkUpdatingFees(false);
+  };
+
+  const handleCreateDriver = async () => {
+    if (creatingDriver) return;
+    setCreatingDriver(true);
+    setDriverNotice('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Your session expired. Sign in again.');
+      const response = await fetch('/api/admin/drivers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify(driverForm),
+      });
+      const result = await response.json() as { driver?: Driver; error?: string };
+      if (!response.ok || !result.driver) throw new Error(result.error ?? 'Could not create the driver account.');
+      setDrivers((current) => [...current, result.driver!].sort((a, b) => a.full_name.localeCompare(b.full_name)));
+      setDriverForm({ fullName: '', email: '', phone: '', password: '' });
+      setDriverNotice('Driver login created. Share the login details with the driver securely.');
+    } catch (error) {
+      setDriverNotice(error instanceof Error ? error.message : 'Could not create the driver account.');
+    } finally {
+      setCreatingDriver(false);
+    }
+  };
+
+  const handleToggleDriver = async (driver: Driver) => {
+    const { error } = await supabase.from('drivers').update({ active: !driver.active }).eq('id', driver.id);
+    if (error) setDriverNotice(`Could not update driver: ${error.message}`);
+    else setDrivers((current) => current.map((item) => item.id === driver.id ? { ...item, active: !driver.active } : item));
   };
 
   const handleAddDepartureGroup = async () => {
@@ -701,24 +747,6 @@ export default function AdminDashboard() {
     setSendingAnnouncement(false);
   };
 
-  const handleSetAttendance = async (studentId: string, status: 'present' | 'absent') => {
-    setSavingAttendance(studentId);
-    setAttendanceError('');
-    const { error } = await supabase
-      .from('daily_assignments')
-      .update({ attendance_status: status, attendance_marked_at: new Date().toISOString(), attendance_marked_by: adminUserId })
-      .eq('student_id', studentId)
-      .eq('assignment_date', attendanceDate);
-    if (error) {
-      setAttendanceError(`Could not save attendance: ${error.message}`);
-    } else {
-      const markedAt = new Date().toISOString();
-      setAttendanceRows((rows) => rows.map((row) => row.student_id === studentId ? { ...row, attendance_status: status, attendance_marked_at: markedAt } : row));
-      setAttendanceMonthRows((rows) => rows.map((row) => row.student_id === studentId && row.assignment_date === attendanceDate ? { ...row, attendance_status: status, attendance_marked_at: markedAt } : row));
-    }
-    setSavingAttendance(null);
-  };
-
   const handleResendAnnouncement = async (item: Notification) => {
     if (
       !window.confirm(
@@ -851,6 +879,7 @@ export default function AdminDashboard() {
       title: 'Applications',
     },
     { key: 'assignments', label: '🚐', title: 'Daily Assignments' },
+    { key: 'drivers', label: '🪪', title: 'Driver Accounts' },
     { key: 'departures', label: '🚍', title: 'Departures' },
     { key: 'attendance', label: '✅', title: 'Attendance' },
     { key: 'fees', label: '💳', title: 'Fees' },
@@ -1322,6 +1351,28 @@ export default function AdminDashboard() {
           />
         )}
 
+        {activeTab === 'drivers' && (
+          <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+              <h2 className="text-xl font-semibold text-white">Create driver login</h2>
+              <p className="mt-1 text-sm text-zinc-400">Drivers use these credentials at the driver sign-in page to record attendance for assigned trips.</p>
+              {driverNotice && <p role="status" className="mt-4 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-300">{driverNotice}</p>}
+              <div className="mt-4 space-y-3">
+                <input value={driverForm.fullName} onChange={(event) => setDriverForm((value) => ({ ...value, fullName: event.target.value }))} placeholder="Driver full name" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white" />
+                <input type="email" autoComplete="email" value={driverForm.email} onChange={(event) => setDriverForm((value) => ({ ...value, email: event.target.value }))} placeholder="Driver email" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white" />
+                <input type="tel" value={driverForm.phone} onChange={(event) => setDriverForm((value) => ({ ...value, phone: event.target.value }))} placeholder="Phone (optional)" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white" />
+                <input type="password" autoComplete="new-password" minLength={10} value={driverForm.password} onChange={(event) => setDriverForm((value) => ({ ...value, password: event.target.value }))} placeholder="Temporary password (10+ characters)" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white" />
+                <button type="button" disabled={creatingDriver || !driverForm.fullName.trim() || !driverForm.email.trim() || driverForm.password.length < 10} onClick={() => void handleCreateDriver()} className="rounded-xl bg-yellow-400 px-4 py-3 text-sm font-semibold text-zinc-950 disabled:opacity-50">{creatingDriver ? 'Creating…' : 'Create driver account'}</button>
+                <p className="text-xs text-zinc-500">Give the driver their login details through your usual secure channel. They can use the password reset link if needed.</p>
+              </div>
+            </section>
+            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+              <h2 className="mb-4 text-xl font-semibold text-white">Driver accounts ({drivers.length})</h2>
+              {drivers.length === 0 ? <p className="rounded-xl border border-dashed border-zinc-700 px-4 py-8 text-center text-sm text-zinc-400">No driver accounts yet. Create an account to assign trips and enable driver attendance.</p> : <div className="space-y-2">{drivers.map((driver) => <div key={driver.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3"><div><p className="font-medium text-white">{driver.full_name}</p><p className="text-xs text-zinc-400">{driver.email}{driver.phone ? ` · ${driver.phone}` : ''}</p></div><button type="button" onClick={() => void handleToggleDriver(driver)} className={`rounded-lg px-3 py-2 text-xs font-semibold ${driver.active ? 'bg-emerald-500/15 text-emerald-200' : 'bg-zinc-800 text-zinc-400'}`}>{driver.active ? 'Active · deactivate' : 'Inactive · activate'}</button></div>)}</div>}
+            </section>
+          </div>
+        )}
+
         {activeTab === 'assignments' && (
           <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
             <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -1414,53 +1465,17 @@ export default function AdminDashboard() {
                         </select>
                       </div>
 
-                      <div>
-                        <label className="mb-1 block text-xs text-zinc-400">
-                          Driver Name
-                        </label>
-                        <input
-                          value={
-                            groupAssignments[group.route_id]?.driver_name ?? ''
-                          }
-                          onChange={(event) =>
-                            setGroupAssignments((prev) => ({
-                              ...prev,
-                              [group.route_id]: {
-                                ...prev[group.route_id],
-                                driver_name: event.target.value,
-                              },
-                            }))
-                          }
-                          placeholder="Driver name"
-                          className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-yellow-400"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="mb-1 block text-xs text-zinc-400">
-                          Driver Contact
-                        </label>
-                        <input
-                          value={
-                            groupAssignments[group.route_id]?.driver_contact ??
-                            ''
-                          }
-                          onChange={(event) =>
-                            setGroupAssignments((prev) => ({
-                              ...prev,
-                              [group.route_id]: {
-                                ...prev[group.route_id],
-                                driver_contact: event.target.value,
-                              },
-                            }))
-                          }
-                          placeholder="Driver contact"
-                          className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-yellow-400"
-                        />
+                      <div className="md:col-span-2">
+                        <label className="mb-1 block text-xs text-zinc-400">Driver account</label>
+                        <select value={groupAssignments[group.route_id]?.driver_id ?? ''} onChange={(event) => setGroupAssignments((prev) => ({ ...prev, [group.route_id]: { ...prev[group.route_id], driver_id: event.target.value } }))} className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-white outline-none focus:border-yellow-400">
+                          <option value="">Select driver account…</option>{drivers.filter((driver) => driver.active).map((driver) => <option key={driver.id} value={driver.id}>{driver.full_name}{driver.phone ? ` · ${driver.phone}` : ''}</option>)}
+                        </select>
                       </div>
                     </div>
                   </div>
                 ))}
+
+                {assignmentError && <p role="alert" className="rounded-xl border border-red-500/20 bg-red-500/[0.05] px-4 py-3 text-sm text-red-200">{assignmentError}</p>}
 
                 {assignSuccess && (
                   <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
@@ -1819,7 +1834,7 @@ export default function AdminDashboard() {
                 <label className="text-xs text-zinc-400">Trip date<input aria-label="Trip date" type="date" value={attendanceDate} onChange={(event) => { setAttendanceDate(event.target.value); setAttendanceMonth(event.target.value.slice(0, 7)); }} className="mt-1 block rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white" /></label>
               </div>
               {attendanceError && <p role="alert" className="mt-4 rounded-xl border border-red-500/20 bg-red-500/[0.05] px-4 py-3 text-sm text-red-200">{attendanceError}</p>}
-              {attendanceRows.length === 0 ? <p className="mt-4 rounded-xl border border-dashed border-zinc-700 px-4 py-8 text-center text-sm text-zinc-400">No students have been assigned to a trip on this date.</p> : <div className="mt-4 space-y-2">{attendanceRows.map((row) => { const student = students.find((item) => item.id === row.student_id); return <div key={row.student_id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3"><div><p className="font-medium text-white">{student?.full_name ?? 'Student record unavailable'}</p><p className="text-xs text-zinc-500">{student?.routes?.name ?? 'Route not assigned'} · {student?.institution ?? 'Institution not set'} · {student?.driver_name ?? 'Driver not set'}</p></div><div className="flex items-center gap-2"><span className={`mr-2 text-xs ${row.attendance_status === 'present' ? 'text-emerald-300' : row.attendance_status === 'absent' ? 'text-red-300' : 'text-zinc-500'}`}>{row.attendance_status ?? 'Not recorded'}</span><button type="button" disabled={savingAttendance === row.student_id} onClick={() => void handleSetAttendance(row.student_id, 'present')} className="rounded-lg bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-200 disabled:opacity-40">Present</button><button type="button" disabled={savingAttendance === row.student_id} onClick={() => void handleSetAttendance(row.student_id, 'absent')} className="rounded-lg bg-red-500/15 px-3 py-2 text-xs font-semibold text-red-200 disabled:opacity-40">Absent</button></div></div>; })}</div>}
+              {attendanceRows.length === 0 ? <p className="mt-4 rounded-xl border border-dashed border-zinc-700 px-4 py-8 text-center text-sm text-zinc-400">No students have been assigned to a trip on this date.</p> : <div className="mt-4 space-y-2">{attendanceRows.map((row) => { const student = students.find((item) => item.id === row.student_id); return <div key={row.student_id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3"><div><p className="font-medium text-white">{student?.full_name ?? 'Student record unavailable'}</p><p className="text-xs text-zinc-500">{student?.routes?.name ?? 'Route not assigned'} · {student?.institution ?? 'Institution not set'} · {row.driver_name ?? 'Driver not assigned'}</p></div><span className={`rounded-full px-3 py-1 text-xs font-semibold ${row.attendance_status === 'present' ? 'bg-emerald-500/15 text-emerald-200' : row.attendance_status === 'absent' ? 'bg-red-500/15 text-red-200' : 'bg-zinc-800 text-zinc-400'}`}>{row.attendance_status ?? 'Awaiting driver'}</span></div>; })}</div>}
             </section>
 
             <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">

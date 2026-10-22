@@ -1,0 +1,49 @@
+import { NextResponse } from 'next/server';
+import { createServiceClient, getAdminFromRequest } from '@/lib/supabase/service';
+
+export async function POST(request: Request) {
+  const service = createServiceClient();
+  if (!service) {
+    return NextResponse.json({ error: 'Driver account creation is not configured on the server.' }, { status: 503 });
+  }
+  const adminId = await getAdminFromRequest(request, service);
+  if (!adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  let body: { email?: string; password?: string; fullName?: string; phone?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
+  }
+
+  const email = body.email?.trim().toLowerCase() ?? '';
+  const fullName = body.fullName?.trim() ?? '';
+  const password = body.password ?? '';
+  if (!/^\S+@\S+\.\S+$/.test(email) || !fullName || password.length < 10) {
+    return NextResponse.json({ error: 'Enter a valid email, driver name, and password with at least 10 characters.' }, { status: 400 });
+  }
+
+  const { data: authData, error: authError } = await service.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { account_type: 'driver', full_name: fullName },
+  });
+  if (authError || !authData.user) {
+    return NextResponse.json({ error: authError?.message ?? 'Could not create the driver login.' }, { status: 400 });
+  }
+
+  const { data, error } = await service.from('drivers').insert({
+    id: authData.user.id,
+    email,
+    full_name: fullName,
+    phone: body.phone?.trim() || null,
+    created_by: adminId,
+  }).select('id, email, full_name, phone, active, created_at').single();
+
+  if (error || !data) {
+    await service.auth.admin.deleteUser(authData.user.id);
+    return NextResponse.json({ error: error?.message ?? 'Could not save the driver account.' }, { status: 400 });
+  }
+  return NextResponse.json({ driver: data }, { status: 201 });
+}

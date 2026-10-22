@@ -84,6 +84,10 @@ export default function AdminLogin() {
           <Link href="/auth/login" className={linkClass}>
             Student log in
           </Link>
+          {' · '}
+          <Link href="/driver/login" className={linkClass}>
+            Driver log in
+          </Link>
         </>
       }
     >
