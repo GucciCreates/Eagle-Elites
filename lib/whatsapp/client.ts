@@ -7,7 +7,7 @@ export type NotifyPayload =
   | { event: 'rejection'; studentId: string }
   | { event: 'holiday'; date: string; reason: string }
   | { event: 'assignment'; date: string; studentIds: string[] }
-  | { event: 'announcement'; title: string; message: string }
+  | { event: 'announcement'; title: string; message: string; targetType?: string; targetValue?: string | null }
   | { event: 'test'; phone: string };
 
 export type NotifyResponse = {

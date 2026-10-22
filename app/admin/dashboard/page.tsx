@@ -26,6 +26,10 @@ type Student = {
   institution: string | null;
   route_id: string | null;
   departure_group_id?: string | null;
+  cnic_last4?: string | null;
+  user_type?: string | null;
+  department?: string | null;
+  pickup_area?: string | null;
   coaster_number?: string;
   driver_name?: string;
   driver_contact?: string;
@@ -48,7 +52,11 @@ type Notification = {
   title: string;
   message: string;
   created_at: string;
+  target_type?: string;
+  target_value?: string | null;
 };
+type DepartureSelection = { student_id: string; slot_id: string; selection_date: string };
+type AttendanceRecord = { student_id: string; assignment_date: string; attendance_status: 'present' | 'absent' | null; attendance_marked_at?: string | null };
 type Application = ApplicationRow;
 type DepartureGroup = {
   id: string;
@@ -96,16 +104,29 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [isTabPending, startTabTransition] = useTransition();
   const [adminReady, setAdminReady] = useState(false);
+  const [adminUserId, setAdminUserId] = useState('');
   const [departureStatusError, setDepartureStatusError] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const [studentSearch, setStudentSearch] = useState('');
   const [studentRouteFilter, setStudentRouteFilter] = useState('all');
   const [studentFeeFilter, setStudentFeeFilter] = useState('all');
+  const [studentUniversityFilter, setStudentUniversityFilter] = useState('all');
+  const [studentDepartmentFilter, setStudentDepartmentFilter] = useState('all');
+  const [studentPickupFilter, setStudentPickupFilter] = useState('all');
+  const [studentSort, setStudentSort] = useState('name');
+  const [studentSortDirection, setStudentSortDirection] = useState<'asc' | 'desc'>('asc');
   const [studentPage, setStudentPage] = useState(0);
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [bulkUpdatingFees, setBulkUpdatingFees] = useState(false);
   const [studentListNotice, setStudentListNotice] = useState('');
   const [selectedDepartureIds, setSelectedDepartureIds] = useState<string[]>([]);
+  const [departureSelections, setDepartureSelections] = useState<DepartureSelection[]>([]);
+  const [attendanceDate, setAttendanceDate] = useState(() => typeof window === 'undefined' ? '' : getPakistanDate());
+  const [attendanceMonth, setAttendanceMonth] = useState(() => typeof window === 'undefined' ? '' : getPakistanDate().slice(0, 7));
+  const [attendanceRows, setAttendanceRows] = useState<AttendanceRecord[]>([]);
+  const [attendanceMonthRows, setAttendanceMonthRows] = useState<AttendanceRecord[]>([]);
+  const [attendanceError, setAttendanceError] = useState('');
+  const [savingAttendance, setSavingAttendance] = useState<string | null>(null);
 
   const [assignDate, setAssignDate] = useState(() =>
     typeof window === 'undefined' ? '' : getPakistanDate(),
@@ -131,6 +152,8 @@ export default function AdminDashboard() {
   const [sendingAnnouncement, setSendingAnnouncement] = useState(false);
   const [announcementSuccess, setAnnouncementSuccess] = useState(false);
   const [announcementWhatsApp, setAnnouncementWhatsApp] = useState(false);
+  const [announcementTargetType, setAnnouncementTargetType] = useState('all');
+  const [announcementTargetValue, setAnnouncementTargetValue] = useState('');
   const [holidayWhatsApp, setHolidayWhatsApp] = useState(true);
   const [whatsAppNotice, setWhatsAppNotice] = useState('');
   const [resendingId, setResendingId] = useState<string | null>(null);
@@ -222,6 +245,7 @@ export default function AdminDashboard() {
         router.push('/admin/login');
         return;
       }
+      setAdminUserId(session.user.id);
       setAdminReady(true);
 
       const [
@@ -269,7 +293,7 @@ export default function AdminDashboard() {
           .order('slot_number', { ascending: true }),
         supabase
           .from('departure_selections')
-          .select('student_id')
+          .select('student_id, slot_id, selection_date')
           .eq('selection_date', getPakistanDate()),
       ]);
 
@@ -295,6 +319,8 @@ export default function AdminDashboard() {
         setSelectedDepartureIds(
           departureSelectionsData.map((selection) => selection.student_id),
         );
+      if (departureSelectionsData)
+        setDepartureSelections(departureSelectionsData as DepartureSelection[]);
       setLoading(false);
     };
 
@@ -328,6 +354,47 @@ export default function AdminDashboard() {
     };
   }, [adminReady, supabase]);
 
+  useEffect(() => {
+    if (!adminReady || !attendanceDate || !attendanceMonth) return;
+    let cancelled = false;
+    const monthStart = `${attendanceMonth}-01`;
+    const [year, month] = attendanceMonth.split('-').map(Number);
+    const nextMonth = new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10);
+    void Promise.all([
+      supabase.from('daily_assignments').select('student_id, assignment_date, attendance_status, attendance_marked_at').eq('assignment_date', attendanceDate),
+      supabase.from('daily_assignments').select('student_id, assignment_date, attendance_status, attendance_marked_at').gte('assignment_date', monthStart).lt('assignment_date', nextMonth),
+    ]).then(([daily, monthly]) => {
+      if (cancelled) return;
+      const error = daily.error ?? monthly.error;
+      setAttendanceError(error?.message ?? '');
+      if (daily.data) setAttendanceRows(daily.data as AttendanceRecord[]);
+      if (monthly.data) setAttendanceMonthRows(monthly.data as AttendanceRecord[]);
+    });
+    return () => { cancelled = true; };
+  }, [adminReady, attendanceDate, attendanceMonth, supabase]);
+
+  useEffect(() => {
+    if (!adminReady) return;
+    const refreshSelections = async () => {
+      const { data, error } = await supabase
+        .from('departure_selections')
+        .select('student_id, slot_id, selection_date')
+        .eq('selection_date', getPakistanDate());
+      if (error || !data) return;
+      setDepartureSelections(data as DepartureSelection[]);
+      setSelectedDepartureIds(data.map((selection) => selection.student_id));
+    };
+    const channel = supabase
+      .channel('admin-departure-selection-overview')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'departure_selections' }, () => void refreshSelections())
+      .subscribe();
+    const interval = window.setInterval(() => void refreshSelections(), 60_000);
+    return () => {
+      window.clearInterval(interval);
+      void supabase.removeChannel(channel);
+    };
+  }, [adminReady, supabase]);
+
   const dailyGroups: DailyGroup[] = routes
     .map((route) => ({
       route_id: route.id,
@@ -340,7 +407,7 @@ export default function AdminDashboard() {
     const query = studentSearch.trim().toLocaleLowerCase();
     const matchesSearch =
       !query ||
-      [student.full_name, student.email, student.institution, student.routes?.name]
+      [student.full_name, student.email, student.institution, student.routes?.name, student.cnic_last4, student.department, student.pickup_area]
         .some((value) => value?.toLocaleLowerCase().includes(query));
     const matchesRoute =
       studentRouteFilter === 'all' ||
@@ -349,8 +416,26 @@ export default function AdminDashboard() {
         : student.route_id === studentRouteFilter);
     const matchesFee =
       studentFeeFilter === 'all' || student.fee_status === studentFeeFilter;
-    return matchesSearch && matchesRoute && matchesFee;
+    const group = departureGroups.find((item) => item.id === student.departure_group_id);
+    const matchesUniversity = studentUniversityFilter === 'all' ||
+      (studentUniversityFilter === 'unassigned' ? !student.institution : student.institution === studentUniversityFilter || group?.university === studentUniversityFilter);
+    const matchesDepartment = studentDepartmentFilter === 'all' || group?.department === studentDepartmentFilter || student.department === studentDepartmentFilter;
+    const matchesPickup = studentPickupFilter === 'all' || student.pickup_area === studentPickupFilter;
+    return matchesSearch && matchesRoute && matchesFee && matchesUniversity && matchesDepartment && matchesPickup;
+  }).sort((a, b) => {
+    const groupA = departureGroups.find((item) => item.id === a.departure_group_id);
+    const groupB = departureGroups.find((item) => item.id === b.departure_group_id);
+    const value = (student: Student, group: DepartureGroup | undefined) => ({
+      name: student.full_name, enrollment: student.cnic_last4 ?? '', university: student.institution ?? group?.university ?? '',
+      department: student.department ?? group?.department ?? '', pickup: student.pickup_area ?? '', fee: student.fee_status ?? '', route: student.routes?.name ?? '',
+    })[studentSort as 'name' | 'enrollment' | 'university' | 'department' | 'pickup' | 'fee' | 'route'];
+    const compared = String(value(a, groupA)).localeCompare(String(value(b, groupB)), undefined, { numeric: true, sensitivity: 'base' });
+    return studentSortDirection === 'asc' ? compared : -compared;
   });
+  const uniqueOptions = (values: (string | null | undefined)[]) => [...new Set(values.filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b));
+  const universities = uniqueOptions([...departureGroups.map((group) => group.university), ...students.map((student) => student.institution)]);
+  const departments = uniqueOptions([...departureGroups.map((group) => group.department), ...students.map((student) => student.department)]);
+  const pickupAreas = uniqueOptions(students.map((student) => student.pickup_area));
   const studentsPerPage = 50;
   const pageCount = Math.max(1, Math.ceil(matchingStudents.length / studentsPerPage));
   const visibleStudents = matchingStudents.slice(
@@ -576,26 +661,35 @@ export default function AdminDashboard() {
   };
 
   const handleSendAnnouncement = async () => {
-    if (!announcementTitle || !announcementMessage) return;
+    if (!announcementTitle.trim() || !announcementMessage.trim()) return;
     setSendingAnnouncement(true);
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('notifications')
       .insert({
         title: announcementTitle,
         message: announcementMessage,
         type: 'general',
+        target_type: announcementTargetType,
+        target_value: ['university', 'departure_group'].includes(announcementTargetType) ? announcementTargetValue : null,
       })
       .select()
       .single();
 
-    if (data) setNotifications((prev) => [data as Notification, ...prev]);
+    if (error || !data) {
+      setWhatsAppNotice(`Announcement failed: ${error?.message ?? 'Could not save the announcement.'}`);
+      setSendingAnnouncement(false);
+      return;
+    }
+    setNotifications((prev) => [data as Notification, ...prev]);
 
     if (data && announcementWhatsApp) {
       const result = await notifyWhatsApp({
         event: 'announcement',
         title: announcementTitle,
         message: announcementMessage,
+        targetType: announcementTargetType,
+        targetValue: announcementTargetValue || null,
       });
       setWhatsAppNotice(describeWhatsApp(result));
     }
@@ -607,10 +701,28 @@ export default function AdminDashboard() {
     setSendingAnnouncement(false);
   };
 
+  const handleSetAttendance = async (studentId: string, status: 'present' | 'absent') => {
+    setSavingAttendance(studentId);
+    setAttendanceError('');
+    const { error } = await supabase
+      .from('daily_assignments')
+      .update({ attendance_status: status, attendance_marked_at: new Date().toISOString(), attendance_marked_by: adminUserId })
+      .eq('student_id', studentId)
+      .eq('assignment_date', attendanceDate);
+    if (error) {
+      setAttendanceError(`Could not save attendance: ${error.message}`);
+    } else {
+      const markedAt = new Date().toISOString();
+      setAttendanceRows((rows) => rows.map((row) => row.student_id === studentId ? { ...row, attendance_status: status, attendance_marked_at: markedAt } : row));
+      setAttendanceMonthRows((rows) => rows.map((row) => row.student_id === studentId && row.assignment_date === attendanceDate ? { ...row, attendance_status: status, attendance_marked_at: markedAt } : row));
+    }
+    setSavingAttendance(null);
+  };
+
   const handleResendAnnouncement = async (item: Notification) => {
     if (
       !window.confirm(
-        'Send this announcement to all opted-in students on WhatsApp?',
+        'Send this announcement to its saved audience on WhatsApp?',
       )
     )
       return;
@@ -619,6 +731,8 @@ export default function AdminDashboard() {
       event: 'announcement',
       title: item.title,
       message: item.message,
+      targetType: item.target_type ?? 'all',
+      targetValue: item.target_value ?? null,
     });
     setWhatsAppNotice(describeWhatsApp(result));
     setResendingId(null);
@@ -738,6 +852,7 @@ export default function AdminDashboard() {
     },
     { key: 'assignments', label: '🚐', title: 'Daily Assignments' },
     { key: 'departures', label: '🚍', title: 'Departures' },
+    { key: 'attendance', label: '✅', title: 'Attendance' },
     { key: 'fees', label: '💳', title: 'Fees' },
     {
       key: 'messages',
@@ -956,7 +1071,7 @@ export default function AdminDashboard() {
                 All Students ({students.length})
               </h2>
 
-              <div className="mb-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_12rem_10rem]">
+              <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 <label className="sr-only" htmlFor="student-search">Search students</label>
                 <input
                   id="student-search"
@@ -967,7 +1082,7 @@ export default function AdminDashboard() {
                     setStudentPage(0);
                     setSelectedStudentIds([]);
                   }}
-                  placeholder="Search name, email, institution, or route…"
+                  placeholder="Search name, enrolment no., email, or pickup area…"
                   className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-yellow-400"
                 />
                 <label className="sr-only" htmlFor="student-route-filter">Filter by route</label>
@@ -1000,6 +1115,24 @@ export default function AdminDashboard() {
                   <option value="unpaid">Unpaid</option>
                   <option value="paid">Paid</option>
                 </select>
+                <label className="sr-only" htmlFor="student-university-filter">Filter by university</label>
+                <select id="student-university-filter" value={studentUniversityFilter} onChange={(event) => { setStudentUniversityFilter(event.target.value); setStudentPage(0); setSelectedStudentIds([]); }} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white outline-none focus:border-yellow-400">
+                  <option value="all">All universities</option><option value="unassigned">No university</option>
+                  {universities.map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+                <label className="sr-only" htmlFor="student-department-filter">Filter by department</label>
+                <select id="student-department-filter" value={studentDepartmentFilter} onChange={(event) => { setStudentDepartmentFilter(event.target.value); setStudentPage(0); setSelectedStudentIds([]); }} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white outline-none focus:border-yellow-400">
+                  <option value="all">All departments</option>{departments.map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+                <label className="sr-only" htmlFor="student-pickup-filter">Filter by pickup area</label>
+                <select id="student-pickup-filter" value={studentPickupFilter} onChange={(event) => { setStudentPickupFilter(event.target.value); setStudentPage(0); setSelectedStudentIds([]); }} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white outline-none focus:border-yellow-400">
+                  <option value="all">All pickup areas</option>{pickupAreas.map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+                <label className="sr-only" htmlFor="student-sort">Sort students</label>
+                <select id="student-sort" value={studentSort} onChange={(event) => setStudentSort(event.target.value)} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white outline-none focus:border-yellow-400">
+                  <option value="name">Sort: Name</option><option value="enrollment">Sort: Enrolment no.</option><option value="university">Sort: University</option><option value="department">Sort: Department</option><option value="pickup">Sort: Pickup area</option><option value="fee">Sort: Fee status</option><option value="route">Sort: Route</option>
+                </select>
+                <button type="button" onClick={() => setStudentSortDirection((direction) => direction === 'asc' ? 'desc' : 'asc')} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-200 hover:border-yellow-400">{studentSortDirection === 'asc' ? 'Ascending ↑' : 'Descending ↓'}</button>
               </div>
 
               <div className="mb-3 flex flex-col gap-3 rounded-xl border border-zinc-800 bg-zinc-950/70 p-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1036,9 +1169,12 @@ export default function AdminDashboard() {
                 <p role="status" className="mb-3 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-300">{studentListNotice}</p>
               )}
 
+              <div className="mb-2 hidden grid-cols-[2rem_minmax(9rem,1.2fr)_minmax(7rem,1fr)_minmax(7rem,1fr)_5rem_5rem] gap-3 px-3 text-[10px] uppercase tracking-wide text-zinc-500 lg:grid">
+                <span></span><span>Name / enrolment</span><span>University / department</span><span>Pickup / route</span><span>Fee</span><span></span>
+              </div>
               <div className="space-y-2">
                 {visibleStudents.map((student) => (
-                  <div key={student.id} className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950/70 px-3 py-3">
+                  <div key={student.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950/70 px-3 py-3 lg:grid lg:grid-cols-[2rem_minmax(9rem,1.2fr)_minmax(7rem,1fr)_minmax(7rem,1fr)_5rem_5rem]">
                     <input
                       type="checkbox"
                       aria-label={`Select ${student.full_name}`}
@@ -1049,10 +1185,10 @@ export default function AdminDashboard() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium text-white">{student.full_name}</p>
                       <p className="truncate text-xs text-zinc-400">{student.email}</p>
-                      <p className="mt-1 truncate text-xs text-zinc-500">
-                        {student.routes?.name || 'No route assigned'}{student.institution ? ` · ${student.institution}` : ''}
-                      </p>
+                      <p className="truncate text-xs text-zinc-500">Enrolment: {student.cnic_last4 || '—'}</p>
                     </div>
+                    <div className="hidden min-w-0 text-xs text-zinc-300 sm:block"><p className="truncate">{student.institution || '—'}</p><p className="truncate text-zinc-500">{student.department || departureGroups.find((group) => group.id === student.departure_group_id)?.department || '—'}</p></div>
+                    <div className="hidden min-w-0 text-xs text-zinc-300 sm:block"><p className="truncate">{student.pickup_area || 'Pickup not set'}</p><p className="truncate text-zinc-500">{student.routes?.name || 'No route'}</p></div>
                     <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-medium ${student.fee_status === 'paid' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300'}`}>
                       {student.fee_status === 'paid' ? 'Paid' : 'Unpaid'}
                     </span>
@@ -1347,6 +1483,32 @@ export default function AdminDashboard() {
 
         {activeTab === 'departures' && (
           <div className="space-y-6">
+            <section className="rounded-[28px] border border-yellow-500/20 bg-zinc-900/80 p-5">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-yellow-300">Today · {getPakistanDate()}</p>
+                  <h2 className="mt-1 text-xl font-semibold text-white">Today&apos;s departure overview</h2>
+                  <p className="mt-1 text-sm text-zinc-400">Vehicle planning by university, department, and departure slot.</p>
+                </div>
+                <span className="rounded-full bg-zinc-800 px-3 py-1 text-sm text-zinc-200">{departureSelections.length} selected students</span>
+              </div>
+              {departureStatusError ? <p role="alert" className="mt-4 rounded-xl border border-red-500/20 bg-red-500/[0.05] px-4 py-4 text-sm text-red-200">Couldn&apos;t load departure selections: {departureStatusError}</p> : todaySlotGroups.size === 0 ? (
+                <div className="mt-4 rounded-2xl border border-dashed border-zinc-700 bg-zinc-950/50 px-5 py-8 text-center"><p className="font-medium text-zinc-200">No departures posted for today yet</p><p className="mt-1 text-sm text-zinc-500">Once slots are posted, their student lists and headcounts will appear here.</p></div>
+              ) : (
+                <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                  {departureGroups.filter((group) => todaySlotGroups.has(group.id)).map((group) => {
+                    const slots = departureSlots.filter((slot) => slot.slot_date === getPakistanDate() && slot.group_id === group.id).sort((a, b) => a.slot_number - b.slot_number);
+                    return <div key={group.id} className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
+                      <div className="mb-3 flex items-start justify-between gap-3"><div><h3 className="font-semibold text-white">{group.university}</h3><p className="text-xs text-zinc-500">{group.department}</p></div><span className="text-xs text-zinc-400">{slots.reduce((total, slot) => total + departureSelections.filter((selection) => selection.slot_id === slot.id).length, 0)} students</span></div>
+                      <div className="space-y-3">{slots.map((slot) => {
+                        const slotSelections = departureSelections.filter((selection) => selection.slot_id === slot.id);
+                        return <div key={slot.id} className="rounded-xl border border-zinc-800 px-3 py-3"><div className="flex items-center justify-between gap-3"><p className="font-medium text-zinc-100">Slot {slot.slot_number} <span className="font-normal text-zinc-400">· depart {slot.departure_time}</span></p><span className="rounded-full bg-yellow-400/10 px-2.5 py-1 text-xs font-semibold text-yellow-200">{slotSelections.length} {slotSelections.length === 1 ? 'student' : 'students'}</span></div>{slot.notes && <p className="mt-1 text-xs text-zinc-500">{slot.notes}</p>}{slotSelections.length ? <ul className="mt-3 divide-y divide-zinc-800">{slotSelections.map((selection) => { const student = students.find((item) => item.id === selection.student_id); return <li key={selection.student_id} className="flex justify-between gap-3 py-2 text-sm"><span className="text-zinc-200">{student?.full_name ?? 'Student record unavailable'}</span><span className="shrink-0 text-xs text-zinc-500">{student?.cnic_last4 || student?.email || ''}</span></li>; })}</ul> : <p className="mt-3 text-sm text-zinc-500">No students selected this slot yet.</p>}</div>;
+                      })}</div>
+                    </div>;
+                  })}
+                </div>
+              )}
+            </section>
             <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
@@ -1649,6 +1811,24 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {activeTab === 'attendance' && (
+          <div className="space-y-6">
+            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-yellow-300">Driver-reported trip record</p><h2 className="mt-1 text-xl font-semibold text-white">Trip attendance</h2><p className="mt-1 text-sm text-zinc-400">Record who boarded for each student assigned to the selected date.</p></div>
+                <label className="text-xs text-zinc-400">Trip date<input aria-label="Trip date" type="date" value={attendanceDate} onChange={(event) => { setAttendanceDate(event.target.value); setAttendanceMonth(event.target.value.slice(0, 7)); }} className="mt-1 block rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white" /></label>
+              </div>
+              {attendanceError && <p role="alert" className="mt-4 rounded-xl border border-red-500/20 bg-red-500/[0.05] px-4 py-3 text-sm text-red-200">{attendanceError}</p>}
+              {attendanceRows.length === 0 ? <p className="mt-4 rounded-xl border border-dashed border-zinc-700 px-4 py-8 text-center text-sm text-zinc-400">No students have been assigned to a trip on this date.</p> : <div className="mt-4 space-y-2">{attendanceRows.map((row) => { const student = students.find((item) => item.id === row.student_id); return <div key={row.student_id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3"><div><p className="font-medium text-white">{student?.full_name ?? 'Student record unavailable'}</p><p className="text-xs text-zinc-500">{student?.routes?.name ?? 'Route not assigned'} · {student?.institution ?? 'Institution not set'} · {student?.driver_name ?? 'Driver not set'}</p></div><div className="flex items-center gap-2"><span className={`mr-2 text-xs ${row.attendance_status === 'present' ? 'text-emerald-300' : row.attendance_status === 'absent' ? 'text-red-300' : 'text-zinc-500'}`}>{row.attendance_status ?? 'Not recorded'}</span><button type="button" disabled={savingAttendance === row.student_id} onClick={() => void handleSetAttendance(row.student_id, 'present')} className="rounded-lg bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-200 disabled:opacity-40">Present</button><button type="button" disabled={savingAttendance === row.student_id} onClick={() => void handleSetAttendance(row.student_id, 'absent')} className="rounded-lg bg-red-500/15 px-3 py-2 text-xs font-semibold text-red-200 disabled:opacity-40">Absent</button></div></div>; })}</div>}
+            </section>
+
+            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+              <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-semibold text-white">Monthly attendance report</h2><p className="mt-1 text-sm text-zinc-400">Trip attendance totals for each student.</p></div><label className="text-xs text-zinc-400">Month<input aria-label="Report month" type="month" value={attendanceMonth} onChange={(event) => setAttendanceMonth(event.target.value)} className="mt-1 block rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white" /></label></div>
+              <div className="overflow-x-auto"><table className="w-full min-w-[36rem] text-left text-sm"><thead className="text-xs uppercase text-zinc-500"><tr><th className="pb-2">Student</th><th className="pb-2">Trips recorded</th><th className="pb-2">Present</th><th className="pb-2">Absent</th></tr></thead><tbody className="divide-y divide-zinc-800">{students.map((student) => { const records = attendanceMonthRows.filter((row) => row.student_id === student.id); const present = records.filter((row) => row.attendance_status === 'present').length; const absent = records.filter((row) => row.attendance_status === 'absent').length; return <tr key={student.id}><td className="py-2.5"><p className="font-medium text-zinc-200">{student.full_name}</p><p className="text-xs text-zinc-500">{student.cnic_last4 || student.email}</p></td><td className="py-2.5 text-zinc-300">{present + absent} / {records.length}</td><td className="py-2.5 text-emerald-300">{present}</td><td className="py-2.5 text-red-300">{absent}</td></tr>; })}</tbody></table></div>
+            </section>
+          </div>
+        )}
+
         {activeTab === 'fees' && (
           <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
             <div className="mb-5 flex items-center justify-between">
@@ -1829,6 +2009,14 @@ export default function AdminDashboard() {
                   className="w-full resize-none rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-white placeholder:text-zinc-600 outline-none focus:border-yellow-400"
                 />
 
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="sr-only" htmlFor="announcement-audience">Announcement audience</label>
+                  <select id="announcement-audience" value={announcementTargetType} onChange={(event) => { setAnnouncementTargetType(event.target.value); setAnnouncementTargetValue(''); }} className="rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-yellow-400">
+                    <option value="all">All students</option><option value="university">One university</option><option value="departure_group">One departure group</option><option value="unpaid">Unpaid students</option><option value="faculty">Faculty</option>
+                  </select>
+                  {announcementTargetType === 'university' ? <select aria-label="Choose university" value={announcementTargetValue} onChange={(event) => setAnnouncementTargetValue(event.target.value)} className="rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-yellow-400"><option value="">Choose university</option>{universities.map((university) => <option key={university} value={university}>{university}</option>)}</select> : announcementTargetType === 'departure_group' ? <select aria-label="Choose departure group" value={announcementTargetValue} onChange={(event) => setAnnouncementTargetValue(event.target.value)} className="rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-yellow-400"><option value="">Choose departure group</option>{departureGroups.map((group) => <option key={group.id} value={group.id}>{group.university} · {group.department}</option>)}</select> : <p className="self-center text-xs text-zinc-500">Audience: {announcementTargetType === 'all' ? 'every student' : announcementTargetType === 'unpaid' ? 'students with unpaid fees' : announcementTargetType}</p>}
+                </div>
+
                 <label className="flex items-center gap-2 text-sm text-zinc-300">
                   <input
                     type="checkbox"
@@ -1843,18 +2031,20 @@ export default function AdminDashboard() {
 
                 {announcementSuccess && (
                   <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-                    ✅ Announcement sent to all students!
+                  ✅ Announcement sent to the selected audience.
                   </div>
                 )}
+                {whatsAppNotice && <p role="status" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-300">{whatsAppNotice}</p>}
 
                 <button
                   type="button"
                   onClick={handleSendAnnouncement}
-                  className="rounded-xl bg-gradient-to-r from-[#facc15] via-[#fbbf24] to-[#f59e0b] px-5 py-3 text-sm font-semibold text-slate-950 shadow-[0_15px_30px_rgba(250,204,21,0.3)]"
+                  disabled={sendingAnnouncement || !announcementTitle.trim() || !announcementMessage.trim() || (['university', 'departure_group'].includes(announcementTargetType) && !announcementTargetValue)}
+                  className="rounded-xl bg-gradient-to-r from-[#facc15] via-[#fbbf24] to-[#f59e0b] px-5 py-3 text-sm font-semibold text-slate-950 shadow-[0_15px_30px_rgba(250,204,21,0.3)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {sendingAnnouncement
                     ? 'Sending...'
-                    : 'Send to All Students →'}
+                    : `Send to ${announcementTargetType === 'all' ? 'All Students' : announcementTargetType === 'unpaid' ? 'Unpaid Students' : announcementTargetType === 'faculty' ? 'Faculty' : 'Selected Group'} →`}
                 </button>
               </div>
             </div>

@@ -11,7 +11,7 @@ type Body =
   | { event: 'rejection'; studentId: string }
   | { event: 'holiday'; date: string; reason: string }
   | { event: 'assignment'; date: string; studentIds: string[] }
-  | { event: 'announcement'; title: string; message: string }
+  | { event: 'announcement'; title: string; message: string; targetType?: string; targetValue?: string | null }
   | { event: 'test'; phone: string };
 
 function formatDate(date: string) {
@@ -143,7 +143,31 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      const { data } = await optedIn();
+      const validTargets = ['all', 'university', 'departure_group', 'unpaid', 'faculty'];
+      const targetType = body.targetType ?? 'all';
+      if (!validTargets.includes(targetType)) {
+        return NextResponse.json(
+          { ok: false, error: 'Invalid announcement audience' },
+          { status: 400 },
+        );
+      }
+      if (['university', 'departure_group'].includes(targetType) && !body.targetValue) {
+        return NextResponse.json(
+          { ok: false, error: 'The selected audience requires a target value' },
+          { status: 400 },
+        );
+      }
+      let recipientsQuery = service
+        .from('profiles')
+        .select('id, phone, full_name')
+        .eq('role', 'student')
+        .eq('status', 'active')
+        .eq('whatsapp_opt_in', true);
+      if (targetType === 'university') recipientsQuery = recipientsQuery.eq('institution', body.targetValue!);
+      if (targetType === 'departure_group') recipientsQuery = recipientsQuery.eq('departure_group_id', body.targetValue!);
+      if (targetType === 'unpaid') recipientsQuery = recipientsQuery.neq('fee_status', 'paid');
+      if (targetType === 'faculty') recipientsQuery = recipientsQuery.eq('user_type', 'faculty');
+      const { data } = await recipientsQuery;
       summary = await sendToRecipients(
         service,
         'announcement',
