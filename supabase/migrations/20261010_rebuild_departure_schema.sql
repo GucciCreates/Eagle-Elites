@@ -2,13 +2,6 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-DROP POLICY IF EXISTS "Anyone can read departure groups" ON departure_groups;
-DROP POLICY IF EXISTS "Anyone can read departure slots" ON departure_slots;
-DROP POLICY IF EXISTS "Students can manage own selections" ON departure_selections;
-DROP POLICY IF EXISTS "Admins can manage departure groups" ON departure_groups;
-DROP POLICY IF EXISTS "Admins can manage departure slots" ON departure_slots;
-DROP POLICY IF EXISTS "Admins can read all selections" ON departure_selections;
-
 ALTER TABLE IF EXISTS departure_slots DROP CONSTRAINT IF EXISTS departure_slots_group_id_fkey;
 ALTER TABLE IF EXISTS departure_selections DROP CONSTRAINT IF EXISTS departure_selections_slot_id_fkey;
 ALTER TABLE IF EXISTS profiles DROP CONSTRAINT IF EXISTS profiles_departure_group_id_fkey;
