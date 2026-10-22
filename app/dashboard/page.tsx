@@ -762,21 +762,24 @@ export default function Dashboard() {
       hint: profile?.fee_status === 'paid' ? 'All clear' : 'Action needed',
       accent:
         profile?.fee_status === 'paid' ? 'text-emerald-300' : 'text-red-300',
-      featured: true,
+      icon: '◈',
+      tab: 'payments' as DashboardTab,
     },
     {
       label: 'Scheduled days',
       value: `${schedules.length || 0}`,
       hint: `For next week · ${nextWeekRange}`,
       accent: 'text-yellow-300',
-      featured: false,
+      icon: '↗',
+      tab: 'schedule' as DashboardTab,
     },
     {
       label: 'Class days',
       value: `${classDays.length || 0}`,
       hint: 'Selected days',
       accent: 'text-cyan-300',
-      featured: false,
+      icon: '▦',
+      tab: 'timetable' as DashboardTab,
     },
   ];
 
@@ -812,23 +815,20 @@ export default function Dashboard() {
     );
 
   return (
-      <div className="relative min-h-screen overflow-x-clip bg-[#07090d] text-white">
+      <div className="relative min-h-screen overflow-x-clip bg-[#080b10] text-white">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-20 left-10 h-72 w-72 rounded-full bg-yellow-400/10 blur-3xl" />
-        <div className="absolute top-1/3 right-10 h-80 w-80 rounded-full bg-cyan-500/8 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-fuchsia-500/8 blur-3xl" />
+        <div className="absolute -top-24 left-[-5rem] h-96 w-96 rounded-full bg-yellow-400/[0.06] blur-3xl" />
       </div>
 
-      <nav className="sticky top-0 z-50 border-b border-white/5 bg-[#0b0f14]/85 backdrop-blur-xl shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
+      <nav className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#0b0f14]/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-yellow-400/20 bg-gradient-to-br from-yellow-300/20 to-yellow-500/10 text-[11px] font-black tracking-[0.12em] text-yellow-200 shadow-[0_0_24px_rgba(250,204,21,0.12)]">
               EE
             </div>
             <div>
-              <p className="text-[13px] font-semibold tracking-[0.18em] text-white uppercase">
-                Eagle Elites
-              </p>
+              <p className="text-[13px] font-semibold tracking-[0.16em] text-white uppercase">Eagle Elites</p>
+              <p className="mt-0.5 text-[10px] font-medium tracking-wide text-zinc-500">Student portal</p>
             </div>
           </div>
 
@@ -947,7 +947,7 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      <main className="relative z-10 mx-auto max-w-6xl space-y-5 px-4 py-6 sm:py-8">
+      <main className="relative z-10 mx-auto max-w-7xl space-y-6 px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
         <nav aria-label="Student dashboard" className="sticky top-[65px] z-40 -mx-4 border-y border-white/[0.06] bg-[#090d13]/95 px-4 py-2 backdrop-blur-xl sm:static sm:mx-0 sm:rounded-2xl sm:border sm:bg-[#0b1017]/90 sm:p-2">
           <div className="flex gap-2 overflow-x-auto">
             {primaryTabs.map((tab) => (
@@ -970,117 +970,57 @@ export default function Dashboard() {
           </div>
         </nav>
 
-        {isFridaySaturdayToday && (
-          <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-4 py-3 flex items-center gap-3 shadow-[0_0_0_1px_rgba(250,204,21,0.04)]">
-            <span className="text-xl">⏰</span>
-            <p className="text-yellow-200 text-sm font-medium">
-              Reminder: Submit your schedule for next week before Sunday
-              midnight.
-            </p>
-          </div>
-        )}
-
-        {unpaidPayments.length > 0 && (
-          <div className="rounded-2xl border border-red-500/20 bg-red-500/8 px-4 py-3 flex items-center gap-3">
-            <span className="text-xl">💳</span>
-            <p className="text-red-200 text-sm font-medium">
-              You have {unpaidPayments.length} unpaid payment
-              {unpaidPayments.length > 1 ? 's' : ''}. Please clear your dues.
-            </p>
-            <button
-              onClick={() => changeTab('payments')}
-              className="ml-auto text-xs bg-red-500 hover:bg-red-400 text-white px-3 py-1.5 rounded-lg transition"
-            >
-              View
-            </button>
-          </div>
-        )}
-
-        <div className="grid gap-3 sm:grid-cols-3">
-          {summaryCards.map((item) => (
-            <div
-              key={item.label}
-              className={`rounded-[24px] border p-4 shadow-[0_20px_40px_rgba(0,0,0,0.18)] backdrop-blur-sm ${
-                item.featured
-                  ? 'border-yellow-500/20 bg-gradient-to-br from-yellow-500/12 via-[#10171f] to-emerald-500/10'
-                  : 'border-white/8 bg-gradient-to-br from-white/5 to-[#10171f]/80'
-              }`}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-                  {item.label}
-                </p>
-                <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-yellow-300 to-yellow-500 shadow-[0_0_16px_rgba(250,204,21,0.45)]" />
-              </div>
-              <p
-                className={`mt-4 text-3xl font-black tracking-tight ${item.accent}`}
-              >
-                {item.value}
-              </p>
-              <p className="mt-2 text-xs text-zinc-400">{item.hint}</p>
-            </div>
-          ))}
-        </div>
-
         {isTabPending && <SectionLoading />}
 
         {activeTab === 'home' && (
-          <div className="space-y-4">
-            <div className="overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(250,204,21,0.18),_transparent_28%),linear-gradient(135deg,_rgba(18,20,26,0.96),_rgba(8,12,17,0.96))] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.25)] sm:p-6">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.28em] text-zinc-400">
-                    Welcome back
-                  </p>
-                  <h2 className="mt-2 text-3xl font-black tracking-[-0.04em] text-white sm:text-4xl">
-                    Welcome, {profile?.full_name}
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-zinc-400">
-                    {profile?.email}
-                  </p>
-                  {profile?.institution && (
-                    <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-yellow-500/20 bg-yellow-500/10 px-3 py-1.5 text-sm text-yellow-200 shadow-[0_0_20px_rgba(250,204,21,0.08)]">
-                      <span>📍</span>
-                      <span>{profile.institution}</span>
-                    </div>
-                  )}
+          <div className="space-y-6">
+            <section className="relative overflow-hidden rounded-[30px] border border-white/[0.09] bg-[radial-gradient(ellipse_at_85%_0%,rgba(250,204,21,0.12),transparent_35%),linear-gradient(135deg,#151a22_0%,#0e131a_64%,#0b1016_100%)] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.2)] sm:p-7">
+              <div className="pointer-events-none absolute -right-12 -top-24 h-64 w-64 rounded-full border border-yellow-300/[0.08]" />
+              <div className="pointer-events-none absolute -right-3 -top-16 h-48 w-48 rounded-full border border-yellow-300/[0.06]" />
+              <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-yellow-200/75">Your campus commute</p>
+                  <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">Welcome, {profile?.full_name?.split(' ')[0] || 'student'}</h1>
+                  <p className="mt-2 text-sm text-zinc-400">A clear view of your rides, schedule, and account.</p>
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    {profile?.institution && <span className="inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-black/20 px-3 py-2 text-xs font-medium text-zinc-200"><span className="text-yellow-300" aria-hidden="true">⌖</span>{profile.institution}</span>}
+                    {profile?.route_id && <span className="inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-black/20 px-3 py-2 text-xs font-medium text-zinc-300"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Route assigned</span>}
+                  </div>
                 </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <span
-                    className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] ${
-                      profile?.fee_status === 'paid'
-                        ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
-                        : 'border-red-500/25 bg-red-500/10 text-red-300'
-                    }`}
-                  >
-                    {profile?.fee_status === 'paid'
-                      ? 'Fees Paid'
-                      : 'Fees Pending'}
-                  </span>
-                  <span className="inline-flex items-center rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-cyan-300">
-                    {todayName}
+                <div className="flex shrink-0 flex-wrap items-center gap-2 sm:flex-col sm:items-end">
+                  <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-medium text-zinc-300">{todayName}</span>
+                  <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${profile?.fee_status === 'paid' ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200' : 'border-amber-300/20 bg-amber-300/10 text-amber-100'}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${profile?.fee_status === 'paid' ? 'bg-emerald-300' : 'bg-amber-300'}`} />
+                    {profile?.fee_status === 'paid' ? 'Account up to date' : 'Fee payment pending'}
                   </span>
                 </div>
               </div>
+            </section>
+
+            {isFridaySaturdayToday && <div className="flex items-start gap-3 rounded-2xl border border-yellow-400/15 bg-yellow-400/[0.07] px-4 py-3.5"><span className="mt-0.5 text-yellow-200" aria-hidden="true">◷</span><p className="text-sm leading-6 text-yellow-100/90">Submit your schedule for next week before Sunday midnight.</p><button type="button" onClick={() => changeTab('schedule')} className="ml-auto shrink-0 text-xs font-semibold text-yellow-200 hover:text-white">Open schedule →</button></div>}
+
+            {unpaidPayments.length > 0 && <div className="flex items-start gap-3 rounded-2xl border border-red-400/15 bg-red-400/[0.07] px-4 py-3.5"><span className="mt-0.5 text-red-200" aria-hidden="true">!</span><p className="text-sm leading-6 text-red-100/90">You have {unpaidPayments.length} unpaid payment{unpaidPayments.length > 1 ? 's' : ''}. Please review your balance.</p><button type="button" onClick={() => changeTab('payments')} className="ml-auto shrink-0 text-xs font-semibold text-red-200 hover:text-white">Review fees →</button></div>}
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              {summaryCards.map((item) => <button key={item.label} type="button" onClick={() => changeTab(item.tab)} className="group rounded-2xl border border-white/[0.08] bg-[#10151d]/90 p-4 text-left shadow-[0_12px_28px_rgba(0,0,0,0.12)] transition hover:-translate-y-0.5 hover:border-yellow-300/20 hover:bg-[#141a23] sm:rounded-[22px] sm:p-5">
+                <div className="flex items-center justify-between"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{item.label}</span><span className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.03] text-sm text-yellow-200">{item.icon}</span></div>
+                <p className={`mt-4 text-2xl font-semibold tracking-tight ${item.accent}`}>{item.value}</p>
+                <div className="mt-2 flex items-center justify-between gap-3"><span className="text-xs text-zinc-500">{item.hint}</span><span className="text-xs text-zinc-600 transition group-hover:text-yellow-200">Open →</span></div>
+              </button>)}
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
-              <div className="rounded-[28px] border border-white/10 bg-[#0d131c] p-5 shadow-[0_24px_50px_rgba(0,0,0,0.2)]">
-                <div className="mb-5 flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-white">
-                    Today&apos;s trip
-                  </h3>
+            <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+              <section className="rounded-[26px] border border-white/[0.08] bg-[#10151d] p-5 shadow-[0_18px_42px_rgba(0,0,0,0.14)] sm:p-6">
+                <div className="mb-5 flex items-start justify-between gap-3">
+                  <div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-yellow-200/70">Travel plan</p><h2 className="mt-1 text-lg font-semibold text-white">Today&apos;s trip</h2></div>
                   {todaySchedule && (
-                    <span className="rounded-full border border-yellow-500/20 bg-yellow-500/10 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-yellow-300">
-                      live
-                    </span>
+                    <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/[0.07] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-200"><span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />Scheduled</span>
                   )}
                 </div>
 
                 {todaySchedule ? (
                   <>
-                    <div className="relative mb-5 h-24 overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900/90">
+                    <div className="relative mb-5 h-24 overflow-hidden rounded-2xl border border-white/[0.07] bg-[#0b1016]">
                       <div className="absolute inset-0 flex items-center px-4">
                         <div className="h-0.5 w-full bg-zinc-700" />
                       </div>
@@ -1115,7 +1055,7 @@ export default function Dashboard() {
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-2xl border border-white/8 bg-white/3 p-3">
+                      <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3.5">
                         <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                           Pickup
                         </p>
@@ -1123,7 +1063,7 @@ export default function Dashboard() {
                           {formatTime(todaySchedule.arrival_time)}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-white/8 bg-white/3 p-3">
+                      <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3.5">
                         <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                           Return
                         </p>
@@ -1131,7 +1071,7 @@ export default function Dashboard() {
                           {formatTime(todaySchedule.departure_time)}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-white/8 bg-white/3 p-3">
+                      <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3.5">
                         <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                           Pickup point
                         </p>
@@ -1139,7 +1079,7 @@ export default function Dashboard() {
                           {todaySchedule.pickup_points?.name}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-white/8 bg-white/3 p-3">
+                      <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3.5">
                         <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                           Time changes
                         </p>
@@ -1178,9 +1118,23 @@ export default function Dashboard() {
                     </p>
                   </div>
                 )}
-              </div>
 
-              <div className="rounded-[28px] border border-white/10 bg-[#0d131c] p-5 shadow-[0_24px_50px_rgba(0,0,0,0.2)]">
+                {todaySchedule && assignment && <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Your ride</p>
+                    <p className="mt-2 text-lg font-semibold text-yellow-200">Vehicle {assignment.coasters?.coaster_number ? `#${assignment.coasters.coaster_number}` : 'assigned'}</p>
+                    <p className="mt-1 text-sm text-zinc-300">{assignment.driver_name || 'Driver details pending'}</p>
+                    {assignment.driver_contact && <a href={`tel:${assignment.driver_contact}`} className="mt-2 inline-flex text-xs font-medium text-zinc-400 transition hover:text-yellow-200">Call driver · {assignment.driver_contact}</a>}
+                  </div>
+                  <div className={`rounded-xl border p-4 ${assignment.seat_confirmed ? 'border-emerald-400/15 bg-emerald-400/[0.06]' : 'border-white/[0.07] bg-white/[0.025]'}`}>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Seat confirmation</p>
+                    <p className="mt-2 text-sm font-semibold text-white">{assignment.seat_confirmed ? `Confirmed · ${formatDate(assignment.confirmed_at)}` : 'Please confirm your seat'}</p>
+                    {!assignment.seat_confirmed && <button type="button" onClick={handleConfirmSeat} disabled={confirmingSeat} className="mt-3 inline-flex min-h-9 items-center rounded-lg bg-yellow-400 px-3 py-2 text-xs font-bold text-slate-950 transition hover:bg-yellow-300 disabled:opacity-50">{confirmingSeat ? 'Confirming…' : 'Confirm seat'}</button>}
+                  </div>
+                </div>}
+              </section>
+
+              <section className="rounded-[26px] border border-white/[0.08] bg-[#10151d] p-5 shadow-[0_18px_42px_rgba(0,0,0,0.14)] sm:p-6">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
@@ -1339,62 +1293,8 @@ export default function Dashboard() {
                     )}
                   </>
                 )}
-              </div>
+              </section>
 
-              {todaySchedule && assignment && (
-                <div className="space-y-4">
-                  <div className="rounded-[28px] border border-white/10 bg-[#0d131c] p-5">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                      Driver & vehicle
-                    </p>
-                    <div className="mt-4 space-y-4">
-                      <div>
-                        <p className="text-zinc-500 text-xs">Vehicle</p>
-                        <p className="mt-1 text-2xl font-black text-yellow-300">
-                          #{assignment.coasters?.coaster_number}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-zinc-500 text-xs">Assigned driver</p>
-                        <p className="mt-1 text-base font-bold text-white">
-                          {assignment.driver_name}
-                        </p>
-                        <p className="mt-1 text-xs text-zinc-400">
-                          📞 {assignment.driver_contact}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {assignment && (
-                    <div
-                      className={`rounded-[28px] border p-5 ${
-                        assignment.seat_confirmed
-                          ? 'border-emerald-500/20 bg-emerald-500/10'
-                          : 'border-white/10 bg-[#0d131c]'
-                      }`}
-                    >
-                      <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                        Seat status
-                      </p>
-                      <p className="mt-3 text-sm font-medium text-white">
-                        {assignment.seat_confirmed
-                          ? `Confirmed on ${formatDate(assignment.confirmed_at)}`
-                          : 'Seat not confirmed yet'}
-                      </p>
-                      {!assignment.seat_confirmed && (
-                        <button
-                          onClick={handleConfirmSeat}
-                          disabled={confirmingSeat}
-                          className="mt-4 w-full rounded-xl bg-yellow-400 px-4 py-2.5 text-sm font-bold text-black transition hover:bg-yellow-300 disabled:opacity-45"
-                        >
-                          {confirmingSeat ? 'Confirming...' : 'Confirm Seat'}
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
 
             {holidays.length > 0 && (
