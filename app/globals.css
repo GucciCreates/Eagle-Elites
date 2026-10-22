@@ -146,6 +146,41 @@ textarea {
   }
 }
 
+/* Keep admin surfaces aligned with the student portal's restrained dark palette. */
+.admin-shell[data-admin-theme='dark'] {
+  background: #080b10 !important;
+  color: #f5f7fb !important;
+}
+
+.admin-shell[data-admin-theme='dark'] > nav {
+  background: rgba(11, 15, 20, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-950'],
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-950/80'],
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-950/70'],
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-950/60'],
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-950/50'] {
+  background-color: #0b1016 !important;
+}
+
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-900'],
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-900/80'],
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-900/75'],
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-900/70'] {
+  background-color: #10151d !important;
+}
+
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-800'] {
+  background-color: #171d26 !important;
+}
+
+.admin-shell[data-admin-theme='dark'] [class~='border-zinc-800'],
+.admin-shell[data-admin-theme='dark'] [class~='border-zinc-700'] {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
 /* Admin-only light palette. Dark remains the saved default. */
 .admin-shell[data-admin-theme='light'] {
   --admin-canvas: #f4f6f9;

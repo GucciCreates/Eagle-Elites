@@ -1116,18 +1116,16 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="admin-shell min-h-screen bg-[#05070b] text-white" data-admin-theme={theme}>
-      <nav className="border-b border-zinc-800 bg-[#090d13]/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+    <div className="admin-shell min-h-screen bg-[#080b10] text-white" data-admin-theme={theme}>
+      <nav className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#0b0f14]/90 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#facc15] via-[#fbbf24] to-[#f59e0b] text-lg font-black text-slate-950 shadow-[0_15px_30px_rgba(250,204,21,0.35)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-yellow-400/20 bg-gradient-to-br from-yellow-300/20 to-yellow-500/10 text-[11px] font-black tracking-[0.12em] text-yellow-200 shadow-[0_0_24px_rgba(250,204,21,0.12)]">
               EE
             </div>
             <div>
-              <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-[#facc15]/80">
-                Eagle Elites
-              </p>
-              <h1 className="text-lg font-semibold">Admin Panel</h1>
+              <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-white">Eagle Elites</p>
+              <h1 className="mt-0.5 text-[10px] font-medium tracking-wide text-zinc-500">Admin portal</h1>
             </div>
           </div>
 
