@@ -87,6 +87,7 @@ export default function ResetPasswordForm({ variant }: { variant: Variant }) {
     const hasRecoveryCallback =
       type === 'recovery' || Boolean(tokenHash || authCode || accessToken);
     let active = true;
+    let recoveryAuthorized = false;
 
     /* eslint-disable react-hooks/set-state-in-effect */
     if (hasRecoveryCallback) setCheckingRecovery(true);
@@ -104,7 +105,12 @@ export default function ResetPasswordForm({ variant }: { variant: Variant }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY' && active) {
+      if (
+        active &&
+        (event === 'PASSWORD_RECOVERY' || (authCode && event === 'SIGNED_IN'))
+      ) {
+        recoveryAuthorized = true;
+        setError('');
         setRecoveryMode(true);
         setCheckingRecovery(false);
       }
@@ -135,7 +141,12 @@ export default function ResetPasswordForm({ variant }: { variant: Variant }) {
           // The browser client exchanges PKCE codes and hash tokens on initialization.
           const { data, error: sessionError } = await supabase.auth.getSession();
           if (!active) return;
-          if (data.session && (authCode || accessToken || type === 'recovery')) {
+          const hashTokenMatchesSession =
+            Boolean(accessToken) && data.session?.access_token === accessToken;
+          if (
+            data.session &&
+            (hashTokenMatchesSession || recoveryAuthorized)
+          ) {
             setRecoveryMode(true);
           } else {
             setError(
