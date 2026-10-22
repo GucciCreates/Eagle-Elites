@@ -148,29 +148,62 @@ textarea {
 
 /* Admin-only light palette. Dark remains the saved default. */
 .admin-shell[data-admin-theme='light'] {
-  background: #f3f5f8 !important;
-  color: #172033 !important;
+  --admin-canvas: #f4f6f9;
+  --admin-surface: #ffffff;
+  --admin-inset: #f7f8fa;
+  --admin-stroke: #e1e5ec;
+  --admin-ink: #202939;
+  --admin-muted: #697586;
+  background: var(--admin-canvas) !important;
+  color: var(--admin-ink) !important;
+  color-scheme: light;
 }
 
 .admin-shell[data-admin-theme='light'] nav {
-  background: rgba(255, 255, 255, 0.94) !important;
-  border-color: #d7dce5 !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-color: var(--admin-stroke) !important;
+}
+
+.admin-shell[data-admin-theme='light'] nav[aria-label='Admin workspaces'],
+.admin-shell[data-admin-theme='light'] nav[aria-label$=' sections'] {
+  background: transparent !important;
 }
 
 .admin-shell[data-admin-theme='light'] [class~='bg-zinc-950'],
 .admin-shell[data-admin-theme='light'] [class~='bg-zinc-950/70'],
 .admin-shell[data-admin-theme='light'] [class~='bg-zinc-950/60'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-950/50'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-950/80'],
 .admin-shell[data-admin-theme='light'] [class~='bg-zinc-900'],
 .admin-shell[data-admin-theme='light'] [class~='bg-zinc-900/80'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-900/75'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-900/70'],
 .admin-shell[data-admin-theme='light'] [class~='bg-zinc-800'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-700'],
 .admin-shell[data-admin-theme='light'] [class~='bg-[#05070b]'],
 .admin-shell[data-admin-theme='light'] [class~='bg-[#090d13]/80'] {
-  background-color: #fff !important;
+  background-color: var(--admin-surface) !important;
+}
+
+.admin-shell[data-admin-theme='light'] [class~='bg-white/[0.1]'],
+.admin-shell[data-admin-theme='light'] [class~='bg-white/[0.04]'],
+.admin-shell[data-admin-theme='light'] [class~='bg-white/[0.025]'] {
+  background-color: var(--admin-inset) !important;
+}
+
+.admin-shell[data-admin-theme='light'] [class*='shadow-'] {
+  --tw-shadow-color: rgb(32 41 57 / 0.08) !important;
+}
+
+.admin-shell[data-admin-theme='light'] [class*='divide-zinc-800'] > :not(:first-child) {
+  border-color: var(--admin-stroke) !important;
 }
 
 .admin-shell[data-admin-theme='light'] [class*='border-zinc-800'],
-.admin-shell[data-admin-theme='light'] [class*='border-zinc-700'] {
-  border-color: #d7dce5 !important;
+.admin-shell[data-admin-theme='light'] [class*='border-zinc-700'],
+.admin-shell[data-admin-theme='light'] [class*='border-zinc-600'],
+.admin-shell[data-admin-theme='light'] [class*='border-zinc-500'] {
+  border-color: var(--admin-stroke) !important;
 }
 
 .admin-shell[data-admin-theme='light'] [class*='text-white'],
@@ -181,14 +214,74 @@ textarea {
 }
 
 .admin-shell[data-admin-theme='light'] [class*='text-zinc-400'],
-.admin-shell[data-admin-theme='light'] [class*='text-zinc-500'] {
-  color: #596579 !important;
+.admin-shell[data-admin-theme='light'] [class*='text-zinc-500'],
+.admin-shell[data-admin-theme='light'] [class*='text-zinc-600'] {
+  color: var(--admin-muted) !important;
+}
+
+.admin-shell[data-admin-theme='light'] [class*='text-yellow-100'],
+.admin-shell[data-admin-theme='light'] [class*='text-yellow-200'],
+.admin-shell[data-admin-theme='light'] [class*='text-yellow-300'],
+.admin-shell[data-admin-theme='light'] [class*='text-yellow-400'],
+.admin-shell[data-admin-theme='light'] [class*='text-amber-200'],
+.admin-shell[data-admin-theme='light'] [class*='text-[#facc15]'] {
+  color: #80620a !important;
+}
+
+.admin-shell[data-admin-theme='light'] [class*='text-red-200'],
+.admin-shell[data-admin-theme='light'] [class*='text-red-300'],
+.admin-shell[data-admin-theme='light'] [class*='text-red-400'] {
+  color: #a83232 !important;
+}
+
+.admin-shell[data-admin-theme='light'] [class*='text-emerald-200'],
+.admin-shell[data-admin-theme='light'] [class*='text-emerald-300'] {
+  color: #18734b !important;
+}
+
+.admin-shell[data-admin-theme='light'] [class*='text-sky-200'] {
+  color: #17618a !important;
+}
+
+.admin-shell[data-admin-theme='light'] [class*='bg-yellow-400/'],
+.admin-shell[data-admin-theme='light'] [class*='bg-yellow-500/'],
+.admin-shell[data-admin-theme='light'] [class*='bg-[#facc15]/'] {
+  background-color: #f8efcf !important;
+}
+
+.admin-shell[data-admin-theme='light'] [class*='bg-red-400/'],
+.admin-shell[data-admin-theme='light'] [class*='bg-red-500/'] {
+  background-color: #fae9e7 !important;
+}
+
+.admin-shell[data-admin-theme='light'] [class*='bg-emerald-400/'],
+.admin-shell[data-admin-theme='light'] [class*='bg-emerald-500/'] {
+  background-color: #e5f4ec !important;
+}
+
+.admin-shell[data-admin-theme='light'] [class*='bg-amber-400/'],
+.admin-shell[data-admin-theme='light'] [class*='bg-amber-500/'] {
+  background-color: #f7efdc !important;
+}
+
+.admin-shell[data-admin-theme='light'] [class~='bg-red-950'],
+.admin-shell[data-admin-theme='light'] [class~='bg-red-900'] {
+  background-color: #fae9e7 !important;
+}
+
+.admin-shell[data-admin-theme='light'] [class~='bg-red-500'][class*='text-white'] {
+  color: #fff !important;
 }
 
 .admin-shell[data-admin-theme='light'] input,
 .admin-shell[data-admin-theme='light'] select,
 .admin-shell[data-admin-theme='light'] textarea {
-  color: #172033 !important;
-  background-color: #fff !important;
-  border-color: #cbd2de !important;
+  color: var(--admin-ink) !important;
+  background-color: var(--admin-surface) !important;
+  border-color: #cfd6e0 !important;
+}
+
+.admin-shell[data-admin-theme='light'] input::placeholder,
+.admin-shell[data-admin-theme='light'] textarea::placeholder {
+  color: #8993a3 !important;
 }
