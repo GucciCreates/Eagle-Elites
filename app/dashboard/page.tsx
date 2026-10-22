@@ -203,6 +203,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<DashboardTab>('home');
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [scheduleView, setScheduleView] = useState<ScheduleView>('overview');
   const [myDepartureGroup, setMyDepartureGroup] =
@@ -783,6 +784,9 @@ export default function Dashboard() {
     { key: 'help', label: 'Help' },
     { key: 'profile', label: 'Profile' },
   ];
+  const profileMenuTabs = tabs.filter((tab) =>
+    ['timetable', 'help', 'profile'].includes(tab.key),
+  );
   const scheduleTabs: Array<{ key: ScheduleView; label: string }> = [
     { key: 'overview', label: 'Overview' },
     { key: 'change', label: 'Request Time Change' },
@@ -877,24 +881,51 @@ export default function Dashboard() {
               )}
             </div>
 
-            <div className="hidden items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-2.5 py-1.5 sm:flex">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-white/12 to-yellow-400/12 text-[11px] font-semibold text-white">
-                {profile?.full_name?.charAt(0)?.toUpperCase() || 'S'}
-              </div>
-              <div className="text-left">
-                <p className="text-[11px] font-medium leading-none text-white">
-                  {profile?.full_name}
-                </p>
-                <span
-                  className={`mt-1 inline-flex items-center rounded-full border px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.12em] ${
-                    profile?.fee_status === 'paid'
-                      ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
-                      : 'border-red-500/20 bg-red-500/10 text-red-300'
-                  }`}
-                >
-                  {profile?.fee_status === 'paid' ? 'Paid' : 'Unpaid'}
+            <div className="relative">
+              <button
+                type="button"
+                aria-label="Open profile menu"
+                aria-haspopup="menu"
+                aria-expanded={showProfileMenu}
+                onClick={() => setShowProfileMenu((open) => !open)}
+                className="flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-2 transition hover:border-yellow-400/25 hover:bg-white/[0.07]"
+              >
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-white/12 to-yellow-400/12 text-[11px] font-semibold text-white">
+                  {profile?.full_name?.charAt(0)?.toUpperCase() || 'S'}
                 </span>
-              </div>
+                <span className="hidden max-w-32 text-left sm:block">
+                  <span className="block truncate text-[11px] font-medium leading-none text-white">
+                    {profile?.full_name}
+                  </span>
+                  <span className={`mt-1 inline-flex items-center rounded-full border px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.12em] ${profile?.fee_status === 'paid' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : 'border-red-500/20 bg-red-500/10 text-red-300'}`}>
+                    {profile?.fee_status === 'paid' ? 'Paid' : 'Unpaid'}
+                  </span>
+                </span>
+                <span className="hidden text-[10px] text-zinc-500 sm:inline" aria-hidden="true">▾</span>
+              </button>
+              {showProfileMenu && (
+                <nav aria-label="Account and more sections" className="absolute right-0 top-12 z-[60] w-60 overflow-hidden rounded-2xl border border-white/10 bg-[#10161d] p-2 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
+                  <div className="border-b border-white/[0.07] px-3 py-2.5 sm:hidden">
+                    <p className="truncate text-sm font-semibold text-white">{profile?.full_name || 'Account'}</p>
+                    <p className="mt-1 text-xs text-zinc-500">{profile?.email}</p>
+                  </div>
+                  <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">More</p>
+                  {profileMenuTabs.map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab(tab.key);
+                        setShowProfileMenu(false);
+                      }}
+                      className={`flex min-h-10 w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition ${activeTab === tab.key ? 'bg-yellow-400/10 font-semibold text-yellow-200' : 'text-zinc-300 hover:bg-white/[0.05] hover:text-white'}`}
+                    >
+                      {tab.label}
+                      {activeTab === tab.key && <span aria-hidden="true">✓</span>}
+                    </button>
+                  ))}
+                </nav>
+              )}
             </div>
 
             <button
@@ -964,12 +995,12 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <div className="flex gap-1 overflow-x-auto rounded-2xl border border-white/8 bg-white/3 p-1">
+        <div className="flex gap-1 rounded-2xl border border-white/8 bg-white/3 p-1">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`rounded-xl px-3 py-2 text-sm font-medium transition-all whitespace-nowrap ${
+              className={`${['timetable', 'help', 'profile'].includes(tab.key) ? 'hidden sm:flex' : 'flex'} flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:flex-none sm:px-3 sm:text-sm ${
                 activeTab === tab.key
                   ? 'bg-yellow-400 text-black shadow-[0_8px_18px_rgba(250,204,21,0.35)]'
                   : 'text-zinc-400 hover:text-white hover:bg-white/4'
@@ -1055,21 +1086,32 @@ export default function Dashboard() {
                       <div className="absolute right-3 top-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                         {profile?.institution || 'destination'}
                       </div>
-                      <div
-                        className="absolute top-1/2 -translate-y-1/2"
-                        style={{ animation: 'drive 5s linear infinite' }}
-                      >
-                        <span className="text-3xl">🚌</span>
+                      <div className="dashboard-vehicle absolute top-1/2 -translate-y-1/2" aria-hidden="true">
+                        <svg viewBox="0 0 48 32" className="h-8 w-12 text-yellow-300" fill="none">
+                          <path d="M8 5.5h25a5 5 0 0 1 5 5V24H7V6.5a1 1 0 0 1 1-1Z" fill="currentColor" fillOpacity=".16" stroke="currentColor" strokeWidth="1.6" />
+                          <path d="M10 9h10v7H10zM23 9h10v7H23zM38 14h3.5a2 2 0 0 1 2 2v5H38" stroke="currentColor" strokeWidth="1.5" />
+                          <path d="M10 20h28" stroke="currentColor" strokeWidth="1.5" />
+                          <circle cx="14" cy="25" r="3" fill="#0b0f14" stroke="currentColor" strokeWidth="1.5" />
+                          <circle cx="33" cy="25" r="3" fill="#0b0f14" stroke="currentColor" strokeWidth="1.5" />
+                        </svg>
                       </div>
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-2xl">
-                        🏫
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <path strokeLinejoin="round" d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6M8 9h.01M12 9h.01M16 9h.01M8 12h.01M16 12h.01" />
+                        </svg>
                       </div>
                     </div>
 
                     <style>{`
-                      @keyframes drive {
-                        0% { left: -60px; }
-                        100% { left: 100%; }
+                      @keyframes dashboard-transit {
+                        0% { left: 0; }
+                        100% { left: calc(100% - 3.25rem); }
+                      }
+                      .dashboard-vehicle {
+                        animation: dashboard-transit 9s ease-in-out infinite alternate;
+                      }
+                      @media (prefers-reduced-motion: reduce) {
+                        .dashboard-vehicle { animation: none; left: 42%; }
                       }
                     `}</style>
 
@@ -1110,9 +1152,25 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </>
+                ) : !profile?.route_id ? (
+                  <div className="rounded-2xl border border-sky-300/15 bg-[radial-gradient(circle_at_90%_0%,rgba(56,189,248,0.1),transparent_38%),#0b1119] p-5 sm:p-6">
+                    <div className="flex items-start gap-4">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-sky-300/15 bg-sky-300/10 text-sky-200" aria-hidden="true">i</span>
+                      <div>
+                        <p className="font-semibold text-white">Your route is not assigned yet</p>
+                        <p className="mt-2 text-sm leading-6 text-zinc-400">The transport team needs to assign a route before your pickup times appear here. Send a message with your name and institution, and they’ll guide you through the next step.</p>
+                        <button type="button" onClick={() => setActiveTab('help')} className="mt-4 inline-flex min-h-10 items-center rounded-xl bg-yellow-400 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-yellow-300">Get help with route assignment</button>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 p-5 text-center sm:p-6">
-                    <p className="mb-3 text-3xl">🚌</p>
+                    <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-700 bg-black/20 text-zinc-400" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="1.6">
+                        <circle cx="12" cy="12" r="9" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2" />
+                      </svg>
+                    </span>
                     <p className="text-base font-medium text-zinc-300">
                       No trip scheduled for today
                     </p>
@@ -1386,6 +1444,15 @@ export default function Dashboard() {
 
         {activeTab === 'schedule' && (
           <div className="space-y-5">
+            {!profile?.route_id && (
+              <div className="flex flex-col gap-3 rounded-2xl border border-sky-300/15 bg-sky-300/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                <div>
+                  <p className="font-semibold text-white">Route assignment needed</p>
+                  <p className="mt-1 text-sm text-zinc-400">Weekly pickup options will appear after the transport team assigns your route.</p>
+                </div>
+                <button type="button" onClick={() => setActiveTab('help')} className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-yellow-300/30 hover:text-white">Open Help</button>
+              </div>
+            )}
             <div className="rounded-2xl border border-white/10 bg-[#0d131c] p-2">
               <div className="flex flex-wrap gap-2">
                 {scheduleTabs.map((item) => (
