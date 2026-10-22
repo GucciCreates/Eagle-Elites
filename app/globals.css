@@ -112,3 +112,36 @@ textarea {
       0 10px 25px rgba(0, 0, 0, 0.32);
   }
 }
+
+/* Reduce the glare of saturated gold accents on small, bright phone screens. */
+@media (max-width: 639px) {
+  :root {
+    --background: #101318;
+    --yellow: #d8b85f;
+    --yellow-strong: #dfc36f;
+  }
+
+  body {
+    background:
+      radial-gradient(circle at top left, rgba(216, 184, 95, 0.045), transparent 25%),
+      radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.07), transparent 28%),
+      var(--background);
+  }
+
+  [class~='bg-yellow-400'],
+  [class~='bg-yellow-300'],
+  [class~='bg-[#facc15]'] {
+    background-color: #d8b85f !important;
+  }
+
+  [class~='text-yellow-300'],
+  [class~='text-yellow-200'] {
+    color: #e4cc86 !important;
+  }
+
+  [class~='bg-gradient-to-r'][class~='from-yellow-300'],
+  [class~='bg-gradient-to-r'][class~='from-[#facc15]'] {
+    background-image: none !important;
+    background-color: #d8b85f !important;
+  }
+}

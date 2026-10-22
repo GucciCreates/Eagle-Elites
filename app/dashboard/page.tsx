@@ -1,7 +1,7 @@
 'use client';
 
 import PasswordInput from '@/components/password-input';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPostLoginPath } from '@/lib/auth/post-login-path';
 import {
@@ -12,6 +12,7 @@ import {
 import { createClient } from '@/lib/supabase/client';
 import TimeSelect from '@/components/time-select';
 import WhatsAppOptInCard from '@/components/whatsapp-opt-in-card';
+import SectionLoading from '@/components/section-loading';
 import {
   fetchTimeOptionsForGroup,
   toHHMM,
@@ -202,6 +203,7 @@ export default function Dashboard() {
   const [classDays, setClassDays] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<DashboardTab>('home');
+  const [isTabPending, startTabTransition] = useTransition();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -256,6 +258,8 @@ export default function Dashboard() {
 
   const router = useRouter();
   const supabase = createClient();
+  const changeTab = (tab: DashboardTab) =>
+    startTabTransition(() => setActiveTab(tab));
   const [todayInfo] = useState(() => {
     if (typeof window === 'undefined') {
       return {
@@ -915,7 +919,7 @@ export default function Dashboard() {
                       key={tab.key}
                       type="button"
                       onClick={() => {
-                        setActiveTab(tab.key);
+                        changeTab(tab.key);
                         setShowProfileMenu(false);
                       }}
                       className={`flex min-h-10 w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition ${activeTab === tab.key ? 'bg-yellow-400/10 font-semibold text-yellow-200' : 'text-zinc-300 hover:bg-white/[0.05] hover:text-white'}`}
@@ -961,7 +965,7 @@ export default function Dashboard() {
               {unpaidPayments.length > 1 ? 's' : ''}. Please clear your dues.
             </p>
             <button
-              onClick={() => setActiveTab('payments')}
+              onClick={() => changeTab('payments')}
               className="ml-auto text-xs bg-red-500 hover:bg-red-400 text-white px-3 py-1.5 rounded-lg transition"
             >
               View
@@ -999,7 +1003,7 @@ export default function Dashboard() {
           {tabs.map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => changeTab(tab.key)}
               className={`${['timetable', 'help', 'profile'].includes(tab.key) ? 'hidden sm:flex' : 'flex'} flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:flex-none sm:px-3 sm:text-sm ${
                 activeTab === tab.key
                   ? 'bg-yellow-400 text-black shadow-[0_8px_18px_rgba(250,204,21,0.35)]'
@@ -1010,6 +1014,8 @@ export default function Dashboard() {
             </button>
           ))}
         </div>
+
+        {isTabPending && <SectionLoading />}
 
         {activeTab === 'home' && (
           <div className="space-y-4">
@@ -1159,7 +1165,7 @@ export default function Dashboard() {
                       <div>
                         <p className="font-semibold text-white">Your route is not assigned yet</p>
                         <p className="mt-2 text-sm leading-6 text-zinc-400">The transport team needs to assign a route before your pickup times appear here. Send a message with your name and institution, and they’ll guide you through the next step.</p>
-                        <button type="button" onClick={() => setActiveTab('help')} className="mt-4 inline-flex min-h-10 items-center rounded-xl bg-yellow-400 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-yellow-300">Get help with route assignment</button>
+                        <button type="button" onClick={() => changeTab('help')} className="mt-4 inline-flex min-h-10 items-center rounded-xl bg-yellow-400 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-yellow-300">Get help with route assignment</button>
                       </div>
                     </div>
                   </div>
@@ -1450,7 +1456,7 @@ export default function Dashboard() {
                   <p className="font-semibold text-white">Route assignment needed</p>
                   <p className="mt-1 text-sm text-zinc-400">Weekly pickup options will appear after the transport team assigns your route.</p>
                 </div>
-                <button type="button" onClick={() => setActiveTab('help')} className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-yellow-300/30 hover:text-white">Open Help</button>
+                <button type="button" onClick={() => changeTab('help')} className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-yellow-300/30 hover:text-white">Open Help</button>
               </div>
             )}
             <div className="rounded-2xl border border-white/10 bg-[#0d131c] p-2">

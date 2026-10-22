@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { getPakistanDate } from '@/lib/date/pakistan';
@@ -8,6 +8,7 @@ import PaymentSettingsTab from '@/components/admin/payment-settings-tab';
 import TimeOptionsTab from '@/components/admin/time-options-tab';
 import WhatsAppTab from '@/components/admin/whatsapp-tab';
 import ApplicationsTab, { type ApplicationRow } from '@/components/admin/applications-tab';
+import SectionLoading from '@/components/section-loading';
 import { notifyWhatsApp, type NotifyResponse } from '@/lib/whatsapp/client';
 
 function describeWhatsApp(result: NotifyResponse) {
@@ -93,6 +94,7 @@ export default function AdminDashboard() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isTabPending, startTabTransition] = useTransition();
   const [adminReady, setAdminReady] = useState(false);
   const [departureStatusError, setDepartureStatusError] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
@@ -196,6 +198,8 @@ export default function AdminDashboard() {
 
   const router = useRouter();
   const [supabase] = useState(() => createClient());
+  const changeTab = (tab: string) =>
+    startTabTransition(() => setActiveTab(tab));
 
   useEffect(() => {
     const init = async () => {
@@ -798,7 +802,7 @@ export default function AdminDashboard() {
             <button
               key={tab.key}
               type="button"
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => changeTab(tab.key)}
               className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium transition-all ${
                 activeTab === tab.key
                   ? 'bg-[#facc15] text-black shadow-[0_12px_25px_rgba(250,204,21,0.25)]'
@@ -815,6 +819,8 @@ export default function AdminDashboard() {
             </button>
           ))}
         </div>
+
+        {isTabPending && <SectionLoading />}
 
         {whatsAppNotice && (
           <div
