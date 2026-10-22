@@ -1,94 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Eagle Elites Portal
 
-## Getting Started
+Student transport enrollment and operations portal built with Next.js, Supabase, and Vercel. The application supports public route discovery, student onboarding and application review, student schedules, and admin operations. Product context and roadmap are in [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md).
 
-First, run the development server:
+## Repository layout
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```text
+app/                 Next.js routes, layouts, styles, and API handlers
+components/           Shared UI grouped by feature (admin, auth, marketing, onboarding)
+lib/                  Auth, Supabase, dates, uploads, pricing, and notification helpers
+docs/                 Product brief and project documentation
+supabase/migrations/  Database migrations; preserve timestamped filenames
+supabase/rollback/    Explicit rollback scripts for matching migrations
+public/               Static assets used by the application
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Local setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Use Node.js compatible with the installed Next.js version.
+2. Copy `.env.example` to `.env.local` and fill in the values for your Supabase project. Keep `.env.local` and all real credentials out of Git.
+3. Install dependencies and start the development server:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+   ```bash
+   npm ci
+   npm run dev
+   ```
 
-## Learn More
+4. Open <http://127.0.0.1:3000>.
 
-To learn more about Next.js, take a look at the following resources:
+For a production build, run `npm run lint`, `npm run build`, then `npm start`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Environment variables
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Variable | Required for | Notes |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | App and public route fares | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser auth and public route fares | Publishable/anon key; database access must be protected by RLS |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only admin and scheduled jobs | Keep secret; never prefix with `NEXT_PUBLIC_` |
+| `CRON_SECRET` | Fee reminder cron | Long random secret used to authorize scheduled requests |
+| `WHATSAPP_TOKEN` | WhatsApp notifications | Meta WhatsApp Cloud API token |
+| `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp notifications | Phone number ID from WhatsApp Manager |
+| `WHATSAPP_TEMPLATE_LANG` | Optional | Defaults to `en` |
+| `WHATSAPP_API_VERSION` | Optional | Defaults to `v21.0` in the current integration |
+| `WHATSAPP_TEMPLATE_*` | Optional | Override the template names listed below |
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+WhatsApp credentials are optional for core portal use. The fee reminders and notification endpoints require their server-side credentials to be configured.
 
 ## Database migrations
 
-SQL migrations live in `supabase/migrations/`. Run new ones in the Supabase
-SQL editor (or `supabase db push`) **in this order** before deploying code that
-uses them:
+Migration files are kept in `supabase/migrations/` with their existing timestamped names. Apply them to the intended Supabase project in migration order, review each migration before applying it, and take a database backup before any schema change. In particular, `20261010_rebuild_departure_schema.sql` drops and recreates departure tables and removes/re-adds a profile column; do not run it against data that must be preserved without a reviewed migration plan.
 
-1. `20261021_app_settings.sql`: admin-editable payment/bank details (`app_settings`)
-2. `20261021_time_options.sql`: admin-defined arrival/departure times (`time_options`) and server-side validation triggers
-3. `20261021_whatsapp_notifications.sql`: `profiles.whatsapp_opt_in` and the `whatsapp_messages` log
+The later migrations cover RLS hardening, application settings, time options, WhatsApp opt-in/logging, and onboarding updates. The security rollback script is in `supabase/rollback/`; use it only when intentionally reverting its matching migration.
 
-## WhatsApp alerts (Meta WhatsApp Cloud API)
+## WhatsApp templates
 
-Opted-in students receive WhatsApp template messages for:
+Students receive messages only when opted in. Configure and get Meta approval for the templates before enabling the relevant notifications. Current template defaults:
 
-| Event | When | Template (default name) | Body variables |
-|---|---|---|---|
-| Approval | Admin approves an application | `ee_application_approved` | `{{1}}` name |
-| Rejection | Admin rejects an application (needs fix) | `ee_application_needs_fix` | `{{1}}` name, `{{2}}` reason |
-| Fee due | 1st of the month, unpaid students (cron) | `ee_fee_due` | `{{1}}` name, `{{2}}` amount, `{{3}}` due date |
-| Fee overdue | 10th of the month, still unpaid (cron) | `ee_fee_overdue` | `{{1}}` name, `{{2}}` amount |
-| Holiday | Admin adds a no-service day | `ee_holiday_notice` | `{{1}}` date, `{{2}}` reason |
-| Assignment | Admin saves daily vehicle/driver assignments | `ee_vehicle_assignment` | `{{1}}` name, `{{2}}` date, `{{3}}` vehicle, `{{4}}` driver, `{{5}}` driver contact |
-| Announcement | Admin ticks "Also send on WhatsApp" or clicks "Send on WhatsApp" | `ee_announcement` | `{{1}}` title, `{{2}}` message |
-| Test | Admin → WhatsApp tab → Send test | `hello_world` (Meta sample, en_US) | none |
+| Event | Default template | Variables |
+|---|---|---|
+| Application approved | `ee_application_approved` | Name |
+| Application needs changes | `ee_application_needs_fix` | Name, reason |
+| Fee due | `ee_fee_due` | Name, amount, due date |
+| Fee overdue | `ee_fee_overdue` | Name, amount |
+| Holiday notice | `ee_holiday_notice` | Date, reason |
+| Vehicle assignment | `ee_vehicle_assignment` | Name, date, vehicle, driver, contact |
+| Announcement | `ee_announcement` | Title, message |
+| Test | `hello_world` | Meta sample template |
 
-Every attempt is logged in `whatsapp_messages` (visible in Admin → WhatsApp).
-Reminders, holiday and assignment messages are de-duplicated, so retries don't
-double-send. If WhatsApp isn't configured, nothing is sent and the attempt is
-logged as `skipped`.
+Configure `WHATSAPP_TEMPLATE_LANG` and the optional `WHATSAPP_TEMPLATE_*` overrides if your approved names or language differ. Attempts are recorded in the `whatsapp_messages` table; missing WhatsApp configuration causes notification attempts to be skipped.
 
-### Setup
+## Scheduled jobs
 
-1. In Meta Business Manager, create a WhatsApp Business account and add a phone
-   number, then create a **System User** token with `whatsapp_business_messaging`
-   permission.
-2. In WhatsApp Manager → Message templates, create the templates above
-   (category **Utility**, language **English** `en`), with body variables in the
-   order shown. Example `ee_fee_due` body:
-   `Hi {{1}}, your Eagle Elites transport fee of {{2}} is due by {{3}}. Please pay to keep your seat.`
-   Wait for each template to be approved.
-3. Set these environment variables in Vercel (Production), then redeploy:
+Vercel cron configuration is in `vercel.json`. Fee reminders call `/api/cron/fee-reminders` on the 1st and 10th of each month. Vercel schedules use UTC; the current `0 4` schedule corresponds to 09:00 in Pakistan Standard Time (UTC+5). Set `CRON_SECRET` in the Vercel project environment before enabling the cron jobs.
 
-   | Variable | Required | Notes |
-   |---|---|---|
-   | `SUPABASE_SERVICE_ROLE_KEY` | yes | Server-only; used to read opted-in students and write the log |
-   | `WHATSAPP_TOKEN` | yes | System User access token |
-   | `WHATSAPP_PHONE_NUMBER_ID` | yes | From WhatsApp Manager → Phone numbers |
-   | `CRON_SECRET` | yes | Any long random string; Vercel Cron sends it automatically |
-   | `WHATSAPP_TEMPLATE_LANG` | no | Default `en` |
-   | `WHATSAPP_API_VERSION` | no | Default `v21.0` |
-   | `WHATSAPP_TEMPLATE_APPROVAL`, `_REJECTION`, `_FEE_DUE`, `_FEE_OVERDUE`, `_HOLIDAY`, `_ASSIGNMENT`, `_ANNOUNCEMENT`, `_TEST` | no | Override template names |
+## Useful commands
 
-4. Cron jobs are defined in `vercel.json` (09:00 PKT on the 1st and 10th).
-5. Admin → WhatsApp shows which variables are set and lets you send a test.
-
-Phone numbers are normalised to Pakistan format (`+92 3XX XXXXXXX`); students
-opt in during onboarding or from their dashboard profile.
+- `npm run dev` — local development server
+- `npm run lint` — ESLint
+- `npm run build` — production build and type checking
+- `npm start` — serve the last production build

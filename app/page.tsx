@@ -1,5 +1,5 @@
 import { cacheLife } from 'next/cache';
-import LandingPage, { type LiveRoute } from './landing-page';
+import LandingPage, { type LiveRoute } from '@/components/marketing/landing-page';
 
 async function getRoutes(): Promise<{ routes: LiveRoute[]; available: boolean }> {
   'use cache';
