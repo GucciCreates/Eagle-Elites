@@ -12,6 +12,7 @@ type Body =
   | { event: 'holiday'; date: string; reason: string }
   | { event: 'assignment'; date: string; studentIds: string[] }
   | { event: 'announcement'; title: string; message: string; targetType?: string; targetValue?: string | null }
+  | { event: 'announcement_students'; title: string; message: string; studentIds: string[] }
   | { event: 'test'; phone: string };
 
 function formatDate(date: string) {
@@ -174,6 +175,18 @@ export async function POST(request: Request) {
         (data ?? []) as Recipient[],
         () => [body.title, body.message],
       );
+      break;
+    }
+
+    case 'announcement_students': {
+      const ids = Array.isArray(body.studentIds) ? [...new Set(body.studentIds)].slice(0, 1000) : [];
+      if (!body.title || !body.message || ids.length === 0) {
+        return NextResponse.json({ ok: false, error: 'Choose students and provide a reminder message.' }, { status: 400 });
+      }
+      const { data } = await service.from('profiles')
+        .select('id, phone, full_name')
+        .eq('role', 'student').eq('status', 'active').eq('whatsapp_opt_in', true).in('id', ids);
+      summary = await sendToRecipients(service, 'announcement', (data ?? []) as Recipient[], () => [body.title, body.message]);
       break;
     }
 

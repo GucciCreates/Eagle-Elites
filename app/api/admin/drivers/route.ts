@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   const adminId = await getAdminFromRequest(request, service);
   if (!adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  let body: { email?: string; fullName?: string; phone?: string };
+  let body: { email?: string; fullName?: string; phone?: string; cnic?: string; usualVehicleId?: string };
   try {
     body = await request.json();
   } catch {
@@ -34,8 +34,10 @@ export async function POST(request: Request) {
     email,
     full_name: fullName,
     phone: body.phone?.trim() || null,
+    cnic: body.cnic?.trim() || null,
+    usual_vehicle_id: body.usualVehicleId || null,
     created_by: adminId,
-  }).select('id, email, full_name, phone, active, created_at').single();
+  }).select('id, email, full_name, phone, cnic, usual_vehicle_id, active, created_at').single();
 
   if (error || !data) {
     await service.auth.admin.deleteUser(authData.user.id);

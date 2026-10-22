@@ -3,11 +3,12 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { getPakistanDate } from '@/lib/date/pakistan';
+import { getPakistanDate, getPakistanWeekStart } from '@/lib/date/pakistan';
 import PaymentSettingsTab from '@/components/admin/payment-settings-tab';
 import TimeOptionsTab from '@/components/admin/time-options-tab';
 import WhatsAppTab from '@/components/admin/whatsapp-tab';
 import ApplicationsTab, { type ApplicationRow } from '@/components/admin/applications-tab';
+import ProofViewer from '@/components/admin/proof-viewer';
 import SectionLoading from '@/components/section-loading';
 import { notifyWhatsApp, type NotifyResponse } from '@/lib/whatsapp/client';
 
@@ -22,6 +23,7 @@ type Student = {
   id: string;
   full_name: string;
   email: string;
+  status?: string;
   fee_status: string;
   institution: string | null;
   route_id: string | null;
@@ -30,6 +32,9 @@ type Student = {
   user_type?: string | null;
   department?: string | null;
   pickup_area?: string | null;
+  payment_proof_url?: string | null;
+  phone?: string | null;
+  fee_due_date?: string | null;
   coaster_number?: string;
   driver_name?: string;
   driver_contact?: string;
@@ -37,8 +42,8 @@ type Student = {
 };
 
 type Route = { id: string; name: string; price: number };
-type Coaster = { id: string; coaster_number: string };
-type Driver = { id: string; email: string; full_name: string; phone: string | null; active: boolean };
+type Coaster = { id: string; coaster_number: string; vehicle_type?: string; seat_capacity?: number; maintenance_status?: string; default_route_id?: string | null };
+type Driver = { id: string; email: string; full_name: string; phone: string | null; cnic?: string | null; usual_vehicle_id?: string | null; active: boolean };
 type HelpMessage = {
   id: string;
   message: string;
@@ -92,6 +97,9 @@ type AssignmentGroup = {
   coaster_id?: string;
   driver_id?: string;
 };
+type DailyAssignment = { id: string; student_id: string; assignment_date: string; route_id?: string | null; coaster_id: string | null; driver_id: string | null; seat_confirmed: boolean; profiles?: { full_name: string; route_id: string | null } | null; coasters?: { coaster_number: string; seat_capacity: number } | null };
+type WeeklyPlanRow = { student_id: string; week_start: string; day_of_week: string; profiles?: { full_name: string; route_id: string | null; routes?: { name: string } | null } | null; pickup_points?: { name: string } | null };
+type FeePayment = { student_id: string; fee_month: string; amount: number; recorded_at: string };
 
 export default function AdminDashboard() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -118,6 +126,7 @@ export default function AdminDashboard() {
   const [studentPage, setStudentPage] = useState(0);
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [bulkUpdatingFees, setBulkUpdatingFees] = useState(false);
+  const [savingFeeStudent, setSavingFeeStudent] = useState<string | null>(null);
   const [studentListNotice, setStudentListNotice] = useState('');
   const [selectedDepartureIds, setSelectedDepartureIds] = useState<string[]>([]);
   const [departureSelections, setDepartureSelections] = useState<DepartureSelection[]>([]);
@@ -135,10 +144,16 @@ export default function AdminDashboard() {
   >({});
   const [savingAssignment, setSavingAssignment] = useState(false);
   const [assignmentError, setAssignmentError] = useState('');
-  const [driverForm, setDriverForm] = useState({ fullName: '', email: '', phone: '' });
+  const [driverForm, setDriverForm] = useState({ fullName: '', email: '', phone: '', cnic: '', usualVehicleId: '' });
   const [creatingDriver, setCreatingDriver] = useState(false);
   const [driverNotice, setDriverNotice] = useState('');
   const [assignSuccess, setAssignSuccess] = useState(false);
+  const [weeklyAssignments, setWeeklyAssignments] = useState<DailyAssignment[]>([]);
+  const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlanRow[]>([]);
+  const [todayAssignments, setTodayAssignments] = useState<DailyAssignment[]>([]);
+  const [feePayments, setFeePayments] = useState<FeePayment[]>([]);
+  const [feeSearch, setFeeSearch] = useState('');
+  const [newVehicleDetails, setNewVehicleDetails] = useState({ type: 'van', capacity: '28', routeId: '' });
 
   const [editingPrice, setEditingPrice] = useState<Record<string, string>>({});
   const [savingPrice, setSavingPrice] = useState<string | null>(null);
@@ -166,6 +181,7 @@ export default function AdminDashboard() {
   const [addingHoliday, setAddingHoliday] = useState(false);
 
   const [newVehicle, setNewVehicle] = useState('');
+  const [feeReportMonth, setFeeReportMonth] = useState(() => typeof window === 'undefined' ? '' : getPakistanDate().slice(0, 7));
   const [addingVehicle, setAddingVehicle] = useState(false);
   const [newRouteName, setNewRouteName] = useState('');
   const [newRoutePrice, setNewRoutePrice] = useState('');
@@ -270,7 +286,7 @@ export default function AdminDashboard() {
           .order('full_name'),
         supabase.from('routes').select('*'),
         supabase.from('coasters').select('*'),
-        supabase.from('drivers').select('id, email, full_name, phone, active').order('full_name'),
+        supabase.from('drivers').select('id, email, full_name, phone, cnic, usual_vehicle_id, active').order('full_name'),
         supabase
           .from('help_messages')
           .select('*, profiles(full_name, email)')
@@ -379,6 +395,29 @@ export default function AdminDashboard() {
   }, [adminReady, attendanceDate, attendanceMonth, supabase]);
 
   useEffect(() => {
+    if (!adminReady || !assignDate) return;
+    const weekStart = getPakistanWeekStart();
+    const weekEndDate = new Date(`${weekStart}T00:00:00Z`);
+    weekEndDate.setUTCDate(weekEndDate.getUTCDate() + 6);
+    const weekEnd = weekEndDate.toISOString().slice(0, 10);
+    void Promise.all([
+      supabase.from('daily_assignments').select('id, student_id, assignment_date, route_id, coaster_id, driver_id, seat_confirmed, profiles!inner(full_name, route_id), coasters(coaster_number, seat_capacity)').gte('assignment_date', weekStart).lte('assignment_date', weekEnd),
+      supabase.from('daily_assignments').select('id, student_id, assignment_date, route_id, coaster_id, driver_id, seat_confirmed, profiles!inner(full_name, route_id), coasters(coaster_number, seat_capacity)').eq('assignment_date', assignDate),
+      supabase.from('weekly_schedules').select('student_id, week_start, day_of_week, profiles!inner(full_name, route_id, routes(name)), pickup_points(name)').eq('week_start', getPakistanWeekStart(1)),
+    ]).then(([week, today, plan]) => {
+      if (week.data) setWeeklyAssignments(week.data as unknown as DailyAssignment[]);
+      if (today.data) setTodayAssignments(today.data as unknown as DailyAssignment[]);
+      if (plan.data) setWeeklyPlan(plan.data as unknown as WeeklyPlanRow[]);
+    });
+  }, [adminReady, assignDate, supabase]);
+
+  useEffect(() => {
+    if (!adminReady || !feeReportMonth) return;
+    void supabase.from('fee_payments').select('student_id, fee_month, amount, recorded_at').order('fee_month', { ascending: false }).limit(5000)
+      .then(({ data }) => { if (data) setFeePayments(data as FeePayment[]); });
+  }, [adminReady, feeReportMonth, supabase]);
+
+  useEffect(() => {
     if (!adminReady) return;
     const refreshSelections = async () => {
       const { data, error } = await supabase
@@ -478,6 +517,7 @@ export default function AdminDashboard() {
       for (const student of group.students) {
         inserts.push({
           student_id: student.id,
+          route_id: group.route_id,
           coaster_id: assignment.coaster_id,
           driver_name: driver.full_name,
           driver_contact: driver.phone || '',
@@ -560,10 +600,24 @@ export default function AdminDashboard() {
       setStudentListNotice(
         `Marked ${selectedStudentIds.length} student${selectedStudentIds.length === 1 ? '' : 's'} as paid.`,
       );
+      const { data: paymentRows } = await supabase.from('fee_payments').select('student_id, fee_month, amount, recorded_at').order('fee_month', { ascending: false }).limit(5000);
+      if (paymentRows) setFeePayments(paymentRows as FeePayment[]);
       setSelectedStudentIds([]);
       setStudentPage(0);
     }
     setBulkUpdatingFees(false);
+  };
+
+  const handleMarkStudentPaid = async (studentId: string) => {
+    setSavingFeeStudent(studentId);
+    const { error } = await supabase.from('profiles').update({ fee_status: 'paid' }).eq('id', studentId);
+    if (error) setStudentListNotice(`Couldn’t record payment: ${error.message}`);
+    else {
+      setStudents((current) => current.map((student) => student.id === studentId ? { ...student, fee_status: 'paid' } : student));
+      const { data } = await supabase.from('fee_payments').select('student_id, fee_month, amount, recorded_at').order('fee_month', { ascending: false }).limit(5000);
+      if (data) setFeePayments(data as FeePayment[]);
+    }
+    setSavingFeeStudent(null);
   };
 
   const handleCreateDriver = async () => {
@@ -581,7 +635,7 @@ export default function AdminDashboard() {
       const result = await response.json() as { driver?: Driver; error?: string };
       if (!response.ok || !result.driver) throw new Error(result.error ?? 'Could not create the driver account.');
       setDrivers((current) => [...current, result.driver!].sort((a, b) => a.full_name.localeCompare(b.full_name)));
-      setDriverForm({ fullName: '', email: '', phone: '' });
+      setDriverForm({ fullName: '', email: '', phone: '', cnic: '', usualVehicleId: '' });
       setDriverNotice('Driver account created. An invitation email was sent so they can set their password.');
     } catch (error) {
       setDriverNotice(error instanceof Error ? error.message : 'Could not create the driver account.');
@@ -805,7 +859,12 @@ export default function AdminDashboard() {
 
     const { data } = await supabase
       .from('coasters')
-      .insert({ coaster_number: newVehicle })
+      .insert({
+        coaster_number: newVehicle.trim(),
+        vehicle_type: newVehicleDetails.type,
+        seat_capacity: Number(newVehicleDetails.capacity) || 28,
+        default_route_id: newVehicleDetails.routeId || null,
+      })
       .select()
       .single();
 
@@ -813,6 +872,44 @@ export default function AdminDashboard() {
 
     setNewVehicle('');
     setAddingVehicle(false);
+  };
+
+  const handleUpdateVehicle = async (vehicle: Coaster, changes: Partial<Coaster>) => {
+    const { error } = await supabase.from('coasters').update(changes).eq('id', vehicle.id);
+    if (!error) setCoasters((current) => current.map((item) => item.id === vehicle.id ? { ...item, ...changes } : item));
+  };
+
+  const handleSeatReminder = async () => {
+    const unconfirmedIds = todayAssignments.filter((item) => !item.seat_confirmed).map((item) => item.student_id);
+    if (!unconfirmedIds.length) return;
+    const result = await notifyWhatsApp({ event: 'announcement_students', studentIds: unconfirmedIds, title: 'Confirm your seat', message: `Please confirm your seat for your trip on ${assignDate}. Open the Eagle Elites student dashboard to confirm.` });
+    setWhatsAppNotice(describeWhatsApp(result));
+  };
+
+  const handleFeeReminders = async (studentIds: string[]) => {
+    if (!studentIds.length) return;
+    const result = await notifyWhatsApp({ event: 'announcement_students', studentIds, title: 'Monthly fee reminder', message: `Our records show your ${feeReportMonth} transport fee is unpaid. Please contact Eagle Elites if you have already paid.` });
+    setWhatsAppNotice(describeWhatsApp(result));
+  };
+
+  const downloadMonthlyInvoice = () => {
+    const monthStart = `${feeReportMonth}-01`;
+    const paidByStudent = new Map(feePayments.filter((payment) => payment.fee_month === monthStart).map((payment) => [payment.student_id, payment]));
+    const rows = students.filter((student) => student.status === 'active').map((student) => {
+      const paid = paidByStudent.get(student.id);
+      const expected = routes.find((route) => route.id === student.route_id)?.price ?? 0;
+      const due = student.fee_due_date ?? `${feeReportMonth}-01`;
+      const overdue = student.fee_status !== 'paid' ? Math.max(0, Math.floor((Date.now() - new Date(`${due}T00:00:00`).getTime()) / 86400000)) : 0;
+      return [student.full_name, student.email, student.institution ?? '', student.routes?.name ?? '', expected, paid ? paid.amount : 0, paid ? 'Paid' : 'Unpaid', overdue];
+    });
+    const csv = [['Student', 'Email', 'University', 'Route', 'Expected PKR', 'Collected PKR', 'Status', 'Days overdue'], ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `eagle-elites-fees-${feeReportMonth}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleUpdatePrice = async (routeId: string) => {
@@ -872,6 +969,7 @@ export default function AdminDashboard() {
 
   const tabs = [
     { key: 'overview', label: '📊', title: 'Overview' },
+    { key: 'schedule', label: '🗓️', title: 'Weekly Schedule' },
     { key: 'students', label: '👥', title: 'Students' },
     {
       key: 'applications',
@@ -1093,6 +1191,59 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {activeTab === 'schedule' && (
+          <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+            <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+              <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-yellow-300">Operations · Monday to Sunday</p><h2 className="mt-1 text-xl font-semibold text-white">Weekly travel schedule</h2><p className="mt-1 text-sm text-zinc-400">Daily headcounts by route, with scheduled vehicles and drivers.</p></div>
+              <button type="button" onClick={() => changeTab('assignments')} className="rounded-xl border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:border-yellow-400">Manage assignments →</button>
+            </div>
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-400">Next week student plan · {getPakistanWeekStart(1)}</h3>
+            <div className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((weekday) => {
+                const rows = weeklyPlan.filter((row) => row.day_of_week.toLowerCase() === weekday.toLowerCase());
+                const routesForDay = routes.map((route) => ({ route, students: rows.filter((row) => row.profiles?.route_id === route.id) })).filter((group) => group.students.length);
+                return (
+                  <article key={weekday} className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
+                    <div className="mb-2 flex items-center justify-between"><h4 className="font-semibold text-white">{weekday}</h4><span className="text-xs text-zinc-500">{rows.length} planned</span></div>
+                    {routesForDay.length ? <div className="space-y-2">{routesForDay.map(({ route, students: routeStudents }) => {
+                      const vehicle = coasters.find((item) => item.default_route_id === route.id && item.maintenance_status !== 'maintenance' && item.maintenance_status !== 'retired');
+                      const capacity = vehicle?.seat_capacity ?? 0;
+                      const overCapacity = capacity > 0 && routeStudents.length > capacity;
+                      const underused = capacity > 0 && routeStudents.length <= capacity / 2;
+                      return <div key={route.id} className="rounded-xl border border-zinc-800 px-3 py-2">
+                        <div className="flex justify-between gap-2"><span className="text-sm text-zinc-200">{route.name}</span><span className="text-xs text-zinc-400">{routeStudents.length} riders</span></div>
+                        <p className="mt-1 text-xs text-zinc-500">Pickup points: {[...new Set(routeStudents.map((row) => row.pickup_points?.name).filter(Boolean))].join(', ') || 'not set'}</p>
+                        {overCapacity ? <p className="mt-1 text-xs font-medium text-red-300">Capacity warning: {routeStudents.length} riders for {capacity} seats</p> : vehicle ? <p className="mt-1 text-xs text-zinc-500">Usual vehicle {vehicle.coaster_number} · {capacity} seats</p> : <p className="mt-1 text-xs text-amber-200">No available usual vehicle</p>}
+                        {underused && <p className="mt-1 text-xs text-amber-200">Low utilisation · {capacity - routeStudents.length} seats would be unused</p>}
+                        <details className="mt-2"><summary className="cursor-pointer text-xs text-yellow-300">View students</summary><p className="mt-1 text-xs leading-5 text-zinc-400">{routeStudents.map((row) => row.profiles?.full_name ?? 'Student').join(', ')}</p></details>
+                      </div>;
+                    })}</div> : <p className="rounded-xl border border-dashed border-zinc-800 px-3 py-5 text-center text-xs text-zinc-500">No students scheduled</p>}
+                  </article>
+                );
+              })}
+            </div>
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-400">Assigned vehicles this week</h3>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 7 }, (_, index) => {
+                const start = new Date(`${getPakistanWeekStart()}T00:00:00Z`);
+                start.setUTCDate(start.getUTCDate() + index);
+                const date = start.toISOString().slice(0, 10);
+                const dayRows = weeklyAssignments.filter((row) => row.assignment_date === date);
+                const byRoute = routes.map((route) => ({ route, rows: dayRows.filter((row) => row.route_id === route.id || row.profiles?.route_id === route.id) })).filter((group) => group.rows.length);
+                const weekday = start.toLocaleDateString('en-PK', { weekday: 'long', timeZone: 'UTC' });
+                return <article key={date} className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
+                  <div className="mb-3 flex items-center justify-between"><div><h3 className="font-semibold text-white">{weekday}</h3><p className="text-xs text-zinc-500">{date}</p></div><span className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300">{dayRows.length} students</span></div>
+                  {!byRoute.length ? <p className="rounded-xl border border-dashed border-zinc-800 px-3 py-5 text-center text-xs text-zinc-500">No trips assigned</p> : <div className="space-y-3">{byRoute.map(({ route, rows }) => {
+                    const vehicle = coasters.find((item) => item.id === rows[0]?.coaster_id);
+                    const full = vehicle?.seat_capacity ? rows.length > vehicle.seat_capacity : false;
+                    return <div key={route.id} className="rounded-xl border border-zinc-800 px-3 py-2.5"><div className="flex items-center justify-between gap-2"><p className="text-sm font-medium text-zinc-200">{route.name}</p><span className="text-xs text-zinc-400">{rows.length} riders</span></div><p className="mt-1 text-xs text-zinc-500">{vehicle?.coaster_number ?? 'Vehicle pending'} · {rows.filter((row) => row.seat_confirmed).length} confirmed</p>{full && <p className="mt-1 text-xs font-semibold text-red-300">Capacity exceeded · {vehicle?.seat_capacity} seats</p>}</div>;
+                  })}</div>}
+                </article>;
+              })}
+            </div>
+          </section>
+        )}
+
         {activeTab === 'students' && (
           <div className="grid gap-6 xl:grid-cols-[1.6fr_0.8fr]">
             <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
@@ -1222,6 +1373,7 @@ export default function AdminDashboard() {
                       {student.fee_status === 'paid' ? 'Paid' : 'Unpaid'}
                     </span>
                     <button type="button" onClick={() => setEditingStudent(student)} className="shrink-0 rounded-lg bg-zinc-700 px-3 py-1.5 text-xs text-zinc-200 transition hover:bg-zinc-600">Edit</button>
+                    {student.payment_proof_url && <details className="basis-full lg:col-span-full"><summary className="cursor-pointer text-xs font-medium text-yellow-300">View payment proof</summary><div className="mt-3 max-w-xl"><ProofViewer value={student.payment_proof_url} label={`${student.full_name} payment proof`} /></div></details>}
                   </div>
                 ))}
                 {matchingStudents.length === 0 && (
@@ -1361,18 +1513,26 @@ export default function AdminDashboard() {
                 <input value={driverForm.fullName} onChange={(event) => setDriverForm((value) => ({ ...value, fullName: event.target.value }))} placeholder="Driver full name" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white" />
                 <input type="email" autoComplete="email" value={driverForm.email} onChange={(event) => setDriverForm((value) => ({ ...value, email: event.target.value }))} placeholder="Driver email" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white" />
                 <input type="tel" value={driverForm.phone} onChange={(event) => setDriverForm((value) => ({ ...value, phone: event.target.value }))} placeholder="Phone (optional)" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white" />
+                <input type="text" value={driverForm.cnic} onChange={(event) => setDriverForm((value) => ({ ...value, cnic: event.target.value }))} placeholder="CNIC (optional)" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white" />
+                <select value={driverForm.usualVehicleId} onChange={(event) => setDriverForm((value) => ({ ...value, usualVehicleId: event.target.value }))} className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white"><option value="">Usual vehicle (optional)</option>{coasters.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.coaster_number} · {vehicle.vehicle_type ?? 'van'}</option>)}</select>
                 <button type="button" disabled={creatingDriver || !driverForm.fullName.trim() || !driverForm.email.trim()} onClick={() => void handleCreateDriver()} className="rounded-xl bg-yellow-400 px-4 py-3 text-sm font-semibold text-zinc-950 disabled:opacity-50">{creatingDriver ? 'Sending invitation…' : 'Create driver account'}</button>
                 <p className="text-xs text-zinc-500">The invitation link lets the driver set a password securely. No password is stored or shared here.</p>
               </div>
             </section>
             <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
               <h2 className="mb-4 text-xl font-semibold text-white">Driver accounts ({drivers.length})</h2>
-              {drivers.length === 0 ? <p className="rounded-xl border border-dashed border-zinc-700 px-4 py-8 text-center text-sm text-zinc-400">No driver accounts yet. Create an account to assign trips and enable driver attendance.</p> : <div className="space-y-2">{drivers.map((driver) => <div key={driver.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3"><div><p className="font-medium text-white">{driver.full_name}</p><p className="text-xs text-zinc-400">{driver.email}{driver.phone ? ` · ${driver.phone}` : ''}</p></div><button type="button" onClick={() => void handleToggleDriver(driver)} className={`rounded-lg px-3 py-2 text-xs font-semibold ${driver.active ? 'bg-emerald-500/15 text-emerald-200' : 'bg-zinc-800 text-zinc-400'}`}>{driver.active ? 'Active · deactivate' : 'Inactive · activate'}</button></div>)}</div>}
+              {drivers.length === 0 ? <p className="rounded-xl border border-dashed border-zinc-700 px-4 py-8 text-center text-sm text-zinc-400">No driver accounts yet. Create an account to assign trips and enable driver attendance.</p> : <div className="space-y-2">{drivers.map((driver) => { const trips = attendanceMonthRows.filter((row) => row.driver_id === driver.id && row.attendance_status !== null).length; const vehicle = coasters.find((item) => item.id === driver.usual_vehicle_id); return <div key={driver.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3"><div><p className="font-medium text-white">{driver.full_name}</p><p className="text-xs text-zinc-400">{driver.email}{driver.phone ? ` · ${driver.phone}` : ''}{driver.cnic ? ` · CNIC ${driver.cnic}` : ''}</p><p className="mt-1 text-xs text-zinc-500">Usual vehicle: {vehicle?.coaster_number ?? 'Not set'} · {trips} completed trips this month</p></div><button type="button" onClick={() => void handleToggleDriver(driver)} className={`rounded-lg px-3 py-2 text-xs font-semibold ${driver.active ? 'bg-emerald-500/15 text-emerald-200' : 'bg-zinc-800 text-zinc-400'}`}>{driver.active ? 'Active · deactivate' : 'Inactive · activate'}</button></div>; })}</div>}
             </section>
           </div>
         )}
 
         {activeTab === 'assignments' && (
+          <div className="space-y-5">
+          <section className="rounded-[28px] border border-yellow-500/20 bg-zinc-900/80 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-yellow-300">Seat confirmation · {assignDate}</p><h2 className="mt-1 text-xl font-semibold text-white">{todayAssignments.filter((row) => row.seat_confirmed).length} confirmed · {todayAssignments.filter((row) => !row.seat_confirmed).length} awaiting</h2></div><button type="button" disabled={!todayAssignments.some((row) => !row.seat_confirmed)} onClick={() => void handleSeatReminder()} className="rounded-xl bg-yellow-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 disabled:opacity-40">Remind unconfirmed students</button></div>
+            {todayAssignments.length > 0 && <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{todayAssignments.filter((row) => !row.seat_confirmed).map((row) => <p key={row.student_id} className="rounded-xl border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-300">{students.find((student) => student.id === row.student_id)?.full_name ?? 'Student'}</p>)}</div>}
+            {todayAssignments.length === 0 && <p className="mt-3 text-sm text-zinc-500">Save vehicle assignments for this day to track seat confirmations.</p>}
+          </section>
           <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
             <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
@@ -1456,9 +1616,9 @@ export default function AdminDashboard() {
                           className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-white outline-none focus:border-yellow-400"
                         >
                           <option value="">Select vehicle...</option>
-                          {coasters.map((coaster) => (
+                          {coasters.filter((coaster) => (coaster.maintenance_status ?? 'active') === 'active').map((coaster) => (
                             <option key={coaster.id} value={coaster.id}>
-                              Vehicle #{coaster.coaster_number}
+                              {coaster.coaster_number} · {coaster.vehicle_type ?? 'Vehicle'} · {coaster.seat_capacity ?? '—'} seats
                             </option>
                           ))}
                         </select>
@@ -1471,6 +1631,10 @@ export default function AdminDashboard() {
                         </select>
                       </div>
                     </div>
+                    {(() => {
+                      const selectedVehicle = coasters.find((item) => item.id === groupAssignments[group.route_id]?.coaster_id);
+                      return selectedVehicle && selectedVehicle.seat_capacity && group.students.length > selectedVehicle.seat_capacity ? <p role="alert" className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-200">Capacity warning: {group.students.length} students for {selectedVehicle.seat_capacity} seats. Choose a larger vehicle or split this route.</p> : null;
+                    })()}
                   </div>
                 ))}
 
@@ -1492,6 +1656,7 @@ export default function AdminDashboard() {
                 </button>
               </div>
             )}
+          </div>
           </div>
         )}
 
@@ -1844,69 +2009,34 @@ export default function AdminDashboard() {
         )}
 
         {activeTab === 'fees' && (
-          <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-white">
-                  Fee Management
-                </h2>
-                <p className="text-sm text-zinc-400">
-                  {unpaidCount} students have unpaid fees
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {students.map((student) => (
-                <div
-                  key={student.id}
-                  className="flex items-center justify-between gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/70 px-4 py-3"
-                >
-                  <div>
-                    <p className="font-medium text-white">
-                      {student.full_name}
-                    </p>
-                    <p className="text-xs text-zinc-400">
-                      {student.routes?.name || 'No route'}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`rounded-full px-2 py-1 text-[10px] font-medium ${
-                        student.fee_status === 'paid'
-                          ? 'bg-emerald-500/15 text-emerald-300'
-                          : 'bg-red-500/15 text-red-300'
-                      }`}
-                    >
-                      {student.fee_status === 'paid' ? '✓ Paid' : '⚠ Unpaid'}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const newStatus =
-                          student.fee_status === 'paid' ? 'unpaid' : 'paid';
-                        await supabase
-                          .from('profiles')
-                          .update({ fee_status: newStatus })
-                          .eq('id', student.id);
-                        setStudents((prev) =>
-                          prev.map((item) =>
-                            item.id === student.id
-                              ? { ...item, fee_status: newStatus }
-                              : item,
-                          ),
-                        );
-                      }}
-                      className="rounded-lg bg-zinc-700 px-3 py-1.5 text-xs text-zinc-200 transition hover:bg-zinc-600"
-                    >
-                      Toggle
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="space-y-5">
+            {(() => {
+              const monthKey = `${feeReportMonth}-01`;
+              const monthPayments = feePayments.filter((payment) => payment.fee_month === monthKey);
+              const paidIds = new Set(monthPayments.map((payment) => payment.student_id));
+              const activeStudents = students.filter((student) => student.status === 'active');
+              const expected = activeStudents.reduce((sum, student) => sum + (routes.find((route) => route.id === student.route_id)?.price ?? 0), 0);
+              const collected = monthPayments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+              const unpaid = activeStudents.filter((student) => !paidIds.has(student.id));
+              const visibleUnpaid = unpaid.filter((student) => `${student.full_name} ${student.email} ${student.institution ?? ''}`.toLowerCase().includes(feeSearch.toLowerCase()));
+              const overdueDays = (student: Student) => {
+                const due = student.fee_due_date ?? `${feeReportMonth}-01`;
+                return Math.max(0, Math.floor((Date.now() - new Date(`${due}T00:00:00`).getTime()) / 86400000));
+              };
+              return <>
+                <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+                  <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-yellow-300">Monthly collection</p><h2 className="mt-1 text-xl font-semibold text-white">Fee collection dashboard</h2><p className="mt-1 text-sm text-zinc-400">Expected fees are calculated from active route assignments.</p></div><label className="text-xs text-zinc-400">Month<input type="month" value={feeReportMonth} onChange={(event) => setFeeReportMonth(event.target.value)} className="mt-1 block rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white" /></label></div>
+                  <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4"><p className="text-xs text-zinc-500">Expected</p><p className="mt-1 text-2xl font-bold text-white">PKR {expected.toLocaleString()}</p></div><div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4"><p className="text-xs text-zinc-500">Collected this month</p><p className="mt-1 text-2xl font-bold text-emerald-300">PKR {collected.toLocaleString()}</p></div><div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4"><p className="text-xs text-zinc-500">Unpaid</p><p className="mt-1 text-2xl font-bold text-amber-200">{unpaid.length} students</p></div></div>
+                  <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={downloadMonthlyInvoice} className="rounded-xl bg-yellow-400 px-4 py-2.5 text-sm font-semibold text-zinc-950">Export monthly invoice CSV</button><button type="button" onClick={() => void handleFeeReminders(unpaid.map((student) => student.id))} disabled={!unpaid.length} className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-zinc-200 disabled:opacity-40">WhatsApp unpaid students</button></div>
+                  {feeReportMonth !== getPakistanDate().slice(0, 7) && <p className="mt-3 text-xs text-zinc-500">Historical months are read-only. Payment updates are recorded in the current month.</p>}
+                </section>
+                <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-semibold text-white">Unpaid students ({unpaid.length})</h2><p className="text-sm text-zinc-400">Days overdue are counted from the due date, or the first of the selected month.</p></div><input value={feeSearch} onChange={(event) => setFeeSearch(event.target.value)} placeholder="Search unpaid students" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600" /></div>
+                  <div className="space-y-3">{visibleUnpaid.map((student) => <article key={student.id} className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-medium text-white">{student.full_name}</p><p className="text-xs text-zinc-400">{student.institution ?? 'University not set'} · {student.routes?.name ?? 'No route'} · PKR {(routes.find((route) => route.id === student.route_id)?.price ?? 0).toLocaleString()}</p><p className={`mt-1 text-xs ${overdueDays(student) > 0 ? 'text-red-300' : 'text-amber-200'}`}>{overdueDays(student)} days overdue</p></div><div className="flex gap-2"><button type="button" onClick={() => void handleFeeReminders([student.id])} className="rounded-lg border border-emerald-700/60 px-3 py-2 text-xs font-semibold text-emerald-200">WhatsApp reminder</button><button type="button" disabled={savingFeeStudent === student.id || feeReportMonth !== getPakistanDate().slice(0, 7)} onClick={() => void handleMarkStudentPaid(student.id)} className="rounded-lg bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-200 disabled:opacity-40">{savingFeeStudent === student.id ? 'Saving…' : 'Mark paid'}</button></div></div>{student.payment_proof_url && <details className="mt-3"><summary className="cursor-pointer text-xs font-medium text-yellow-300">View payment proof</summary><div className="mt-3 max-w-xl"><ProofViewer value={student.payment_proof_url} label={`${student.full_name} payment proof`} /></div></details>}</article>)}{visibleUnpaid.length === 0 && <p className="rounded-xl border border-dashed border-zinc-700 px-4 py-8 text-center text-sm text-zinc-400">No unpaid students match this search.</p>}</div>
+                </section>
+                <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5"><h2 className="mb-3 text-xl font-semibold text-white">Payment history by student</h2><div className="overflow-x-auto"><table className="w-full min-w-[34rem] text-left text-sm"><thead className="text-xs uppercase text-zinc-500"><tr><th className="pb-2">Student</th><th className="pb-2">Fee month</th><th className="pb-2">Amount</th><th className="pb-2">Recorded</th></tr></thead><tbody className="divide-y divide-zinc-800">{feePayments.slice(0, 100).map((payment) => <tr key={payment.student_id + payment.fee_month}><td className="py-2.5 text-zinc-200">{students.find((student) => student.id === payment.student_id)?.full_name ?? 'Student'}</td><td className="py-2.5 text-zinc-300">{payment.fee_month.slice(0, 7)}</td><td className="py-2.5 text-emerald-300">PKR {Number(payment.amount).toLocaleString()}</td><td className="py-2.5 text-zinc-400">{new Date(payment.recorded_at).toLocaleDateString('en-PK')}</td></tr>)}</tbody></table>{feePayments.length === 0 && <p className="py-6 text-center text-sm text-zinc-500">No monthly payment history yet.</p>}</div></section>
+              </>;
+            })()}
           </div>
         )}
 
@@ -2210,13 +2340,16 @@ export default function AdminDashboard() {
 
         {activeTab === 'vehicles' && (
           <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
-            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <input
                 value={newVehicle}
                 onChange={(event) => setNewVehicle(event.target.value)}
                 placeholder="Vehicle number e.g. C-01, V-05"
-                className="flex-1 rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-white placeholder:text-zinc-600 outline-none focus:border-yellow-400"
+                className="rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-white placeholder:text-zinc-600 outline-none focus:border-yellow-400"
               />
+              <select value={newVehicleDetails.type} onChange={(event) => setNewVehicleDetails((value) => ({ ...value, type: event.target.value }))} className="rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-3 text-sm text-white"><option value="coaster">Coaster</option><option value="hiace">Hiace</option><option value="van">Van</option><option value="bus">Bus</option><option value="other">Other</option></select>
+              <input type="number" min="1" value={newVehicleDetails.capacity} onChange={(event) => setNewVehicleDetails((value) => ({ ...value, capacity: event.target.value }))} placeholder="Seat capacity" className="rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-3 text-sm text-white" />
+              <select value={newVehicleDetails.routeId} onChange={(event) => setNewVehicleDetails((value) => ({ ...value, routeId: event.target.value }))} className="rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-3 text-sm text-white"><option value="">Usual route (optional)</option>{routes.map((route) => <option key={route.id} value={route.id}>{route.name}</option>)}</select>
               <button
                 type="button"
                 onClick={handleAddVehicle}
@@ -2240,7 +2373,15 @@ export default function AdminDashboard() {
                       key={coaster.id}
                       className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-3 text-white"
                     >
-                      🚐 #{coaster.coaster_number}
+                      <div className="flex items-center justify-between"><p className="font-semibold">🚐 {coaster.coaster_number}</p><span className={`rounded-full px-2 py-1 text-[10px] ${coaster.maintenance_status === 'active' || !coaster.maintenance_status ? 'bg-emerald-500/10 text-emerald-300' : 'bg-amber-500/10 text-amber-200'}`}>{coaster.maintenance_status ?? 'active'}</span></div>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <select aria-label={`${coaster.coaster_number} vehicle type`} value={coaster.vehicle_type ?? 'van'} onChange={(event) => void handleUpdateVehicle(coaster, { vehicle_type: event.target.value })} className="rounded-lg border border-zinc-700 bg-zinc-950 px-2 py-2 text-xs text-zinc-200"><option value="coaster">Coaster</option><option value="hiace">Hiace</option><option value="van">Van</option><option value="bus">Bus</option><option value="other">Other</option></select>
+                        <input aria-label={`${coaster.coaster_number} seat capacity`} type="number" min="1" value={coaster.seat_capacity ?? 28} onChange={(event) => setCoasters((current) => current.map((item) => item.id === coaster.id ? { ...item, seat_capacity: Number(event.target.value) } : item))} onBlur={(event) => void handleUpdateVehicle(coaster, { seat_capacity: Number(event.target.value) || 1 })} className="rounded-lg border border-zinc-700 bg-zinc-950 px-2 py-2 text-xs text-zinc-200" />
+                        <select aria-label={`${coaster.coaster_number} usual route`} value={coaster.default_route_id ?? ''} onChange={(event) => void handleUpdateVehicle(coaster, { default_route_id: event.target.value || null })} className="rounded-lg border border-zinc-700 bg-zinc-950 px-2 py-2 text-xs text-zinc-200"><option value="">No usual route</option>{routes.map((route) => <option key={route.id} value={route.id}>{route.name}</option>)}</select>
+                        <select aria-label={`${coaster.coaster_number} maintenance status`} value={coaster.maintenance_status ?? 'active'} onChange={(event) => void handleUpdateVehicle(coaster, { maintenance_status: event.target.value })} className="rounded-lg border border-zinc-700 bg-zinc-950 px-2 py-2 text-xs text-zinc-200"><option value="active">Available</option><option value="maintenance">In maintenance</option><option value="retired">Retired</option></select>
+                      </div>
+                      <p className="mt-2 text-xs text-zinc-500">{coaster.seat_capacity ?? 28} seats · usual route {routes.find((route) => route.id === coaster.default_route_id)?.name ?? 'not set'}</p>
+                      <p className="mt-1 text-xs text-zinc-400">Today&apos;s route: {routes.find((route) => route.id === todayAssignments.find((assignment) => assignment.coaster_id === coaster.id)?.route_id)?.name ?? 'not assigned'} · {todayAssignments.filter((assignment) => assignment.coaster_id === coaster.id).length} assigned</p>
                     </div>
                   ))}
                 </div>
