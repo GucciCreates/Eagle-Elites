@@ -765,9 +765,9 @@ export default function Dashboard() {
       featured: true,
     },
     {
-      label: 'Trips this week',
+      label: 'Scheduled days',
       value: `${schedules.length || 0}`,
-      hint: 'Schedule entries',
+      hint: `For next week · ${nextWeekRange}`,
       accent: 'text-yellow-300',
       featured: false,
     },
@@ -780,16 +780,17 @@ export default function Dashboard() {
     },
   ];
 
-  const tabs: Array<{ key: DashboardTab; label: string }> = [
-    { key: 'home', label: 'Home' },
-    { key: 'schedule', label: 'Schedule' },
-    { key: 'payments', label: 'Payments' },
-    { key: 'timetable', label: 'Timetable' },
-    { key: 'help', label: 'Help' },
-    { key: 'profile', label: 'Profile' },
+  const tabs: Array<{ key: DashboardTab; label: string; icon: string }> = [
+    { key: 'home', label: 'Home', icon: '⌂' },
+    { key: 'schedule', label: 'My schedule', icon: '◷' },
+    { key: 'payments', label: 'Payments', icon: '▤' },
+    { key: 'timetable', label: 'Timetable', icon: '▦' },
+    { key: 'help', label: 'Help & support', icon: '?' },
+    { key: 'profile', label: 'My profile', icon: '◉' },
   ];
+  const primaryTabs = tabs.filter((tab) => ['home', 'schedule', 'payments'].includes(tab.key));
   const profileMenuTabs = tabs.filter((tab) =>
-    ['timetable', 'help', 'profile'].includes(tab.key),
+    ['timetable', 'profile'].includes(tab.key),
   );
   const scheduleTabs: Array<{ key: ScheduleView; label: string }> = [
     { key: 'overview', label: 'Overview' },
@@ -811,7 +812,7 @@ export default function Dashboard() {
     );
 
   return (
-    <div className="min-h-screen bg-[#07090d] text-white relative overflow-hidden">
+      <div className="relative min-h-screen overflow-x-clip bg-[#07090d] text-white">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-20 left-10 h-72 w-72 rounded-full bg-yellow-400/10 blur-3xl" />
         <div className="absolute top-1/3 right-10 h-80 w-80 rounded-full bg-cyan-500/8 blur-3xl" />
@@ -947,6 +948,28 @@ export default function Dashboard() {
       </nav>
 
       <main className="relative z-10 mx-auto max-w-6xl space-y-5 px-4 py-6 sm:py-8">
+        <nav aria-label="Student dashboard" className="sticky top-[65px] z-40 -mx-4 border-y border-white/[0.06] bg-[#090d13]/95 px-4 py-2 backdrop-blur-xl sm:static sm:mx-0 sm:rounded-2xl sm:border sm:bg-[#0b1017]/90 sm:p-2">
+          <div className="flex gap-2 overflow-x-auto">
+            {primaryTabs.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                aria-current={activeTab === tab.key ? 'page' : undefined}
+                onClick={() => changeTab(tab.key)}
+                className={`flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition ${activeTab === tab.key ? 'bg-yellow-400 text-slate-950 shadow-[0_8px_22px_rgba(250,204,21,0.17)]' : 'text-zinc-400 hover:bg-white/[0.05] hover:text-white'}`}
+              >
+                <span aria-hidden="true" className="text-base">{tab.icon}</span>{tab.label}
+                {tab.key === 'payments' && unpaidPayments.length > 0 && <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{unpaidPayments.length}</span>}
+              </button>
+            ))}
+            <div className="ml-auto flex shrink-0 items-center border-l border-white/[0.08] pl-2">
+              <button type="button" onClick={() => changeTab('help')} aria-current={activeTab === 'help' ? 'page' : undefined} className={`flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium transition ${activeTab === 'help' ? 'bg-yellow-400 text-slate-950' : 'text-zinc-400 hover:bg-white/[0.05] hover:text-white'}`}>
+                <span aria-hidden="true">?</span><span>Help</span>
+              </button>
+            </div>
+          </div>
+        </nav>
+
         {isFridaySaturdayToday && (
           <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-4 py-3 flex items-center gap-3 shadow-[0_0_0_1px_rgba(250,204,21,0.04)]">
             <span className="text-xl">⏰</span>
@@ -979,7 +1002,7 @@ export default function Dashboard() {
               key={item.label}
               className={`rounded-[24px] border p-4 shadow-[0_20px_40px_rgba(0,0,0,0.18)] backdrop-blur-sm ${
                 item.featured
-                  ? 'border-yellow-500/20 bg-gradient-to-br from-yellow-500/12 via-[#10171f] to-emerald-500/10 sm:col-span-2'
+                  ? 'border-yellow-500/20 bg-gradient-to-br from-yellow-500/12 via-[#10171f] to-emerald-500/10'
                   : 'border-white/8 bg-gradient-to-br from-white/5 to-[#10171f]/80'
               }`}
             >
@@ -999,22 +1022,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <div className="flex gap-1 rounded-2xl border border-white/8 bg-white/3 p-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => changeTab(tab.key)}
-              className={`${['timetable', 'help', 'profile'].includes(tab.key) ? 'hidden sm:flex' : 'flex'} flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:flex-none sm:px-3 sm:text-sm ${
-                activeTab === tab.key
-                  ? 'bg-yellow-400 text-black shadow-[0_8px_18px_rgba(250,204,21,0.35)]'
-                  : 'text-zinc-400 hover:text-white hover:bg-white/4'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
         {isTabPending && <SectionLoading />}
 
         {activeTab === 'home' && (
@@ -1026,8 +1033,7 @@ export default function Dashboard() {
                     Welcome back
                   </p>
                   <h2 className="mt-2 text-3xl font-black tracking-[-0.04em] text-white sm:text-4xl">
-                    {profile?.full_name}{' '}
-                    <span className="inline-block">👋</span>
+                    Welcome, {profile?.full_name}
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-zinc-400">
                     {profile?.email}
@@ -1092,7 +1098,7 @@ export default function Dashboard() {
                       <div className="absolute right-3 top-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                         {profile?.institution || 'destination'}
                       </div>
-                      <div className="dashboard-vehicle absolute top-1/2 -translate-y-1/2" aria-hidden="true">
+                      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" aria-hidden="true">
                         <svg viewBox="0 0 48 32" className="h-8 w-12 text-yellow-300" fill="none">
                           <path d="M8 5.5h25a5 5 0 0 1 5 5V24H7V6.5a1 1 0 0 1 1-1Z" fill="currentColor" fillOpacity=".16" stroke="currentColor" strokeWidth="1.6" />
                           <path d="M10 9h10v7H10zM23 9h10v7H23zM38 14h3.5a2 2 0 0 1 2 2v5H38" stroke="currentColor" strokeWidth="1.5" />
@@ -1107,19 +1113,6 @@ export default function Dashboard() {
                         </svg>
                       </div>
                     </div>
-
-                    <style>{`
-                      @keyframes dashboard-transit {
-                        0% { left: 0; }
-                        100% { left: calc(100% - 3.25rem); }
-                      }
-                      .dashboard-vehicle {
-                        animation: dashboard-transit 9s ease-in-out infinite alternate;
-                      }
-                      @media (prefers-reduced-motion: reduce) {
-                        .dashboard-vehicle { animation: none; left: 42%; }
-                      }
-                    `}</style>
 
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="rounded-2xl border border-white/8 bg-white/3 p-3">

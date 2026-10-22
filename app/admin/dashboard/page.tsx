@@ -105,6 +105,18 @@ type DailyAssignment = { id: string; student_id: string; assignment_date: string
 type WeeklyPlanRow = { student_id: string; week_start: string; day_of_week: string; profiles?: { full_name: string; route_id: string | null; routes?: { name: string } | null } | null; pickup_points?: { name: string } | null };
 type FeePayment = { student_id: string; fee_month: string; amount: number; recorded_at: string };
 
+const ADMIN_NAV_GROUPS = [
+  { key: 'workspace', label: 'Workspace', tabs: ['overview', 'activity'] },
+  { key: 'people', label: 'People', tabs: ['students', 'applications', 'drivers', 'messages'] },
+  { key: 'operations', label: 'Operations', tabs: ['schedule', 'assignments', 'departures', 'attendance', 'vehicles', 'holidays', 'times'] },
+  { key: 'finance', label: 'Finance', tabs: ['fees', 'pricing', 'settings'] },
+  { key: 'communications', label: 'Communications', tabs: ['announcements', 'whatsapp'] },
+] as const;
+
+const ADMIN_TAB_GROUP = Object.fromEntries(
+  ADMIN_NAV_GROUPS.flatMap((group) => group.tabs.map((tab) => [tab, group.key])),
+) as Record<string, string>;
+
 export default function AdminDashboard() {
   const [students, setStudents] = useState<Student[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
@@ -120,6 +132,7 @@ export default function AdminDashboard() {
   const [adminReady, setAdminReady] = useState(false);
   const [departureStatusError, setDepartureStatusError] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [activeNavGroup, setActiveNavGroup] = useState('workspace');
   const [messageFilter, setMessageFilter] = useState<'open' | 'resolved' | 'all' | 'unread'>('open');
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     if (typeof window === 'undefined') return 'dark';
@@ -250,8 +263,10 @@ export default function AdminDashboard() {
 
   const router = useRouter();
   const [supabase] = useState(() => createClient());
-  const changeTab = (tab: string) =>
+  const changeTab = (tab: string) => {
+    setActiveNavGroup(ADMIN_TAB_GROUP[tab] ?? 'workspace');
     startTabTransition(() => setActiveTab(tab));
+  };
 
   const logAdminActivity = async (action: string, details: Record<string, unknown>) => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -1008,7 +1023,25 @@ export default function AdminDashboard() {
   const unreadMessages = helpMessages.filter((message) => !message.admin_read_at).length;
   const urgentMessages = helpMessages.filter((message) => message.is_urgent && message.status !== 'resolved').length;
   const today = assignDate || '';
+  const activeStudentCount = students.filter((student) => student.status === 'active').length;
+  const studentsWithoutSelection = Math.max(0, activeStudentCount - selectedDepartureIds.length);
+  const awaitingSeatConfirmations = todayAssignments.filter((assignment) => !assignment.seat_confirmed).length;
   const upcomingHoliday = holidays.find((holiday) => holiday.date >= today);
+  const routeSummaries = routes.map((route) => {
+    const routeStudents = students.filter((student) => student.route_id === route.id);
+    const activeStudents = routeStudents.filter((student) => student.status === 'active').length;
+    const unpaidStudents = routeStudents.filter((student) => student.fee_status !== 'paid').length;
+    const routeAssignments = todayAssignments.filter((assignment) =>
+      (assignment.route_id ?? assignment.profiles?.route_id) === route.id,
+    );
+    const vehicle = routeAssignments[0]?.coasters ?? coasters.find(
+      (item) => item.default_route_id === route.id && item.maintenance_status !== 'maintenance' && item.maintenance_status !== 'retired',
+    );
+    const assignedCount = routeAssignments.length;
+    const capacity = vehicle?.seat_capacity ?? 0;
+    return { route, routeStudents, activeStudents, unpaidStudents, routeAssignments, vehicle, assignedCount, capacity };
+  });
+  const unassignedActiveStudents = students.filter((student) => student.status === 'active' && !student.route_id).length;
 
   const tabs = [
     { key: 'overview', label: '📊', title: 'Overview' },
@@ -1059,6 +1092,13 @@ export default function AdminDashboard() {
     whatsapp: students.filter((student) => Boolean(normalizePkPhone(student.phone))).length,
     settings: 1,
   }[key] ?? 0);
+  const navGroupAttention = (groupKey: string) => ({
+    workspace: 0,
+    people: applications.length + unreadMessages,
+    operations: Math.max(0, students.filter((student) => student.status === 'active').length - selectedDepartureIds.length) + attendanceRows.filter((row) => row.attendance_status === null).length,
+    finance: unpaidCount,
+    communications: 0,
+  }[groupKey] ?? 0);
 
   if (loading) {
     return (
@@ -1114,25 +1154,25 @@ export default function AdminDashboard() {
       </nav>
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-6 flex flex-wrap gap-2 overflow-x-auto pb-2">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => changeTab(tab.key)}
-              className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium transition-all ${
-                activeTab === tab.key
-                  ? 'bg-[#facc15] text-black shadow-[0_12px_25px_rgba(250,204,21,0.25)]'
-                  : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white'
-              }`}
-            >
-              <span className="mr-1.5">{tab.label}</span>
-              {tab.title}
-              <span aria-label={`${tabBadge(tab.key)} ${tab.title.toLowerCase()}`} className={`ml-2 inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none text-white ${['applications', 'fees', 'messages'].includes(tab.key) ? 'bg-red-500' : 'bg-zinc-600'}`}>
-                {tabBadge(tab.key) > 99 ? '99+' : tabBadge(tab.key)}
-              </span>
-            </button>
-          ))}
+        <div className="mb-6 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-2 shadow-[0_16px_38px_rgba(0,0,0,0.18)]">
+          <nav aria-label="Admin workspaces" className="flex gap-1 overflow-x-auto border-b border-zinc-800 pb-2">
+            {ADMIN_NAV_GROUPS.map((group) => {
+              const selected = activeNavGroup === group.key;
+              const attention = navGroupAttention(group.key);
+              return <button key={group.key} type="button" aria-pressed={selected} onClick={() => changeTab(group.tabs[0])} className={`flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3.5 text-sm font-semibold transition ${selected ? 'bg-[#facc15] text-black shadow-[0_8px_20px_rgba(250,204,21,0.16)]' : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'}`}>
+                {group.label}
+                {attention > 0 && <span className={`inline-flex min-w-5 justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none text-white ${selected ? 'bg-black/75' : 'bg-red-500'}`}>{attention > 99 ? '99+' : attention}</span>}
+              </button>;
+            })}
+          </nav>
+          <nav aria-label={`${activeNavGroup} sections`} className="flex gap-2 overflow-x-auto pt-2">
+            {tabs.filter((tab) => ADMIN_TAB_GROUP[tab.key] === activeNavGroup).map((tab) => (
+              <button key={tab.key} type="button" aria-current={activeTab === tab.key ? 'page' : undefined} onClick={() => changeTab(tab.key)} className={`flex min-h-9 shrink-0 items-center rounded-lg px-3 text-xs font-medium transition ${activeTab === tab.key ? 'bg-white/[0.1] text-white ring-1 ring-white/10' : 'text-zinc-400 hover:bg-white/[0.04] hover:text-white'}`}>
+                <span className="mr-1.5">{tab.label}</span>{tab.title}
+                <span aria-label={`${tabBadge(tab.key)} ${tab.title.toLowerCase()}`} className={`ml-2 inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none text-white ${['applications', 'fees', 'messages'].includes(tab.key) && tabBadge(tab.key) > 0 ? 'bg-red-500' : 'bg-zinc-700'}`}>{tabBadge(tab.key) > 99 ? '99+' : tabBadge(tab.key)}</span>
+              </button>
+            ))}
+          </nav>
         </div>
 
         {isTabPending && <SectionLoading />}
@@ -1160,42 +1200,49 @@ export default function AdminDashboard() {
 
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
               {[
                 {
                   label: 'Total Students',
                   value: students.length,
                   icon: '👥',
                   color: 'text-white',
+                  tab: 'students',
                 },
                 {
                   label: 'Pending Applications',
                   value: applications.length,
                   icon: '📋',
                   color: 'text-yellow-400',
+                  tab: 'applications',
                 },
                 {
                   label: 'Unpaid Fees',
                   value: unpaidCount,
                   icon: '⚠️',
                   color: 'text-red-400',
+                  tab: 'fees',
                 },
                 {
                   label: 'Open Messages',
                   value: openMessages,
                   icon: '💬',
                   color: 'text-yellow-400',
+                  tab: 'messages',
                 },
                 {
                   label: 'Total Vehicles',
                   value: coasters.length,
                   icon: '🚐',
                   color: 'text-white',
+                  tab: 'vehicles',
                 },
               ].map((stat) => (
-                <div
+                <button
                   key={stat.label}
-                  className="rounded-[24px] border border-zinc-800 bg-zinc-900/80 p-5 shadow-lg"
+                  type="button"
+                  onClick={() => changeTab(stat.tab)}
+                  className="group rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 text-left shadow-lg transition hover:-translate-y-0.5 hover:border-zinc-600 hover:bg-zinc-900 sm:rounded-[24px] sm:p-5"
                 >
                   <div className="mb-3 flex items-center justify-between">
                     <span className={`text-lg ${stat.color}`}>{stat.icon}</span>
@@ -1204,8 +1251,35 @@ export default function AdminDashboard() {
                     </span>
                   </div>
                   <p className="text-3xl font-bold text-white">{stat.value}</p>
-                </div>
+                  <p className="mt-2 text-[11px] font-medium text-zinc-500 transition group-hover:text-yellow-300">Open section <span aria-hidden="true">↗</span></p>
+                </button>
               ))}
+            </div>
+
+            <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+              <section className="rounded-[26px] border border-zinc-800 bg-zinc-900/75 p-5">
+                <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+                  <div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-yellow-300">Daily control center</p><h2 className="mt-1 text-lg font-semibold text-white">Operations snapshot</h2></div>
+                  <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1.5 text-xs text-zinc-400">Selected date · {today || 'Date unavailable'}</span>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4"><p className="text-xs text-zinc-500">Departure choices</p><p className="mt-2 text-2xl font-bold text-white">{selectedDepartureIds.length}<span className="ml-1 text-sm font-medium text-zinc-500">/ {activeStudentCount}</span></p><p className="mt-1 text-xs text-zinc-500">{studentsWithoutSelection} still to choose</p></div>
+                  <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4"><p className="text-xs text-zinc-500">Students assigned today</p><p className="mt-2 text-2xl font-bold text-white">{todayAssignments.length}</p><p className="mt-1 text-xs text-zinc-500">Across current vehicle assignments</p></div>
+                  <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4"><p className="text-xs text-zinc-500">Seats awaiting confirmation</p><p className={`mt-2 text-2xl font-bold ${awaitingSeatConfirmations ? 'text-amber-200' : 'text-emerald-300'}`}>{awaitingSeatConfirmations}</p><p className="mt-1 text-xs text-zinc-500">From today&apos;s assignments</p></div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => changeTab('departures')} className="rounded-xl bg-yellow-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-yellow-300">Review departures <span aria-hidden="true">→</span></button><button type="button" onClick={() => changeTab('assignments')} className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-white/[0.04]">Manage vehicle assignments</button></div>
+              </section>
+              <section className="rounded-[26px] border border-zinc-800 bg-zinc-900/75 p-5">
+                <div className="mb-4"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Needs attention</p><h2 className="mt-1 text-lg font-semibold text-white">Priority queue</h2></div>
+                <div className="space-y-2">
+                  {[
+                    { label: 'Applications to review', value: applications.length, tab: 'applications', tone: 'text-amber-200' },
+                    { label: 'Unpaid fee records', value: unpaidCount, tab: 'fees', tone: 'text-red-300' },
+                    { label: 'Unread help messages', value: unreadMessages, tab: 'messages', tone: 'text-sky-200' },
+                    { label: 'Urgent open messages', value: urgentMessages, tab: 'messages', tone: 'text-red-300' },
+                  ].map((item) => <button key={item.label} type="button" onClick={() => changeTab(item.tab)} className="flex w-full items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-950/50 px-3.5 py-3 text-left transition hover:border-zinc-600 hover:bg-zinc-950"><span className="text-sm text-zinc-300">{item.label}</span><span className={`inline-flex items-center gap-2 text-sm font-semibold ${item.tone}`}>{item.value}<span aria-hidden="true" className="text-zinc-600">→</span></span></button>)}
+                </div>
+              </section>
             </div>
 
             {upcomingHoliday && (
@@ -1220,47 +1294,43 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
-              <h2 className="mb-4 text-xl font-semibold text-white">
-                Routes Summary
-              </h2>
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {routes.map((route) => {
-                  const count = students.filter(
-                    (student) => student.route_id === route.id,
-                  ).length;
-                  const unpaid = students.filter(
-                    (student) =>
-                      student.route_id === route.id &&
-                      student.fee_status !== 'paid',
-                  ).length;
-
-                  return (
-                    <div
-                      key={route.id}
-                      className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4"
-                    >
-                      <div className="mb-2 flex items-center justify-between gap-3">
-                        <h3 className="font-semibold text-white">
-                          {route.name}
-                        </h3>
-                        <span className="text-xs text-zinc-400">
-                          PKR {route.price.toLocaleString()}/month
-                        </span>
-                      </div>
-                      <p className="text-sm text-zinc-400">
-                        {count} students
-                        {unpaid > 0 && (
-                          <span className="ml-2 text-red-400">
-                            {unpaid} unpaid
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
+            <section className="overflow-hidden rounded-[28px] border border-zinc-800 bg-zinc-900/80">
+              <div className="flex flex-wrap items-end justify-between gap-3 border-b border-zinc-800 px-5 py-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-yellow-300">Route health</p>
+                  <h2 className="mt-1 text-xl font-semibold text-white">Route overview</h2>
+                  <p className="mt-1 text-sm text-zinc-400">Student totals, fee follow-up, and today&apos;s vehicle load in one view.</p>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1.5 text-zinc-300">{routeSummaries.length} routes</span>
+                  {unassignedActiveStudents > 0 && <button type="button" onClick={() => { setStudentRouteFilter('unassigned'); changeTab('students'); }} className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 font-medium text-amber-200">{unassignedActiveStudents} active students need a route · View</button>}
+                </div>
+              </div>
+              {routeSummaries.length === 0 ? (
+                <p className="px-5 py-10 text-center text-sm text-zinc-500">No routes have been added yet.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[760px] text-left">
+                    <thead className="bg-zinc-950/60 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                      <tr><th className="px-5 py-3">Route</th><th className="px-4 py-3">Students</th><th className="px-4 py-3">Fee follow-up</th><th className="px-4 py-3">Today&apos;s load</th><th className="px-4 py-3">Monthly fee</th><th className="px-5 py-3 text-right">Action</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800/80">
+                      {routeSummaries.map(({ route, activeStudents: activeCount, routeStudents, unpaidStudents: unpaid, assignedCount, capacity, vehicle }) => {
+                        const overCapacity = capacity > 0 && assignedCount > capacity;
+                        return <tr key={route.id} className="transition hover:bg-white/[0.025]">
+                          <td className="px-5 py-4"><p className="font-semibold text-white">{route.name}</p><p className="mt-1 text-xs text-zinc-500">{routeStudents.length} enrolled · {activeCount} active</p></td>
+                          <td className="px-4 py-4"><span className="text-lg font-semibold text-white">{activeCount}</span><span className="ml-1 text-xs text-zinc-500">active</span></td>
+                          <td className="px-4 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${unpaid ? 'bg-red-400/10 text-red-200' : 'bg-emerald-400/10 text-emerald-200'}`}>{unpaid} unpaid</span></td>
+                          <td className="px-4 py-4"><p className={`text-sm font-medium ${overCapacity ? 'text-red-300' : 'text-zinc-200'}`}>{assignedCount} assigned{capacity ? ` / ${capacity} seats` : ''}</p><p className={`mt-1 text-xs ${vehicle ? 'text-zinc-500' : 'text-amber-200'}`}>{vehicle ? `Vehicle ${vehicle.coaster_number}` : 'Vehicle not assigned'}</p>{overCapacity && <p className="mt-1 text-xs font-medium text-red-300">Over capacity by {assignedCount - capacity}</p>}</td>
+                          <td className="px-4 py-4 text-sm text-zinc-300">PKR {route.price.toLocaleString()}<span className="text-xs text-zinc-500"> / month</span></td>
+                          <td className="px-5 py-4 text-right"><button type="button" onClick={() => { setStudentRouteFilter(route.id); setStudentPage(0); changeTab('students'); }} className="rounded-lg border border-zinc-700 px-3 py-2 text-xs font-medium text-zinc-200 transition hover:border-yellow-400/60 hover:text-yellow-200">View students <span aria-hidden="true">→</span></button></td>
+                        </tr>;
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
           </div>
         )}
 
