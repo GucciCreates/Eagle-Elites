@@ -44,7 +44,7 @@ export default function DriverLogin() {
     {error && <Alert tone="error">{error}</Alert>}
     <form onSubmit={handleLogin} noValidate className="space-y-4">
       <Field id="email" label="Driver email" type="email" autoComplete="username" autoCapitalize="none" spellCheck={false} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="driver@example.com" required />
-      <Field id="password" label="Password" password autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Your password" required labelAction={<Link href="/auth/reset-password" className={`text-xs ${linkClass}`}>Forgot password?</Link>} />
+      <Field id="password" label="Password" password autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Your password" required labelAction={<Link href={`/driver/reset-password${email.trim() ? `?email=${encodeURIComponent(normalizeEmail(email))}` : ''}`} className={`text-xs ${linkClass}`}>Forgot password?</Link>} />
       <SubmitButton loading={loading} loadingText="Logging in…">Log in</SubmitButton>
     </form>
   </AuthShell>;
