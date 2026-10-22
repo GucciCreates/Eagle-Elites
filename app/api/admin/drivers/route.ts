@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   const adminId = await getAdminFromRequest(request, service);
   if (!adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  let body: { email?: string; password?: string; fullName?: string; phone?: string };
+  let body: { email?: string; fullName?: string; phone?: string };
   try {
     body = await request.json();
   } catch {
@@ -18,16 +18,12 @@ export async function POST(request: Request) {
 
   const email = body.email?.trim().toLowerCase() ?? '';
   const fullName = body.fullName?.trim() ?? '';
-  const password = body.password ?? '';
-  if (!/^\S+@\S+\.\S+$/.test(email) || !fullName || password.length < 10) {
-    return NextResponse.json({ error: 'Enter a valid email, driver name, and password with at least 10 characters.' }, { status: 400 });
+  if (!/^\S+@\S+\.\S+$/.test(email) || !fullName) {
+    return NextResponse.json({ error: 'Enter a valid email and driver name.' }, { status: 400 });
   }
 
-  const { data: authData, error: authError } = await service.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { account_type: 'driver', full_name: fullName },
+  const { data: authData, error: authError } = await service.auth.admin.inviteUserByEmail(email, {
+    data: { account_type: 'driver', full_name: fullName },
   });
   if (authError || !authData.user) {
     return NextResponse.json({ error: authError?.message ?? 'Could not create the driver login.' }, { status: 400 });

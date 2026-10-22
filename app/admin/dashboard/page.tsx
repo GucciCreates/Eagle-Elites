@@ -135,7 +135,7 @@ export default function AdminDashboard() {
   >({});
   const [savingAssignment, setSavingAssignment] = useState(false);
   const [assignmentError, setAssignmentError] = useState('');
-  const [driverForm, setDriverForm] = useState({ fullName: '', email: '', phone: '', password: '' });
+  const [driverForm, setDriverForm] = useState({ fullName: '', email: '', phone: '' });
   const [creatingDriver, setCreatingDriver] = useState(false);
   const [driverNotice, setDriverNotice] = useState('');
   const [assignSuccess, setAssignSuccess] = useState(false);
@@ -581,8 +581,8 @@ export default function AdminDashboard() {
       const result = await response.json() as { driver?: Driver; error?: string };
       if (!response.ok || !result.driver) throw new Error(result.error ?? 'Could not create the driver account.');
       setDrivers((current) => [...current, result.driver!].sort((a, b) => a.full_name.localeCompare(b.full_name)));
-      setDriverForm({ fullName: '', email: '', phone: '', password: '' });
-      setDriverNotice('Driver login created. Share the login details with the driver securely.');
+      setDriverForm({ fullName: '', email: '', phone: '' });
+      setDriverNotice('Driver account created. An invitation email was sent so they can set their password.');
     } catch (error) {
       setDriverNotice(error instanceof Error ? error.message : 'Could not create the driver account.');
     } finally {
@@ -1355,15 +1355,14 @@ export default function AdminDashboard() {
           <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
             <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
               <h2 className="text-xl font-semibold text-white">Create driver login</h2>
-              <p className="mt-1 text-sm text-zinc-400">Drivers use these credentials at the driver sign-in page to record attendance for assigned trips.</p>
+              <p className="mt-1 text-sm text-zinc-400">Drivers receive an email invitation to set a password and sign in to record attendance for assigned trips.</p>
               {driverNotice && <p role="status" className="mt-4 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-300">{driverNotice}</p>}
               <div className="mt-4 space-y-3">
                 <input value={driverForm.fullName} onChange={(event) => setDriverForm((value) => ({ ...value, fullName: event.target.value }))} placeholder="Driver full name" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white" />
                 <input type="email" autoComplete="email" value={driverForm.email} onChange={(event) => setDriverForm((value) => ({ ...value, email: event.target.value }))} placeholder="Driver email" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white" />
                 <input type="tel" value={driverForm.phone} onChange={(event) => setDriverForm((value) => ({ ...value, phone: event.target.value }))} placeholder="Phone (optional)" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white" />
-                <input type="password" autoComplete="new-password" minLength={10} value={driverForm.password} onChange={(event) => setDriverForm((value) => ({ ...value, password: event.target.value }))} placeholder="Temporary password (10+ characters)" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white" />
-                <button type="button" disabled={creatingDriver || !driverForm.fullName.trim() || !driverForm.email.trim() || driverForm.password.length < 10} onClick={() => void handleCreateDriver()} className="rounded-xl bg-yellow-400 px-4 py-3 text-sm font-semibold text-zinc-950 disabled:opacity-50">{creatingDriver ? 'Creating…' : 'Create driver account'}</button>
-                <p className="text-xs text-zinc-500">Give the driver their login details through your usual secure channel. They can use the password reset link if needed.</p>
+                <button type="button" disabled={creatingDriver || !driverForm.fullName.trim() || !driverForm.email.trim()} onClick={() => void handleCreateDriver()} className="rounded-xl bg-yellow-400 px-4 py-3 text-sm font-semibold text-zinc-950 disabled:opacity-50">{creatingDriver ? 'Sending invitation…' : 'Create driver account'}</button>
+                <p className="text-xs text-zinc-500">The invitation link lets the driver set a password securely. No password is stored or shared here.</p>
               </div>
             </section>
             <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
