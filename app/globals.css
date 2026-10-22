@@ -145,3 +145,50 @@ textarea {
     background-color: #d8b85f !important;
   }
 }
+
+/* Admin-only light palette. Dark remains the saved default. */
+.admin-shell[data-admin-theme='light'] {
+  background: #f3f5f8 !important;
+  color: #172033 !important;
+}
+
+.admin-shell[data-admin-theme='light'] nav {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border-color: #d7dce5 !important;
+}
+
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-950'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-950/70'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-950/60'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-900'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-900/80'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-800'],
+.admin-shell[data-admin-theme='light'] [class~='bg-[#05070b]'],
+.admin-shell[data-admin-theme='light'] [class~='bg-[#090d13]/80'] {
+  background-color: #fff !important;
+}
+
+.admin-shell[data-admin-theme='light'] [class*='border-zinc-800'],
+.admin-shell[data-admin-theme='light'] [class*='border-zinc-700'] {
+  border-color: #d7dce5 !important;
+}
+
+.admin-shell[data-admin-theme='light'] [class*='text-white'],
+.admin-shell[data-admin-theme='light'] [class*='text-zinc-100'],
+.admin-shell[data-admin-theme='light'] [class*='text-zinc-200'],
+.admin-shell[data-admin-theme='light'] [class*='text-zinc-300'] {
+  color: #202a3b !important;
+}
+
+.admin-shell[data-admin-theme='light'] [class*='text-zinc-400'],
+.admin-shell[data-admin-theme='light'] [class*='text-zinc-500'] {
+  color: #596579 !important;
+}
+
+.admin-shell[data-admin-theme='light'] input,
+.admin-shell[data-admin-theme='light'] select,
+.admin-shell[data-admin-theme='light'] textarea {
+  color: #172033 !important;
+  background-color: #fff !important;
+  border-color: #cbd2de !important;
+}

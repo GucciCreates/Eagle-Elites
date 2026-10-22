@@ -43,6 +43,7 @@ type Props = {
   groups: { id: string; university: string; department: string }[];
   allTransactions: { id: string; payment_transaction_id: string | null }[];
   onWhatsApp: (result: NotifyResponse) => void;
+  onActivity: (action: string, details: Record<string, unknown>) => void;
 };
 
 function parseDbTime(iso: string) {
@@ -76,6 +77,7 @@ export default function ApplicationsTab({
   groups,
   allTransactions,
   onWhatsApp,
+  onActivity,
 }: Props) {
   const [supabase] = useState(() => createClient());
   const [points, setPoints] = useState<Record<string, string>>({});
@@ -149,6 +151,7 @@ export default function ApplicationsTab({
       );
     }
     onRemove(done);
+    if (done.length) onActivity('Approved student applications', { count: done.length, students: done.map((id) => applications.find((app) => app.id === id)?.full_name).filter(Boolean) });
     setSelected(new Set());
     setBusy(null);
   };
@@ -184,6 +187,7 @@ export default function ApplicationsTab({
         onWhatsApp,
       );
       onRemove([app.id]);
+      onActivity('Rejected student application', { student_name: app.full_name });
     }
     setBusy(null);
   };

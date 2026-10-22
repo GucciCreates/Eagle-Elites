@@ -11,6 +11,7 @@ import ApplicationsTab, { type ApplicationRow } from '@/components/admin/applica
 import ProofViewer from '@/components/admin/proof-viewer';
 import SectionLoading from '@/components/section-loading';
 import { notifyWhatsApp, type NotifyResponse } from '@/lib/whatsapp/client';
+import { normalizePkPhone } from '@/lib/phone';
 
 function describeWhatsApp(result: NotifyResponse) {
   if (!result.ok) return `WhatsApp: ${result.error ?? 'failed'}`;
@@ -50,8 +51,11 @@ type HelpMessage = {
   status: string;
   reply: string | null;
   created_at: string;
+  is_urgent?: boolean;
+  admin_read_at?: string | null;
   profiles?: { full_name: string; email: string };
 };
+type ActivityEntry = { id: string; action: string; details: Record<string, unknown>; created_at: string };
 type Holiday = { id: string; date: string; reason: string };
 type Notification = {
   id: string;
@@ -107,6 +111,7 @@ export default function AdminDashboard() {
   const [coasters, setCoasters] = useState<Coaster[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [helpMessages, setHelpMessages] = useState<HelpMessage[]>([]);
+  const [activityEntries, setActivityEntries] = useState<ActivityEntry[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
@@ -115,6 +120,11 @@ export default function AdminDashboard() {
   const [adminReady, setAdminReady] = useState(false);
   const [departureStatusError, setDepartureStatusError] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [messageFilter, setMessageFilter] = useState<'open' | 'resolved' | 'all' | 'unread'>('open');
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    if (typeof window === 'undefined') return 'dark';
+    return window.localStorage.getItem('eagle-admin-theme') === 'light' ? 'light' : 'dark';
+  });
   const [studentSearch, setStudentSearch] = useState('');
   const [studentRouteFilter, setStudentRouteFilter] = useState('all');
   const [studentFeeFilter, setStudentFeeFilter] = useState('all');
@@ -243,6 +253,14 @@ export default function AdminDashboard() {
   const changeTab = (tab: string) =>
     startTabTransition(() => setActiveTab(tab));
 
+  const logAdminActivity = async (action: string, details: Record<string, unknown>) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from('admin_activity_log')
+      .insert({ admin_id: user.id, action, details: { ...details, admin: user.email ?? 'Admin' } }).select('id, action, details, created_at').single();
+    if (data) setActivityEntries((current) => [data as ActivityEntry, ...current].slice(0, 100));
+  };
+
   useEffect(() => {
     const init = async () => {
       const {
@@ -278,6 +296,7 @@ export default function AdminDashboard() {
         { data: departureGroupsData },
         { data: departureSlotsData, error: departureSlotsError },
         { data: departureSelectionsData, error: departureSelectionsError },
+        { data: activityData },
       ] = await Promise.all([
         supabase
           .from('profiles')
@@ -315,6 +334,7 @@ export default function AdminDashboard() {
           .from('departure_selections')
           .select('student_id, slot_id, selection_date')
           .eq('selection_date', getPakistanDate()),
+        supabase.from('admin_activity_log').select('id, action, details, created_at').order('created_at', { ascending: false }).limit(100),
       ]);
 
       if (studentsData) setStudents(studentsData as Student[]);
@@ -326,6 +346,7 @@ export default function AdminDashboard() {
       if (notificationsData)
         setNotifications(notificationsData as Notification[]);
       if (applicationsData) setApplications(applicationsData as Application[]);
+      if (activityData) setActivityEntries(activityData as ActivityEntry[]);
       if (departureGroupsData)
         setDepartureGroups(departureGroupsData as DepartureGroup[]);
       if (departureSlotsData)
@@ -600,6 +621,7 @@ export default function AdminDashboard() {
       setStudentListNotice(
         `Marked ${selectedStudentIds.length} student${selectedStudentIds.length === 1 ? '' : 's'} as paid.`,
       );
+      void logAdminActivity('Marked students as paid', { count: selectedStudentIds.length, student_ids: selectedStudentIds });
       const { data: paymentRows } = await supabase.from('fee_payments').select('student_id, fee_month, amount, recorded_at').order('fee_month', { ascending: false }).limit(5000);
       if (paymentRows) setFeePayments(paymentRows as FeePayment[]);
       setSelectedStudentIds([]);
@@ -613,6 +635,8 @@ export default function AdminDashboard() {
     const { error } = await supabase.from('profiles').update({ fee_status: 'paid' }).eq('id', studentId);
     if (error) setStudentListNotice(`Couldn’t record payment: ${error.message}`);
     else {
+      const student = students.find((item) => item.id === studentId);
+      void logAdminActivity('Marked student as paid', { student_id: studentId, student_name: student?.full_name });
       setStudents((current) => current.map((student) => student.id === studentId ? { ...student, fee_status: 'paid' } : student));
       const { data } = await supabase.from('fee_payments').select('student_id, fee_month, amount, recorded_at').order('fee_month', { ascending: false }).limit(5000);
       if (data) setFeePayments(data as FeePayment[]);
@@ -699,9 +723,14 @@ export default function AdminDashboard() {
       }));
 
     if (entries.length > 0) {
-      await supabase
+      const { error } = await supabase
         .from('departure_slots')
         .upsert(entries, { onConflict: 'group_id,slot_date,slot_number' });
+      if (error) {
+        setWhatsAppNotice(`Could not post departure slots: ${error.message}`);
+        setSavingSlots(false);
+        return;
+      }
     }
 
     const { data } = await supabase
@@ -711,6 +740,7 @@ export default function AdminDashboard() {
       .order('slot_number', { ascending: true });
 
     if (data) setDepartureSlots(data as DepartureSlot[]);
+    if (entries.length) void logAdminActivity('Posted departure slots', { group: departureGroups.find((group) => group.id === selectedGroupId)?.university, date: slotDate, count: entries.length });
 
     setSlotsSuccess(true);
     setTimeout(() => setSlotsSuccess(false), 3000);
@@ -739,7 +769,7 @@ export default function AdminDashboard() {
     if (!replyText[messageId]?.trim()) return;
     setSendingReply(messageId);
 
-    await supabase
+    const { error } = await supabase
       .from('help_messages')
       .update({
         reply: replyText[messageId],
@@ -747,6 +777,7 @@ export default function AdminDashboard() {
         status: 'resolved',
       })
       .eq('id', messageId);
+    if (error) { setSendingReply(null); setWhatsAppNotice(`Could not send reply: ${error.message}`); return; }
 
     setHelpMessages((prev) =>
       prev.map((message) =>
@@ -757,7 +788,16 @@ export default function AdminDashboard() {
     );
 
     setReplyText((prev) => ({ ...prev, [messageId]: '' }));
+    void logAdminActivity('Resolved help message', { message_id: messageId });
     setSendingReply(null);
+  };
+
+  const updateHelpMessage = async (message: HelpMessage, changes: Partial<HelpMessage>) => {
+    const { error } = await supabase.from('help_messages').update(changes).eq('id', message.id);
+    if (error) { setWhatsAppNotice(`Could not update message: ${error.message}`); return; }
+    setHelpMessages((current) => current.map((row) => row.id === message.id ? { ...row, ...changes } : row));
+    if ('is_urgent' in changes) void logAdminActivity(changes.is_urgent ? 'Marked help message urgent' : 'Cleared help message urgency', { message_id: message.id });
+    if ('admin_read_at' in changes) void logAdminActivity(changes.admin_read_at ? 'Read help message' : 'Marked help message unread', { message_id: message.id });
   };
 
   const handleSendAnnouncement = async () => {
@@ -781,6 +821,7 @@ export default function AdminDashboard() {
       setSendingAnnouncement(false);
       return;
     }
+    void logAdminActivity('Posted announcement', { title: announcementTitle, audience: announcementTargetType });
     setNotifications((prev) => [data as Notification, ...prev]);
 
     if (data && announcementWhatsApp) {
@@ -964,6 +1005,8 @@ export default function AdminDashboard() {
   const openMessages = helpMessages.filter(
     (message) => message.status === 'open',
   ).length;
+  const unreadMessages = helpMessages.filter((message) => !message.admin_read_at).length;
+  const urgentMessages = helpMessages.filter((message) => message.is_urgent && message.status !== 'resolved').length;
   const today = assignDate || '';
   const upcomingHoliday = holidays.find((holiday) => holiday.date >= today);
 
@@ -993,7 +1036,29 @@ export default function AdminDashboard() {
     { key: 'times', label: '🕒', title: 'Times' },
     { key: 'whatsapp', label: '🟢', title: 'WhatsApp' },
     { key: 'settings', label: '⚙️', title: 'Settings' },
+    { key: 'activity', label: '🧾', title: 'Activity Log' },
   ];
+
+  const tabBadge = (key: string) => ({
+    overview: students.length,
+    schedule: weeklyAssignments.length,
+    applications: applications.length,
+    students: students.length,
+    assignments: todayAssignments.length,
+    fees: unpaidCount,
+    messages: unreadMessages,
+    announcements: notifications.length,
+    departures: Math.max(0, students.filter((student) => student.status === 'active').length - selectedDepartureIds.length),
+    drivers: drivers.filter((driver) => driver.active).length,
+    attendance: attendanceRows.filter((row) => row.attendance_status === null).length,
+    activity: activityEntries.length,
+    holidays: holidays.length,
+    vehicles: coasters.length,
+    pricing: routes.length,
+    times: departureGroups.length,
+    whatsapp: students.filter((student) => Boolean(normalizePkPhone(student.phone))).length,
+    settings: 1,
+  }[key] ?? 0);
 
   if (loading) {
     return (
@@ -1011,7 +1076,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#05070b] text-white">
+    <div className="admin-shell min-h-screen bg-[#05070b] text-white" data-admin-theme={theme}>
       <nav className="border-b border-zinc-800 bg-[#090d13]/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
@@ -1026,15 +1091,25 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <button
-            onClick={async () => {
-              await supabase.auth.signOut();
-              router.push('/admin/login');
-            }}
-            className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-300 transition hover:bg-zinc-700 hover:text-white"
-          >
-            Log out
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              onClick={() => setTheme((current) => { const next = current === 'dark' ? 'light' : 'dark'; window.localStorage.setItem('eagle-admin-theme', next); return next; })}
+              className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-300 transition hover:bg-zinc-700 hover:text-white"
+            >
+              {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+            </button>
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut();
+                router.push('/admin/login');
+              }}
+              className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-300 transition hover:bg-zinc-700 hover:text-white"
+            >
+              Log out
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -1053,11 +1128,9 @@ export default function AdminDashboard() {
             >
               <span className="mr-1.5">{tab.label}</span>
               {tab.title}
-              {tab.key === 'applications' && applications.length > 0 && (
-                <span aria-label={`${applications.length} pending applications`} className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
-                  {applications.length > 99 ? '99+' : applications.length}
-                </span>
-              )}
+              <span aria-label={`${tabBadge(tab.key)} ${tab.title.toLowerCase()}`} className={`ml-2 inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none text-white ${['applications', 'fees', 'messages'].includes(tab.key) ? 'bg-red-500' : 'bg-zinc-600'}`}>
+                {tabBadge(tab.key) > 99 ? '99+' : tabBadge(tab.key)}
+              </span>
             </button>
           ))}
         </div>
@@ -1372,7 +1445,10 @@ export default function AdminDashboard() {
                     <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-medium ${student.fee_status === 'paid' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300'}`}>
                       {student.fee_status === 'paid' ? 'Paid' : 'Unpaid'}
                     </span>
-                    <button type="button" onClick={() => setEditingStudent(student)} className="shrink-0 rounded-lg bg-zinc-700 px-3 py-1.5 text-xs text-zinc-200 transition hover:bg-zinc-600">Edit</button>
+                    <div className="flex shrink-0 gap-2">
+                      {normalizePkPhone(student.phone) && <a href={`https://wa.me/${normalizePkPhone(student.phone)}?text=${encodeURIComponent(`Hello ${student.full_name}, this is Eagle Elites transport.`)}`} target="_blank" rel="noreferrer" aria-label={`Message ${student.full_name} on WhatsApp`} className="rounded-lg border border-emerald-700/60 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/20">WhatsApp</a>}
+                      <button type="button" onClick={() => setEditingStudent(student)} className="rounded-lg bg-zinc-700 px-3 py-1.5 text-xs text-zinc-200 transition hover:bg-zinc-600">Edit</button>
+                    </div>
                     {student.payment_proof_url && <details className="basis-full lg:col-span-full"><summary className="cursor-pointer text-xs font-medium text-yellow-300">View payment proof</summary><div className="mt-3 max-w-xl"><ProofViewer value={student.payment_proof_url} label={`${student.full_name} payment proof`} /></div></details>}
                   </div>
                 ))}
@@ -1500,6 +1576,7 @@ export default function AdminDashboard() {
             groups={departureGroups}
             allTransactions={students as unknown as { id: string; payment_transaction_id: string | null }[]}
             onWhatsApp={(result) => setWhatsAppNotice(describeWhatsApp(result))}
+            onActivity={(action, details) => void logAdminActivity(action, details)}
           />
         )}
 
@@ -2048,8 +2125,11 @@ export default function AdminDashboard() {
                   Help Messages
                 </h2>
                 <p className="text-sm text-zinc-400">
-                  {openMessages} open messages
+                  {openMessages} open · {unreadMessages} unread · {urgentMessages} urgent
                 </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(['open', 'unread', 'resolved', 'all'] as const).map((filter) => <button key={filter} type="button" onClick={() => setMessageFilter(filter)} className={`rounded-lg px-3 py-2 text-xs font-semibold capitalize ${messageFilter === filter ? 'bg-yellow-400 text-zinc-950' : 'border border-zinc-700 text-zinc-300 hover:bg-zinc-800'}`}>{filter}</button>)}
               </div>
             </div>
 
@@ -2060,7 +2140,7 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <div className="space-y-4">
-                {helpMessages.map((message) => (
+                {helpMessages.filter((message) => messageFilter === 'all' || (messageFilter === 'open' && message.status !== 'resolved') || (messageFilter === 'resolved' && message.status === 'resolved') || (messageFilter === 'unread' && !message.admin_read_at)).map((message) => (
                   <div
                     key={message.id}
                     className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4"
@@ -2083,6 +2163,12 @@ export default function AdminDashboard() {
                       >
                         {message.status}
                       </span>
+                    </div>
+
+                    <div className="mb-3 flex flex-wrap gap-2">
+                      <button type="button" onClick={() => void updateHelpMessage(message, { is_urgent: !message.is_urgent })} className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${message.is_urgent ? 'border-red-500/40 bg-red-500/10 text-red-200' : 'border-zinc-700 text-zinc-300'}`}>{message.is_urgent ? '⚠ Urgent' : 'Mark urgent'}</button>
+                      <button type="button" onClick={() => void updateHelpMessage(message, { admin_read_at: message.admin_read_at ? null : new Date().toISOString() })} className="rounded-lg border border-zinc-700 px-2.5 py-1.5 text-xs text-zinc-300">{message.admin_read_at ? 'Mark unread' : 'Mark read'}</button>
+                      <button type="button" onClick={() => void updateHelpMessage(message, { status: message.status === 'resolved' ? 'open' : 'resolved' })} className="rounded-lg border border-zinc-700 px-2.5 py-1.5 text-xs text-zinc-300">{message.status === 'resolved' ? 'Reopen' : 'Resolve'}</button>
                     </div>
 
                     <p className="mb-3 rounded-xl bg-zinc-900 px-3 py-3 text-sm text-zinc-200">
@@ -2125,7 +2211,15 @@ export default function AdminDashboard() {
                 ))}
               </div>
             )}
+            {helpMessages.filter((message) => messageFilter === 'all' || (messageFilter === 'open' && message.status !== 'resolved') || (messageFilter === 'resolved' && message.status === 'resolved') || (messageFilter === 'unread' && !message.admin_read_at)).length === 0 && <p className="rounded-xl border border-dashed border-zinc-700 p-6 text-center text-sm text-zinc-400">No messages in this view.</p>}
           </div>
+        )}
+
+        {activeTab === 'activity' && (
+          <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+            <div className="mb-5 flex items-center justify-between gap-3"><div><h2 className="text-xl font-semibold text-white">Admin activity</h2><p className="text-sm text-zinc-400">Recent actions recorded for the admin team.</p></div><button type="button" onClick={async () => { const { data } = await supabase.from('admin_activity_log').select('id, action, details, created_at').order('created_at', { ascending: false }).limit(100); if (data) setActivityEntries(data as ActivityEntry[]); }} className="rounded-lg border border-zinc-700 px-3 py-2 text-xs text-zinc-300">Refresh</button></div>
+            {activityEntries.length === 0 ? <p className="rounded-xl border border-dashed border-zinc-700 px-4 py-8 text-center text-sm text-zinc-400">Activity will appear here as admins manage applications, fees, messages, and departure slots.</p> : <ol className="space-y-2">{activityEntries.map((entry) => <li key={entry.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3"><span className="text-sm text-zinc-200">{entry.action}{entry.details.count ? ` · ${entry.details.count} students` : ''}{entry.details.student_name ? ` · ${entry.details.student_name}` : ''}{entry.details.title ? ` · ${entry.details.title}` : ''}{entry.details.group ? ` · ${entry.details.group}` : ''}</span><span className="ml-auto flex flex-col items-end gap-1"><span className="text-[10px] text-zinc-500">{String(entry.details.admin ?? 'Admin')}</span><time className="text-xs text-zinc-500">{new Date(entry.created_at).toLocaleString('en-PK', { dateStyle: 'medium', timeStyle: 'short' })}</time></span></li>)}</ol>}
+          </section>
         )}
 
         {activeTab === 'announcements' && (
