@@ -4,12 +4,12 @@ import type { InputHTMLAttributes, ReactNode } from 'react';
 import PasswordInput from '@/components/password-input';
 
 export const inputClass =
-  'w-full rounded-xl border bg-zinc-900/80 px-4 py-3 text-[15px] text-white placeholder:text-zinc-500 transition focus:outline-none focus:ring-2 disabled:opacity-60';
+  'w-full rounded-xl border bg-white px-4 py-3 text-[15px] text-slate-900 placeholder:text-slate-400 transition focus:outline-none focus:ring-2 disabled:opacity-60';
 
 function stateClass(error?: string) {
   return error
     ? 'border-red-500/60 focus:border-red-400 focus:ring-red-500/20'
-    : 'border-zinc-700/80 focus:border-yellow-400/80 focus:ring-yellow-400/20';
+    : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-100';
 }
 
 type FieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'className'> & {
@@ -45,18 +45,18 @@ export function Field({
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between gap-3">
-        <label htmlFor={id} className="text-sm font-medium text-zinc-300">
+        <label htmlFor={id} className="text-sm font-medium text-slate-700">
           {label}
         </label>
         {labelAction}
       </div>
       {password ? <PasswordInput {...shared} /> : <input {...shared} />}
       {error ? (
-        <p id={errorId} className="mt-1.5 text-xs text-red-300">
+        <p id={errorId} className="mt-1.5 text-xs text-red-600">
           {error}
         </p>
       ) : hint ? (
-        <p id={hintId} className="mt-1.5 text-xs text-zinc-500">
+        <p id={hintId} className="mt-1.5 text-xs text-slate-500">
           {hint}
         </p>
       ) : null}
@@ -72,9 +72,9 @@ export function Alert({
   children: ReactNode;
 }) {
   const styles = {
-    error: 'border-red-500/30 bg-red-500/10 text-red-200',
-    success: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200',
-    info: 'border-yellow-400/25 bg-yellow-400/10 text-yellow-100',
+    error: 'border-red-500/20 bg-red-50 text-red-700',
+    success: 'border-emerald-500/20 bg-emerald-50 text-emerald-700',
+    info: 'border-indigo-500/20 bg-indigo-50 text-indigo-700',
   }[tone];
 
   return (
@@ -103,12 +103,12 @@ export function SubmitButton({
       type="submit"
       disabled={loading || disabled}
       aria-busy={loading}
-      className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 px-4 py-3 font-semibold text-black shadow-[0_12px_28px_rgba(250,204,21,0.28)] transition hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c1119] disabled:cursor-not-allowed disabled:opacity-70"
+      className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3 font-semibold text-white shadow-[0_12px_30px_rgba(79,70,229,0.22)] transition hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-70"
     >
       {loading && (
         <span
           aria-hidden="true"
-          className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent"
+          className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
         />
       )}
       <span>{loading ? loadingText : children}</span>
@@ -117,4 +117,4 @@ export function SubmitButton({
 }
 
 export const linkClass =
-  'rounded font-medium text-yellow-400 transition hover:text-yellow-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/40';
+  'rounded font-medium text-indigo-600 transition hover:text-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-200';

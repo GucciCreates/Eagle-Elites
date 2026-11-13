@@ -14,11 +14,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Eagle Elites | Student Portal',
-    template: '%s | Eagle Elites',
+    default: 'Economics Portal',
+    template: '%s | Economics Portal',
   },
   description:
-    'Premium student transport portal for schedules, payments, and trip management.',
+    'A clean, modern education dashboard for students, teachers, and administrators.',
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
