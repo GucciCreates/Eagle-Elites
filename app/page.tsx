@@ -1,5 +1,5 @@
-import { EducationDashboard } from '@/components/portal/education-dashboard';
+import DashboardPage from '@/app/dashboard/page';
 
 export default function Page() {
-  return <EducationDashboard />;
+  return <DashboardPage />;
 }

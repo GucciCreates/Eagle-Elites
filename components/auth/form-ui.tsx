@@ -74,7 +74,7 @@ export function Alert({
   const styles = {
     error: 'border-red-500/20 bg-red-50 text-red-700',
     success: 'border-emerald-500/20 bg-emerald-50 text-emerald-700',
-    info: 'border-indigo-500/20 bg-indigo-50 text-indigo-700',
+    info: 'border-violet-500/20 bg-violet-50 text-violet-700',
   }[tone];
 
   return (
@@ -103,7 +103,7 @@ export function SubmitButton({
       type="submit"
       disabled={loading || disabled}
       aria-busy={loading}
-      className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3 font-semibold text-white shadow-[0_12px_30px_rgba(79,70,229,0.22)] transition hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-70"
+      className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-500 px-4 py-3 font-semibold text-white shadow-[0_12px_30px_rgba(109,40,217,0.24)] transition hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-70"
     >
       {loading && (
         <span
@@ -117,4 +117,4 @@ export function SubmitButton({
 }
 
 export const linkClass =
-  'rounded font-medium text-indigo-600 transition hover:text-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-200';
+  'rounded font-medium text-violet-600 transition hover:text-violet-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-200';

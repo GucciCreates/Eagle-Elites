@@ -355,648 +355,14 @@ function classNames(...values: Array<string | false | null | undefined>) {
 
 export function EducationDashboard() {
   const [role, setRole] = useState<Role>('student');
-  const [activeView, setActiveView] = useState<string>('home');
   const config = roleConfig[role];
-
-  const renderView = () => {
-    if (activeView === 'courses') {
-      return (
-        <div className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.02)]">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Courses
-                </p>
-                <h2 className="mt-2 text-xl font-semibold text-slate-900">
-                  Active curriculum
-                </h2>
-              </div>
-              <button
-                type="button"
-                className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700"
-              >
-                Manage
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {config.courses.map((course) => (
-                <div
-                  key={course.code}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span
-                      className={classNames(
-                        'inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]',
-                        course.color,
-                      )}
-                    >
-                      {course.code}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      {course.progress}% complete
-                    </span>
-                  </div>
-                  <div className="mt-4 flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-base font-semibold text-slate-900">
-                        {course.title}
-                      </h3>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {course.instructor}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className="rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs font-semibold text-white"
-                    >
-                      Open
-                    </button>
-                  </div>
-                  <div className="mt-4 h-2 w-full rounded-full bg-slate-200">
-                    <div
-                      className="h-full rounded-full bg-indigo-600"
-                      style={{ width: `${course.progress}%` }}
-                    />
-                  </div>
-                  <p className="mt-3 text-xs text-slate-500">{course.next}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.02)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Schedule
-            </p>
-            <h3 className="mt-2 text-xl font-semibold text-slate-900">
-              Next sessions
-            </h3>
-            <div className="mt-5 space-y-3">
-              {[
-                { time: 'Mon • 9:00', label: 'Macroeconomics seminar' },
-                { time: 'Tue • 11:30', label: 'Research lab workshop' },
-                { time: 'Wed • 14:00', label: 'Tutorial review' },
-              ].map((entry) => (
-                <div
-                  key={entry.time}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                    {entry.time}
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    {entry.label}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (activeView === 'assignments') {
-      return (
-        <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.02)]">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Assignments
-              </p>
-              <h2 className="mt-2 text-xl font-semibold text-slate-900">
-                Work queue
-              </h2>
-            </div>
-            <button
-              type="button"
-              className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700"
-            >
-              New task
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {config.assignments.map((item) => (
-              <div
-                key={item.title}
-                className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {item.title}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {item.type} • {item.due}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={classNames(
-                      'rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]',
-                      item.status === 'Due soon' &&
-                        'bg-amber-50 text-amber-700',
-                      item.status === 'Submitted' &&
-                        'bg-emerald-50 text-emerald-700',
-                      item.status === 'Needs review' &&
-                        'bg-slate-200 text-slate-700',
-                    )}
-                  >
-                    {item.status}
-                  </span>
-                  <button
-                    type="button"
-                    className="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white"
-                  >
-                    Open
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    if (activeView === 'schedule') {
-      return (
-        <div className="grid gap-6 xl:grid-cols-[1.5fr_0.9fr]">
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.02)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Timetable
-            </p>
-            <h2 className="mt-2 text-xl font-semibold text-slate-900">
-              Weekly schedule
-            </h2>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              {[
-                ['Monday', 'Macroeconomics • 09:00', 'Room 204'],
-                ['Tuesday', 'Data lab • 10:30', 'Innovation hub'],
-                ['Wednesday', 'Tutorial • 13:00', 'Seminar A'],
-                ['Thursday', 'Seminar • 16:00', 'Room 110'],
-              ].map(([day, title, detail]) => (
-                <div
-                  key={day}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                    {day}
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    {title}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">{detail}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.02)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Events
-            </p>
-            <h3 className="mt-2 text-xl font-semibold text-slate-900">
-              Important dates
-            </h3>
-            <div className="mt-5 space-y-3">
-              {[
-                'Career fair • 18 Nov',
-                'Midterm review • 23 Nov',
-                'Faculty workshop • 28 Nov',
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm font-medium text-slate-700"
-                >
-                  {item}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (activeView === 'grades') {
-      return (
-        <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.02)]">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Grades
-              </p>
-              <h2 className="mt-2 text-xl font-semibold text-slate-900">
-                Performance ledger
-              </h2>
-            </div>
-            <button
-              type="button"
-              className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700"
-            >
-              Download
-            </button>
-          </div>
-
-          <div className="overflow-hidden rounded-2xl border border-slate-200">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-50 text-slate-600">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">Course</th>
-                  <th className="px-4 py-3 font-semibold">Assessment</th>
-                  <th className="px-4 py-3 font-semibold">Weight</th>
-                  <th className="px-4 py-3 font-semibold">Score</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 bg-white">
-                {[
-                  ['Microeconomics', 'Quiz 03', '25%', '92%'],
-                  ['Calculus II', 'Midterm', '30%', '88%'],
-                  ['Academic Writing', 'Essay', '20%', '95%'],
-                  ['Economics Policy', 'Presentation', '25%', '90%'],
-                ].map(([course, assessment, weight, score]) => (
-                  <tr key={course}>
-                    <td className="px-4 py-3 font-medium text-slate-900">
-                      {course}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{assessment}</td>
-                    <td className="px-4 py-3 text-slate-600">{weight}</td>
-                    <td className="px-4 py-3 font-semibold text-indigo-700">
-                      {score}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      );
-    }
-
-    if (activeView === 'resources') {
-      return (
-        <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.02)]">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Resources
-              </p>
-              <h2 className="mt-2 text-xl font-semibold text-slate-900">
-                Library and files
-              </h2>
-            </div>
-            <button
-              type="button"
-              className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700"
-            >
-              Upload
-            </button>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            {[
-              ['Lecture slides', 'PDF • 2.4 MB'],
-              ['Reading pack', 'ZIP • 12 MB'],
-              ['Data spreadsheet', 'XLS • 760 KB'],
-              ['Practice questions', 'PDF • 1.1 MB'],
-            ].map(([name, meta]) => (
-              <div
-                key={name}
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-              >
-                <p className="text-sm font-semibold text-slate-900">{name}</p>
-                <p className="mt-1 text-xs text-slate-500">{meta}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    if (activeView === 'messages') {
-      return (
-        <div className="grid gap-6 xl:grid-cols-[0.9fr_1.5fr]">
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.02)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Messages
-            </p>
-            <h2 className="mt-2 text-xl font-semibold text-slate-900">
-              Conversations
-            </h2>
-            <div className="mt-5 space-y-3">
-              {[
-                ['Dr. Ali', 'Your essay draft is ready for review'],
-                ['Student support', 'Your fee issue was updated'],
-                ['Class rep', 'Workshop notes shared'],
-              ].map(([name, preview]) => (
-                <div
-                  key={name}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
-                >
-                  <p className="text-sm font-semibold text-slate-900">{name}</p>
-                  <p className="mt-1 text-xs text-slate-500">{preview}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.02)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Chat
-            </p>
-            <h2 className="mt-2 text-xl font-semibold text-slate-900">
-              Dr. Ali
-            </h2>
-            <div className="mt-5 space-y-3">
-              <div className="max-w-[80%] rounded-2xl bg-slate-100 p-3 text-sm text-slate-700">
-                I left comments on your worksheet. Please review before
-                Thursday.
-              </div>
-              <div className="ml-auto max-w-[80%] rounded-2xl bg-indigo-600 p-3 text-sm text-white">
-                Thanks, I’ll update the final section before the deadline.
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <section className="grid gap-6 xl:grid-cols-[1.7fr_0.9fr]">
-        <div className="space-y-6">
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.02)]">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Overview
-                </p>
-                <h2 className="mt-2 text-xl font-semibold text-slate-900">
-                  {config.focusTitle}
-                </h2>
-              </div>
-              <button
-                type="button"
-                className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700"
-              >
-                This week
-              </button>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {config.courses.map((course) => (
-                <div
-                  key={course.code}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span
-                      className={classNames(
-                        'inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]',
-                        course.color,
-                      )}
-                    >
-                      {course.code}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      {course.progress}%
-                    </span>
-                  </div>
-                  <h3 className="mt-4 text-base font-semibold text-slate-900">
-                    {course.title}
-                  </h3>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {course.instructor}
-                  </p>
-
-                  <div className="mt-4 h-2 w-full rounded-full bg-slate-200">
-                    <div
-                      className="h-full rounded-full bg-indigo-600"
-                      style={{ width: `${course.progress}%` }}
-                    />
-                  </div>
-
-                  <p className="mt-3 text-xs text-slate-500">{course.next}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.02)]">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Performance
-                </p>
-                <h2 className="mt-2 text-xl font-semibold text-slate-900">
-                  Learning momentum
-                </h2>
-              </div>
-              <button
-                type="button"
-                className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700"
-              >
-                12 weeks
-              </button>
-            </div>
-
-            <div className="flex h-40 items-end gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              {[52, 70, 64, 83, 78, 92, 88].map((value, index) => (
-                <div
-                  key={value + index}
-                  className="flex flex-1 flex-col items-center gap-2"
-                >
-                  <div
-                    className="flex w-full items-end justify-center rounded-t-xl bg-gradient-to-t from-indigo-600 to-indigo-300/90"
-                    style={{ height: `${value}%` }}
-                  />
-                  <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500">
-                    {['M', 'T', 'W', 'T', 'F', 'S', 'S'][index]}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.02)]">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Priority
-                </p>
-                <h2 className="mt-2 text-xl font-semibold text-slate-900">
-                  Upcoming work
-                </h2>
-              </div>
-              <button
-                type="button"
-                className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700"
-              >
-                View all
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {config.assignments.map((item) => (
-                <div
-                  key={item.title}
-                  className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {item.title}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {item.type} · {item.due}
-                    </p>
-                  </div>
-
-                  <span
-                    className={classNames(
-                      'rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]',
-                      item.status === 'Due soon' &&
-                        'bg-amber-50 text-amber-700',
-                      item.status === 'Submitted' &&
-                        'bg-emerald-50 text-emerald-700',
-                      item.status === 'Needs review' &&
-                        'bg-slate-200 text-slate-700',
-                    )}
-                  >
-                    {item.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.02)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Today
-            </p>
-            <h2 className="mt-2 text-xl font-semibold text-slate-900">
-              {config.focusTitle}
-            </h2>
-            <p className="mt-2 text-sm text-slate-600">{config.focusDetail}</p>
-
-            <div className="mt-5 space-y-3">
-              {[
-                {
-                  time: '09:00',
-                  label: 'Economics lecture',
-                  detail: 'Room 204',
-                },
-                {
-                  time: '11:30',
-                  label: 'Workshop review',
-                  detail: 'Faculty office',
-                },
-                {
-                  time: '14:00',
-                  label: 'Office hours',
-                  detail: 'Student support desk',
-                },
-              ].map((entry) => (
-                <div
-                  key={entry.time}
-                  className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-xs font-semibold text-indigo-700">
-                    {entry.time}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {entry.label}
-                    </p>
-                    <p className="text-xs text-slate-500">{entry.detail}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.02)]">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Snapshot
-              </p>
-              <button
-                type="button"
-                className="text-xs font-medium text-indigo-600"
-              >
-                Details
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-4">
-              {[
-                { label: 'Participation', value: 82 },
-                { label: 'Assignments', value: 72 },
-                { label: 'Exams', value: 90 },
-                { label: 'Engagement', value: 68 },
-              ].map((row) => (
-                <div key={row.label}>
-                  <div className="mb-1.5 flex items-center justify-between text-xs text-slate-600">
-                    <span>{row.label}</span>
-                    <span>{row.value}%</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-slate-200">
-                    <div
-                      className="h-full rounded-full bg-indigo-600"
-                      style={{ width: `${row.value}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.02)]">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Announcements
-              </p>
-              <button
-                type="button"
-                className="text-xs font-medium text-indigo-600"
-              >
-                All
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              {config.notices.map((notice) => (
-                <div
-                  key={notice.title}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-900">
-                      {notice.title}
-                    </p>
-                    <span className="text-[10px] uppercase tracking-[0.12em] text-slate-500">
-                      {notice.time}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-xs leading-5 text-slate-600">
-                    {notice.detail}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-[#fafafa] text-slate-900">
       <div className="mx-auto flex max-w-[1600px] gap-6 px-4 py-5 lg:px-6">
         <aside className="hidden w-[280px] shrink-0 rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)] lg:flex lg:flex-col">
           <div className="mb-8 flex items-center gap-3 px-2">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-600 text-base font-bold text-white">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-600 text-base font-bold text-white shadow-[0_10px_24px_rgba(109,40,217,0.22)]">
               E
             </div>
             <div>
@@ -1014,20 +380,17 @@ export function EducationDashboard() {
               <button
                 key={item.key}
                 type="button"
-                onClick={() => setActiveView(item.key)}
                 className={classNames(
                   'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors',
-                  item.key === activeView
-                    ? 'bg-indigo-50 text-indigo-700'
+                  item.key === 'home'
+                    ? 'bg-violet-50 text-violet-700'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
                 )}
               >
                 <span
                   className={classNames(
                     'h-4 w-4',
-                    item.key === activeView
-                      ? 'text-indigo-600'
-                      : 'text-slate-500',
+                    item.key === 'home' ? 'text-violet-600' : 'text-slate-500',
                   )}
                 >
                   {item.icon}
@@ -1057,7 +420,7 @@ export function EducationDashboard() {
                 <span>78%</span>
               </div>
               <div className="h-2.5 w-full rounded-full bg-slate-200">
-                <div className="h-full w-[78%] rounded-full bg-indigo-600" />
+                <div className="h-full w-[78%] rounded-full bg-violet-600" />
               </div>
             </div>
           </div>
@@ -1092,13 +455,13 @@ export function EducationDashboard() {
                   >
                     <BellIcon />
                   </button>
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-600 px-1 text-[10px] font-bold text-white">
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-violet-600 px-1 text-[10px] font-bold text-white">
                     4
                   </span>
                 </div>
 
                 <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-100 text-sm font-semibold text-violet-700">
                     AS
                   </div>
                   <div className="hidden text-left sm:block">
@@ -1124,7 +487,7 @@ export function EducationDashboard() {
                       className={classNames(
                         'rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] transition-colors',
                         role === entry
-                          ? 'bg-slate-900 text-white'
+                          ? 'bg-violet-600 text-white shadow-[0_10px_24px_rgba(109,40,217,0.18)]'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
                       )}
                     >
@@ -1146,13 +509,13 @@ export function EducationDashboard() {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm font-medium text-violet-700 hover:bg-violet-100"
                 >
                   Export
                 </button>
                 <button
                   type="button"
-                  className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_12px_22px_rgba(79,70,229,0.18)] hover:bg-indigo-500"
+                  className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_12px_22px_rgba(109,40,217,0.22)] hover:bg-violet-500"
                 >
                   {config.primaryAction}
                 </button>
@@ -1173,9 +536,8 @@ export function EducationDashboard() {
                   <span
                     className={classNames(
                       'rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em]',
-                      stat.tone === 'indigo' && 'bg-indigo-50 text-indigo-700',
-                      stat.tone === 'emerald' &&
-                        'bg-emerald-50 text-emerald-700',
+                      stat.tone === 'indigo' && 'bg-violet-50 text-violet-700',
+                      stat.tone === 'emerald' && 'bg-emerald-50 text-emerald-700',
                       stat.tone === 'amber' && 'bg-amber-50 text-amber-700',
                       stat.tone === 'slate' && 'bg-slate-100 text-slate-700',
                     )}
@@ -1238,14 +600,12 @@ export function EducationDashboard() {
 
                       <div className="mt-4 h-2 w-full rounded-full bg-slate-200">
                         <div
-                          className="h-full rounded-full bg-indigo-600"
+                          className="h-full rounded-full bg-violet-600"
                           style={{ width: `${course.progress}%` }}
                         />
                       </div>
 
-                      <p className="mt-3 text-xs text-slate-500">
-                        {course.next}
-                      </p>
+                      <p className="mt-3 text-xs text-slate-500">{course.next}</p>
                     </div>
                   ))}
                 </div>
@@ -1276,7 +636,7 @@ export function EducationDashboard() {
                       className="flex flex-1 flex-col items-center gap-2"
                     >
                       <div
-                        className="flex w-full items-end justify-center rounded-t-xl bg-gradient-to-t from-indigo-600 to-indigo-300/90"
+                        className="flex w-full items-end justify-center rounded-t-xl bg-gradient-to-t from-violet-600 to-violet-300/90"
                         style={{ height: `${value}%` }}
                       />
                       <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500">
@@ -1323,12 +683,9 @@ export function EducationDashboard() {
                       <span
                         className={classNames(
                           'rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]',
-                          item.status === 'Due soon' &&
-                            'bg-amber-50 text-amber-700',
-                          item.status === 'Submitted' &&
-                            'bg-emerald-50 text-emerald-700',
-                          item.status === 'Needs review' &&
-                            'bg-slate-200 text-slate-700',
+                          item.status === 'Due soon' && 'bg-amber-50 text-amber-700',
+                          item.status === 'Submitted' && 'bg-emerald-50 text-emerald-700',
+                          item.status === 'Needs review' && 'bg-slate-200 text-slate-700',
                         )}
                       >
                         {item.status}
@@ -1347,9 +704,7 @@ export function EducationDashboard() {
                 <h2 className="mt-2 text-xl font-semibold text-slate-900">
                   {config.focusTitle}
                 </h2>
-                <p className="mt-2 text-sm text-slate-600">
-                  {config.focusDetail}
-                </p>
+                <p className="mt-2 text-sm text-slate-600">{config.focusDetail}</p>
 
                 <div className="mt-5 space-y-3">
                   {[
@@ -1373,7 +728,7 @@ export function EducationDashboard() {
                       key={entry.time}
                       className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3"
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-xs font-semibold text-indigo-700">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-xs font-semibold text-violet-700">
                         {entry.time}
                       </div>
                       <div>
@@ -1394,7 +749,7 @@ export function EducationDashboard() {
                   </p>
                   <button
                     type="button"
-                    className="text-xs font-medium text-indigo-600"
+                    className="text-xs font-medium text-violet-600"
                   >
                     Details
                   </button>
@@ -1414,7 +769,7 @@ export function EducationDashboard() {
                       </div>
                       <div className="h-2 w-full rounded-full bg-slate-200">
                         <div
-                          className="h-full rounded-full bg-indigo-600"
+                          className="h-full rounded-full bg-violet-600"
                           style={{ width: `${row.value}%` }}
                         />
                       </div>
@@ -1430,7 +785,7 @@ export function EducationDashboard() {
                   </p>
                   <button
                     type="button"
-                    className="text-xs font-medium text-indigo-600"
+                    className="text-xs font-medium text-violet-600"
                   >
                     All
                   </button>
@@ -1464,7 +819,7 @@ export function EducationDashboard() {
 
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur sm:hidden">
         <div className="mx-auto grid max-w-md grid-cols-5 gap-2">
-          {roleConfig[role].nav.slice(0, 5).map((item) => (
+          {config.nav.slice(0, 5).map((item) => (
             <button
               key={item.key}
               type="button"
