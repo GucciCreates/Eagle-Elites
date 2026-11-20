@@ -1,20 +1,14 @@
 @import 'tailwindcss';
 
 :root {
-  --background: #fafafa;
-  --foreground: #111827;
-  --surface: #ffffff;
-  --surface-soft: #f3f4f6;
-  --border: #e5e7eb;
-  --muted: #6b7280;
-  --muted-strong: #374151;
-  --accent: #4f46e5;
-  --accent-soft: #eef2ff;
-  --success: #16a34a;
-  --warning: #d97706;
-  --danger: #dc2626;
-  --info: #0284c7;
-  --shadow-soft: 0 12px 30px rgba(15, 23, 42, 0.06);
+  --background: #05070b;
+  --foreground: #f5f7fb;
+  --panel: rgba(15, 19, 26, 0.82);
+  --panel-strong: rgba(17, 24, 39, 0.9);
+  --stroke: rgba(255, 255, 255, 0.08);
+  --muted: #a4acbb;
+  --yellow: #facc15;
+  --yellow-strong: #fbbf24;
 }
 
 @theme inline {
@@ -37,7 +31,7 @@ html:focus-within {
 }
 
 :focus-visible {
-  outline: 3px solid rgba(79, 70, 229, 0.4);
+  outline: 3px solid var(--yellow);
   outline-offset: 3px;
 }
 
@@ -59,10 +53,33 @@ html:focus-within {
 
 body {
   min-height: 100vh;
-  background: #fafafa;
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(250, 204, 21, 0.12),
+      transparent 25%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(59, 130, 246, 0.1),
+      transparent 28%
+    ),
+    var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   letter-spacing: -0.02em;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(circle at center, black 35%, transparent 100%);
 }
 
 button,
@@ -73,8 +90,134 @@ textarea {
 }
 
 ::selection {
-  background: rgba(79, 70, 229, 0.18);
-  color: #111827;
+  background: rgba(250, 204, 21, 0.35);
+  color: white;
+}
+
+@layer utilities {
+  .glass-panel {
+    background: linear-gradient(
+      180deg,
+      rgba(17, 24, 39, 0.8),
+      rgba(9, 12, 18, 0.9)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+    backdrop-filter: blur(14px);
+  }
+
+  .soft-ring {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.02),
+      0 10px 25px rgba(0, 0, 0, 0.32);
+  }
+}
+
+/* Reduce the glare of saturated gold accents on small, bright phone screens. */
+@media (max-width: 639px) {
+  :root {
+    --background: #101318;
+    --yellow: #d8b85f;
+    --yellow-strong: #dfc36f;
+  }
+
+  body {
+    background:
+      radial-gradient(circle at top left, rgba(216, 184, 95, 0.045), transparent 25%),
+      radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.07), transparent 28%),
+      var(--background);
+  }
+
+  [class~='bg-yellow-400'],
+  [class~='bg-yellow-300'],
+  [class~='bg-[#facc15]'] {
+    background-color: #d8b85f !important;
+  }
+
+  [class~='text-yellow-300'],
+  [class~='text-yellow-200'] {
+    color: #e4cc86 !important;
+  }
+
+  [class~='bg-gradient-to-r'][class~='from-yellow-300'],
+  [class~='bg-gradient-to-r'][class~='from-[#facc15]'] {
+    background-image: none !important;
+    background-color: #d8b85f !important;
+  }
+}
+
+/* Keep admin surfaces aligned with the student portal's restrained dark palette. */
+.admin-shell[data-admin-theme='dark'] {
+  background: #080b10 !important;
+  color: #f5f7fb !important;
+}
+
+.admin-shell[data-admin-theme='dark'] > nav {
+  background: rgba(11, 15, 20, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-950'],
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-950/80'],
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-950/70'],
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-950/60'],
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-950/50'] {
+  background-color: #0b1016 !important;
+}
+
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-900'],
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-900/80'],
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-900/75'],
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-900/70'] {
+  background-color: #10151d !important;
+}
+
+.admin-shell[data-admin-theme='dark'] [class~='bg-zinc-800'] {
+  background-color: #171d26 !important;
+}
+
+.admin-shell[data-admin-theme='dark'] [class~='border-zinc-800'],
+.admin-shell[data-admin-theme='dark'] [class~='border-zinc-700'] {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Admin-only light palette. Dark remains the saved default. */
+.admin-shell[data-admin-theme='light'] {
+  --admin-canvas: #f4f6f9;
+  --admin-surface: #ffffff;
+  --admin-inset: #f7f8fa;
+  --admin-stroke: #e1e5ec;
+  --admin-ink: #202939;
+  --admin-muted: #697586;
+  background: var(--admin-canvas) !important;
+  color: var(--admin-ink) !important;
+  color-scheme: light;
+}
+
+.admin-shell[data-admin-theme='light'] nav {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-color: var(--admin-stroke) !important;
+}
+
+.admin-shell[data-admin-theme='light'] nav[aria-label='Admin workspaces'],
+.admin-shell[data-admin-theme='light'] nav[aria-label$=' sections'] {
+  background: transparent !important;
+}
+
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-950'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-950/70'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-950/60'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-950/50'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-950/80'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-900'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-900/80'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-900/75'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-900/70'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-800'],
+.admin-shell[data-admin-theme='light'] [class~='bg-zinc-700'],
+.admin-shell[data-admin-theme='light'] [class~='bg-[#05070b]'],
+.admin-shell[data-admin-theme='light'] [class~='bg-[#090d13]/80'] {
+  background-color: var(--admin-surface) !important;
 }
 
 .admin-shell[data-admin-theme='light'] [class~='bg-white/[0.1]'],
@@ -87,9 +230,7 @@ textarea {
   --tw-shadow-color: rgb(32 41 57 / 0.08) !important;
 }
 
-.admin-shell[data-admin-theme='light']
-  [class*='divide-zinc-800']
-  > :not(:first-child) {
+.admin-shell[data-admin-theme='light'] [class*='divide-zinc-800'] > :not(:first-child) {
   border-color: var(--admin-stroke) !important;
 }
 
@@ -163,8 +304,7 @@ textarea {
   background-color: #fae9e7 !important;
 }
 
-.admin-shell[data-admin-theme='light']
-  [class~='bg-red-500'][class*='text-white'] {
+.admin-shell[data-admin-theme='light'] [class~='bg-red-500'][class*='text-white'] {
   color: #fff !important;
 }
 

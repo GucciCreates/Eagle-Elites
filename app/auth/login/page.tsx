@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AuthShell from '@/components/auth/auth-shell';
-import GoogleButton from '@/components/auth/google-button';
 import {
   Alert,
   Field,
@@ -27,7 +26,6 @@ export default function Login() {
   const [errors, setErrors] = useState<Errors>({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const router = useRouter();
   const [supabase] = useState(() => createClient());
 
@@ -84,28 +82,6 @@ export default function Login() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    if (googleLoading) return;
-    setError('');
-    setGoogleLoading(true);
-
-    try {
-      const { error: oAuthError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/dashboard')}`,
-        },
-      });
-
-      if (oAuthError) throw oAuthError;
-    } catch (err) {
-      setError(
-        friendlyAuthError(err, 'Google sign in failed. Please try again.'),
-      );
-      setGoogleLoading(false);
-    }
-  };
-
   const resetHref = `/auth/reset-password${
     email.trim() ? `?email=${encodeURIComponent(normalizeEmail(email))}` : ''
   }`;
@@ -115,7 +91,7 @@ export default function Login() {
       panel="login"
       eyebrow="Welcome back"
       title="Log in to your account"
-      subtitle="Access your courses, assignments and academic updates in one place."
+      subtitle="Manage your route, seat and payments."
       footer={
         <>
           Don&apos;t have an account?{' '}
@@ -125,22 +101,6 @@ export default function Login() {
         </>
       }
     >
-      <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Student overview
-            </p>
-            <p className="mt-1 text-lg font-semibold text-slate-900">
-              96.4% attendance
-            </p>
-          </div>
-          <div className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-700">
-            On track
-          </div>
-        </div>
-      </div>
-
       {error && <Alert tone="error">{error}</Alert>}
 
       <form onSubmit={handleLogin} noValidate className="space-y-4">
@@ -159,7 +119,7 @@ export default function Login() {
             setErrors((prev) => ({ ...prev, email: validateEmail(email) }))
           }
           error={errors.email}
-          placeholder="name@university.edu"
+          placeholder="you@example.com"
           required
         />
 
@@ -171,7 +131,7 @@ export default function Login() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           error={errors.password}
-          placeholder="Enter your password"
+          placeholder="Your password"
           required
           labelAction={
             <Link href={resetHref} className={`text-xs ${linkClass}`}>
@@ -180,35 +140,21 @@ export default function Login() {
           }
         />
 
-        <label className="flex items-center gap-2 text-sm text-slate-600">
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-          />
-          Keep me signed in
-        </label>
-
         <SubmitButton loading={loading} loadingText="Logging in…">
           Log in
         </SubmitButton>
       </form>
 
-      <div className="my-5 flex items-center gap-3 text-slate-400">
-        <div className="h-px flex-1 bg-slate-200" />
+      <div className="my-5 flex items-center gap-3 text-zinc-500">
+        <div className="h-px flex-1 bg-zinc-800" />
         <span className="text-[10px] uppercase tracking-[0.22em]">or</span>
-        <div className="h-px flex-1 bg-slate-200" />
+        <div className="h-px flex-1 bg-zinc-800" />
       </div>
-
-      <GoogleButton
-        label="Continue with Google"
-        onClick={() => void handleGoogleLogin()}
-        loading={googleLoading}
-      />
 
       <button
         type="button"
         onClick={handleDemoLogin}
-        className="mt-3 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-200"
+        className="w-full rounded-xl border border-zinc-700 bg-zinc-900/60 px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/40"
       >
         Try the demo
       </button>

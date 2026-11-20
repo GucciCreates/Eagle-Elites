@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AuthShell from '@/components/auth/auth-shell';
-import GoogleButton from '@/components/auth/google-button';
 import {
   Alert,
   Field,
@@ -36,7 +35,6 @@ export default function SignUp() {
   const [errors, setErrors] = useState<Errors>({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [sentTo, setSentTo] = useState('');
 
   const router = useRouter();
@@ -48,28 +46,6 @@ export default function SignUp() {
     password: validateNewPassword(password),
     confirm: validateConfirmPassword(password, confirm),
   });
-
-  const handleGoogleLogin = async () => {
-    if (googleLoading) return;
-    setError('');
-    setGoogleLoading(true);
-
-    try {
-      const { error: oAuthError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/onboarding/profile')}`,
-        },
-      });
-
-      if (oAuthError) throw oAuthError;
-    } catch (err) {
-      setError(
-        friendlyAuthError(err, 'Google sign in failed. Please try again.'),
-      );
-      setGoogleLoading(false);
-    }
-  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -250,18 +226,6 @@ export default function SignUp() {
           Create account
         </SubmitButton>
       </form>
-
-      <div className="my-5 flex items-center gap-3 text-zinc-500">
-        <div className="h-px flex-1 bg-zinc-800" />
-        <span className="text-[10px] uppercase tracking-[0.22em]">or</span>
-        <div className="h-px flex-1 bg-zinc-800" />
-      </div>
-
-      <GoogleButton
-        label="Continue with Google"
-        onClick={() => void handleGoogleLogin()}
-        loading={googleLoading}
-      />
     </AuthShell>
   );
 }
