@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AuthShell from '@/components/auth/auth-shell';
+import GoogleAuthOption from '@/components/auth/google-auth-option';
 import {
   Alert,
   Field,
@@ -152,10 +153,20 @@ export default function SignUp() {
           <Link href="/auth/login" className={linkClass}>
             Log in
           </Link>
+          <span className="mx-2 text-zinc-600">·</span>
+          <Link href="/driver/login" className={linkClass}>
+            Driver
+          </Link>
+          <span className="mx-2 text-zinc-600">·</span>
+          <Link href="/admin/login" className={linkClass}>
+            Admin
+          </Link>
         </>
       }
     >
       {error && <Alert tone="error">{error}</Alert>}
+
+      <GoogleAuthOption portal="student" disabled={loading} />
 
       <form onSubmit={handleSignUp} noValidate className="space-y-4">
         <Field

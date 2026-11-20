@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
-type PanelVariant = 'login' | 'signup' | 'admin';
+type PanelVariant = 'login' | 'signup' | 'admin' | 'driver';
 
 const PANELS: Record<
   PanelVariant,
@@ -36,32 +36,41 @@ const PANELS: Record<
       'Restricted to authorised staff',
     ],
   },
+  driver: {
+    heading: 'Every trip, ready to roll.',
+    text: 'Your assigned vehicle, route and passenger list in one place.',
+    points: [
+      'See only trips assigned to you',
+      'Mark boarding as it happens',
+      'Keep dispatch and students in sync',
+    ],
+  },
 };
 
 function SidePanel({ variant }: { variant: PanelVariant }) {
   const panel = PANELS[variant];
   return (
-    <aside className="relative hidden overflow-hidden rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(250,204,21,0.18),_transparent_45%),linear-gradient(160deg,_#111827,_#0a0d14)] p-10 lg:flex lg:flex-col lg:justify-between">
+    <aside className="relative hidden overflow-hidden rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_15%_5%,_rgba(250,204,21,0.2),_transparent_38%),linear-gradient(155deg,_#151923,_#080a0f_72%)] p-10 shadow-[0_32px_90px_rgba(0,0,0,0.35)] lg:flex lg:flex-col lg:justify-between">
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:28px_28px] [mask-image:linear-gradient(to_bottom,black,transparent)]"
+        className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:30px_30px] [mask-image:linear-gradient(to_bottom,black,transparent)]"
       />
       <div className="relative">
         <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-yellow-300/80">
           Eagle Elites
         </p>
-        <h2 className="mt-4 max-w-xs text-4xl font-black leading-tight tracking-tight text-white">
+        <h2 className="mt-4 max-w-sm text-4xl font-black leading-[1.08] tracking-tight text-white xl:text-5xl">
           {panel.heading}
         </h2>
-        <p className="mt-3 max-w-sm text-sm leading-6 text-zinc-400">
+        <p className="mt-4 max-w-sm text-[15px] leading-7 text-zinc-300">
           {panel.text}
         </p>
       </div>
-      <ul className="relative mt-10 space-y-3">
+      <ul className="relative mt-10 space-y-4">
         {panel.points.map((point) => (
           <li
             key={point}
-            className="flex items-start gap-3 text-sm text-zinc-200"
+            className="flex items-start gap-3 text-sm leading-6 text-zinc-200"
           >
             <span
               aria-hidden="true"
@@ -122,11 +131,11 @@ export default function AuthShell({
 
         <main
           className={`flex flex-1 flex-col justify-center py-8 ${
-            panel ? 'lg:grid lg:grid-cols-2 lg:items-stretch lg:gap-8' : ''
+          panel ? 'lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:items-stretch lg:gap-10' : ''
           }`}
         >
           {panel && <SidePanel variant={panel} />}
-          <div className="flex flex-col justify-center lg:py-6">
+          <div className="mx-auto flex w-full max-w-md flex-col justify-center lg:py-6">
             {top}
             <div className="mb-6 text-center">
               <Link

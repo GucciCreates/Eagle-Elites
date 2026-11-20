@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AuthShell from '@/components/auth/auth-shell';
+import GoogleAuthOption from '@/components/auth/google-auth-option';
 import {
   Alert,
   Field,
@@ -27,6 +28,18 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const [supabase] = useState(() => createClient());
+
+  useEffect(() => {
+    const authCode = new URLSearchParams(window.location.search).get('auth');
+    if (!authCode) return;
+    if (authCode === 'admin_only') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setError('This Google account is not registered for the admin portal. Use an authorised admin account.');
+    } else if (authCode === 'google_failed') {
+      setError('Google sign in did not finish. Please try again or use your email and password.');
+    }
+    window.history.replaceState(null, '', window.location.pathname);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,18 +93,17 @@ export default function AdminLogin() {
       subtitle="For Eagle Elites staff only."
       footer={
         <>
-          Not an admin?{' '}
-          <Link href="/auth/login" className={linkClass}>
-            Student log in
-          </Link>
-          {' · '}
-          <Link href="/driver/login" className={linkClass}>
-            Driver log in
-          </Link>
+          <Link href="/auth/login" className={linkClass}>Student</Link>
+          <span className="mx-2 text-zinc-600">·</span>
+          <Link href="/auth/signup" className={linkClass}>Create student account</Link>
+          <span className="mx-2 text-zinc-600">·</span>
+          <Link href="/driver/login" className={linkClass}>Driver</Link>
         </>
       }
     >
       {error && <Alert tone="error">{error}</Alert>}
+
+      <GoogleAuthOption portal="admin" disabled={loading} />
 
       <form onSubmit={handleLogin} noValidate className="space-y-4">
         <Field

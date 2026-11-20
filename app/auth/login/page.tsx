@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AuthShell from '@/components/auth/auth-shell';
+import GoogleAuthOption from '@/components/auth/google-auth-option';
 import {
   Alert,
   Field,
@@ -28,6 +29,20 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const [supabase] = useState(() => createClient());
+
+  useEffect(() => {
+    const authCode = new URLSearchParams(window.location.search).get('auth');
+    if (!authCode) return;
+    const messages: Record<string, string> = {
+      google_failed: 'Google sign in did not finish. Please try again or use your email and password.',
+      setup_failed: 'Your sign in worked, but we could not finish setting up your student profile. Please try again.',
+    };
+    if (messages[authCode]) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setError(messages[authCode]);
+    }
+    window.history.replaceState(null, '', window.location.pathname);
+  }, []);
 
   const handleDemoLogin = () => {
     const demoSession = {
@@ -59,6 +74,7 @@ export default function Login() {
     if (nextErrors.email || nextErrors.password) return;
 
     setLoading(true);
+    let signedIn = false;
     try {
       const { data, error: authError } = await supabase.auth.signInWithPassword(
         {
@@ -68,15 +84,44 @@ export default function Login() {
       );
 
       if (authError) throw authError;
+      signedIn = true;
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('status')
+      const { data: admin, error: adminError } = await supabase
+        .from('admin_users')
+        .select('id')
         .eq('id', data.user.id)
-        .single();
+        .maybeSingle();
+      if (adminError) throw adminError;
+      if (admin) {
+        router.push('/admin/dashboard');
+        return;
+      }
+
+      const { data: driver, error: driverError } = await supabase
+        .from('drivers')
+        .select('id')
+        .eq('id', data.user.id)
+        .eq('active', true)
+        .maybeSingle();
+      if (driverError) throw driverError;
+      if (driver) {
+        router.push('/driver/dashboard');
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('status, role')
+        .eq('id', data.user.id)
+        .maybeSingle();
+      if (profileError) throw profileError;
+      if (!profile || profile.role !== 'student') {
+        throw new Error('We could not find a student account for this login. Try the admin or driver sign-in, or contact support.');
+      }
 
       router.push(getPostLoginPath(profile?.status));
     } catch (err) {
+      if (signedIn) await supabase.auth.signOut();
       setError(friendlyAuthError(err, 'Login failed. Please try again.'));
       setLoading(false);
     }
@@ -98,10 +143,20 @@ export default function Login() {
           <Link href="/auth/signup" className={linkClass}>
             Sign up
           </Link>
+          <span className="mx-2 text-zinc-600">·</span>
+          <Link href="/driver/login" className={linkClass}>
+            Driver
+          </Link>
+          <span className="mx-2 text-zinc-600">·</span>
+          <Link href="/admin/login" className={linkClass}>
+            Admin
+          </Link>
         </>
       }
     >
       {error && <Alert tone="error">{error}</Alert>}
+
+      <GoogleAuthOption portal="student" disabled={loading} />
 
       <form onSubmit={handleLogin} noValidate className="space-y-4">
         <Field
