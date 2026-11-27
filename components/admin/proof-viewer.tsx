@@ -94,7 +94,7 @@ export default function ProofViewer({ value, label = 'Payment proof' }: Props) {
           className="max-h-72 w-full object-contain transition group-hover:opacity-90"
         />
         <span className="block border-t border-zinc-800 px-3 py-1.5 text-left text-xs text-zinc-400">
-          🔍 Tap to zoom
+          Tap to zoom
         </span>
       </button>
 

@@ -283,7 +283,7 @@ export default function ResetPasswordForm({ variant }: { variant: Variant }) {
           <Alert tone="success">Your password has been changed securely.</Alert>
           <Link
             href={copy.loginPath}
-            className="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 px-4 py-3 font-semibold text-black shadow-[0_12px_28px_rgba(250,204,21,0.28)] transition hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c1119]"
+            className="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 px-4 py-3 font-semibold text-black shadow-[0_12px_28px_rgba(232,187,64,0.28)] transition hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c1119]"
           >
             Continue to log in
           </Link>

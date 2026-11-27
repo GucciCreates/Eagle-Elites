@@ -1,5 +1,8 @@
 'use client';
 
+import BrandLoader from '@/components/ui/brand-loader';
+import Logo from '@/components/brand/logo';
+import Icon, { IconTile, type IconName } from '@/components/ui/icons';
 import PasswordInput from '@/components/password-input';
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
@@ -7,7 +10,6 @@ import { getPostLoginPath } from '@/lib/auth/post-login-path';
 import {
   getPakistanDate,
   getPakistanDateForWeekday,
-  getPakistanWeekStart,
 } from '@/lib/date/pakistan';
 import { createClient } from '@/lib/supabase/client';
 import TimeSelect from '@/components/time-select';
@@ -15,182 +17,31 @@ import WhatsAppOptInCard from '@/components/whatsapp-opt-in-card';
 import SectionLoading from '@/components/section-loading';
 import {
   fetchTimeOptionsForGroup,
-  toHHMM,
   type TimeOption,
 } from '@/lib/time-options';
 
-type Profile = {
-  id: string;
-  full_name: string;
-  email: string;
-  role: string;
-  fee_status: string;
-  institution?: string | null;
-  route_id: string;
-  status?: string;
-  departure_group_id?: string | null;
-  phone?: string | null;
-  whatsapp_opt_in?: boolean | null;
-};
-
-type DepartureGroup = {
-  id: string;
-  university: string;
-  department: string;
-};
-
-type DepartureSlot = {
-  id: string;
-  group_id: string;
-  slot_date: string;
-  slot_number: number;
-  pickup_time: string;
-  departure_time: string;
-  notes: string;
-  status: string;
-};
-
-type DepartureSelection = {
-  id: string;
-  student_id: string;
-  slot_id: string;
-  selection_date: string;
-};
-
-type DailyAssignment = {
-  id: string;
-  driver_name: string;
-  driver_contact: string;
-  seat_confirmed: boolean;
-  confirmed_at: string;
-  coasters: { coaster_number: string };
-};
-
-type WeeklySchedule = {
-  id: string;
-  day_of_week: string;
-  arrival_time: string;
-  departure_time: string;
-  change_count: number;
-  last_changed_at: string;
-  pickup_points: { name: string };
-};
-
-type Payment = {
-  id: string;
-  amount: number;
-  month: string;
-  status: string;
-  paid_at: string;
-};
-
-type Notification = {
-  id: string;
-  title: string;
-  message: string;
-  type: string;
-  created_at: string;
-};
-
-type Holiday = {
-  id: string;
-  date: string;
-  reason: string;
-};
-
-type PickupPoint = { id: string; name: string; route_id: string };
-
-// The weekly_schedules table stores times as morning_departure /
-// evening_departure; the UI calls them arrival_time / departure_time.
-type WeeklyScheduleRow = Omit<
-  WeeklySchedule,
-  'arrival_time' | 'departure_time'
-> & {
-  morning_departure: string | null;
-  evening_departure: string | null;
-};
-
-function fromScheduleRows(rows: WeeklyScheduleRow[]): WeeklySchedule[] {
-  return rows.map((row) => ({
-    ...row,
-    arrival_time: toHHMM(row.morning_departure),
-    departure_time: toHHMM(row.evening_departure),
-  }));
-}
-type DashboardTab =
-  'home' | 'schedule' | 'payments' | 'timetable' | 'help' | 'profile';
-type ScheduleView = 'overview' | 'change' | 'timetable';
-
-const DAYS = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-];
-
-function getNextWeekStart() {
-  return getPakistanWeekStart(1);
-}
-
-function canChangeTime(tripDate: string, tripTime: string) {
-  const trip = new Date(`${tripDate}T${tripTime}:00+05:00`);
-  const diffHours = (trip.getTime() - Date.now()) / (1000 * 60 * 60);
-  return diffHours >= 8
-    ? { allowed: true, reason: '' }
-    : {
-        allowed: false,
-        reason: 'Deadline passed — must change at least 8 hours before trip',
-      };
-}
-
-function formatTime(t: string) {
-  if (!t) return '—';
-
-  const [hourStr, minuteStr] = t.split(':');
-  const hour = Number(hourStr);
-  const minute = Number(minuteStr);
-
-  if (Number.isNaN(hour) || Number.isNaN(minute)) return t;
-
-  const suffix = hour >= 12 ? 'PM' : 'AM';
-  const normalizedHour = hour % 12 === 0 ? 12 : hour % 12;
-
-  return `${normalizedHour}:${String(minute).padStart(2, '0')} ${suffix}`;
-}
-
-function formatDate(d: string) {
-  const dateOnly = d.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  const date = dateOnly
-    ? new Date(
-        Number(dateOnly[1]),
-        Number(dateOnly[2]) - 1,
-        Number(dateOnly[3]),
-      )
-    : new Date(d);
-
-  return date.toLocaleDateString('en-PK', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-function getNextWeekRange() {
-  const start = new Date(`${getNextWeekStart()}T00:00:00Z`);
-  const end = new Date(start);
-  end.setUTCDate(start.getUTCDate() + 6);
-
-  const format = (date: Date) =>
-    date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      timeZone: 'UTC',
-    });
-
-  return `${format(start)} – ${format(end)}`;
-}
+import {
+  fromScheduleRows,
+  DAYS,
+  getNextWeekStart,
+  canChangeTime,
+  formatTime,
+  formatDate,
+  getNextWeekRange,
+  type Profile,
+  type DepartureGroup,
+  type DepartureSlot,
+  type DepartureSelection,
+  type DailyAssignment,
+  type WeeklySchedule,
+  type Payment,
+  type Notification,
+  type Holiday,
+  type PickupPoint,
+  type WeeklyScheduleRow,
+  type DashboardTab,
+  type ScheduleView,
+} from '@/lib/dashboard/student';
 
 export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -257,7 +108,7 @@ export default function Dashboard() {
   }>({ arrival: [], departure: [] });
 
   const router = useRouter();
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
   const changeTab = (tab: DashboardTab) =>
     startTabTransition(() => setActiveTab(tab));
   const [todayInfo] = useState(() => {
@@ -470,35 +321,47 @@ export default function Dashboard() {
       if (holidaysData) setHolidays(holidaysData);
       if (timetableData) setClassDays(timetableData.class_days);
 
-      if (profileData?.departure_group_id) {
-        const { data: groupData } = await supabase
-          .from('departure_groups')
-          .select('id, university, department')
-          .eq('id', profileData.departure_group_id)
-          .single();
+      // These lookups are independent, so run them together.
+      const groupId = profileData?.departure_group_id ?? null;
+      const [groupRes, slotsRes, selectionRes, pickupsRes] = await Promise.all([
+        groupId
+          ? supabase
+              .from('departure_groups')
+              .select('id, university, department')
+              .eq('id', groupId)
+              .single()
+          : Promise.resolve({ data: null }),
+        groupId
+          ? supabase
+              .from('departure_slots')
+              .select('*')
+              .eq('group_id', groupId)
+              .eq('slot_date', today)
+              .order('slot_number')
+          : Promise.resolve({ data: null }),
+        groupId
+          ? supabase
+              .from('departure_selections')
+              .select('*')
+              .eq('student_id', session.user.id)
+              .eq('selection_date', today)
+              .single()
+          : Promise.resolve({ data: null }),
+        profileData?.route_id
+          ? supabase
+              .from('pickup_points')
+              .select('*')
+              .eq('route_id', profileData.route_id)
+          : supabase.from('pickup_points').select('*'),
+      ]);
 
-        if (groupData) setMyDepartureGroup(groupData as DepartureGroup);
-
-        const today = getPakistanDate();
-        const { data: slotsData } = await supabase
-          .from('departure_slots')
-          .select('*')
-          .eq('group_id', profileData.departure_group_id)
-          .eq('slot_date', today)
-          .order('slot_number');
-
-        if (slotsData) setTodaySlots(slotsData as DepartureSlot[]);
-
-        const { data: selectionData } = await supabase
-          .from('departure_selections')
-          .select('*')
-          .eq('student_id', session.user.id)
-          .eq('selection_date', today)
-          .single();
-
-        if (selectionData) {
-          setMySelection(selectionData as DepartureSelection);
-          setSelectedSlotId(selectionData.slot_id);
+      if (groupId) {
+        if (groupRes.data) setMyDepartureGroup(groupRes.data as DepartureGroup);
+        if (slotsRes.data) setTodaySlots(slotsRes.data as DepartureSlot[]);
+        if (selectionRes.data) {
+          const selection = selectionRes.data as DepartureSelection;
+          setMySelection(selection);
+          setSelectedSlotId(selection.slot_id);
         }
       } else {
         setMyDepartureGroup(null);
@@ -506,19 +369,7 @@ export default function Dashboard() {
         setMySelection(null);
         setSelectedSlotId('');
       }
-
-      if (profileData?.route_id) {
-        const { data: pickups } = await supabase
-          .from('pickup_points')
-          .select('*')
-          .eq('route_id', profileData.route_id);
-        if (pickups) setPickupPoints(pickups);
-      } else {
-        const { data: allPickups } = await supabase
-          .from('pickup_points')
-          .select('*');
-        if (allPickups) setPickupPoints(allPickups);
-      }
+      if (pickupsRes.data) setPickupPoints(pickupsRes.data as PickupPoint[]);
 
       setLoading(false);
     };
@@ -762,7 +613,7 @@ export default function Dashboard() {
       hint: profile?.fee_status === 'paid' ? 'All clear' : 'Action needed',
       accent:
         profile?.fee_status === 'paid' ? 'text-emerald-300' : 'text-red-300',
-      icon: '◈',
+      icon: 'wallet' as IconName,
       tab: 'payments' as DashboardTab,
     },
     {
@@ -770,7 +621,7 @@ export default function Dashboard() {
       value: `${schedules.length || 0}`,
       hint: `For next week · ${nextWeekRange}`,
       accent: 'text-yellow-300',
-      icon: '↗',
+      icon: 'route' as IconName,
       tab: 'schedule' as DashboardTab,
     },
     {
@@ -778,41 +629,30 @@ export default function Dashboard() {
       value: `${classDays.length || 0}`,
       hint: 'Selected days',
       accent: 'text-cyan-300',
-      icon: '▦',
+      icon: 'calendar' as IconName,
       tab: 'timetable' as DashboardTab,
     },
   ];
 
-  const tabs: Array<{ key: DashboardTab; label: string; icon: string }> = [
-    { key: 'home', label: 'Home', icon: '⌂' },
-    { key: 'schedule', label: 'My schedule', icon: '◷' },
-    { key: 'payments', label: 'Payments', icon: '▤' },
-    { key: 'timetable', label: 'Timetable', icon: '▦' },
-    { key: 'help', label: 'Help & support', icon: '?' },
-    { key: 'profile', label: 'My profile', icon: '◉' },
+  const tabs: Array<{ key: DashboardTab; label: string; short: string; icon: IconName }> = [
+    { key: 'home', label: 'Home', short: 'Home', icon: 'home' },
+    { key: 'schedule', label: 'My schedule', short: 'Schedule', icon: 'route' },
+    { key: 'payments', label: 'Payments', short: 'Payments', icon: 'wallet' },
+    { key: 'timetable', label: 'Timetable', short: 'Classes', icon: 'calendar' },
+    { key: 'profile', label: 'My profile', short: 'Profile', icon: 'user' },
+    { key: 'help', label: 'Help & support', short: 'Help', icon: 'help' },
   ];
-  const primaryTabs = tabs.filter((tab) => ['home', 'schedule', 'payments'].includes(tab.key));
+  const primaryTabs = tabs.filter((tab) => tab.key !== 'help');
+  const mobileTabs = tabs.filter((tab) => tab.key !== 'help');
   const profileMenuTabs = tabs.filter((tab) =>
-    ['timetable', 'profile'].includes(tab.key),
+    ['profile', 'help'].includes(tab.key),
   );
   const scheduleTabs: Array<{ key: ScheduleView; label: string }> = [
     { key: 'overview', label: 'Overview' },
     { key: 'change', label: 'Request Time Change' },
   ];
 
-  if (loading)
-    return (
-      <div className="min-h-screen bg-[#07090d] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-14 h-14 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-[0_10px_30px_rgba(250,204,21,0.35)] animate-pulse">
-            <span className="text-black font-black text-lg">EE</span>
-          </div>
-          <p className="text-zinc-300 text-sm tracking-[0.2em] uppercase">
-            Loading your dashboard...
-          </p>
-        </div>
-      </div>
-    );
+  if (loading) return <BrandLoader label="Loading your dashboard" />;
 
   return (
       <div className="relative min-h-screen overflow-x-clip bg-[#080b10] text-white">
@@ -822,15 +662,7 @@ export default function Dashboard() {
 
       <nav className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#0b0f14]/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-yellow-400/20 bg-gradient-to-br from-yellow-300/20 to-yellow-500/10 text-[11px] font-black tracking-[0.12em] text-yellow-200 shadow-[0_0_24px_rgba(250,204,21,0.12)]">
-              EE
-            </div>
-            <div>
-              <p className="text-[13px] font-semibold tracking-[0.16em] text-white uppercase">Eagle Elites</p>
-              <p className="mt-0.5 text-[10px] font-medium tracking-wide text-zinc-500">Student portal</p>
-            </div>
-          </div>
+          <Logo size={38} subtitle="Rider portal" />
 
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="relative">
@@ -841,7 +673,8 @@ export default function Dashboard() {
                 }}
                 className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/8 bg-white/[0.03] text-sm text-zinc-300 transition hover:border-yellow-400/20 hover:text-yellow-200"
               >
-                <span>🔔</span>
+                <Icon name="bell" size={18} />
+                <span className="sr-only">Announcements</span>
                 {unreadCount > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-yellow-400 text-[10px] font-bold text-black">
                     {unreadCount > 9 ? '9+' : unreadCount}
@@ -850,7 +683,7 @@ export default function Dashboard() {
               </button>
 
               {showNotifications && (
-                <div className="absolute right-0 top-12 z-50 w-80 overflow-hidden rounded-2xl border border-white/10 bg-[#10161d] shadow-[0_20px_50px_rgba(0,0,0,0.32)]">
+                <div className="ee-pop absolute right-0 top-12 z-50 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-white/10 bg-[#10161d] shadow-[0_20px_50px_rgba(0,0,0,0.32)]">
                   <div className="border-b border-white/5 p-4">
                     <p className="text-sm font-bold text-white">
                       Announcements
@@ -909,7 +742,7 @@ export default function Dashboard() {
                 <span className="hidden text-[10px] text-zinc-500 sm:inline" aria-hidden="true">▾</span>
               </button>
               {showProfileMenu && (
-                <nav aria-label="Account and more sections" className="absolute right-0 top-12 z-[60] w-60 overflow-hidden rounded-2xl border border-white/10 bg-[#10161d] p-2 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
+                <nav aria-label="Account and more sections" className="ee-pop absolute right-0 top-12 z-[60] w-60 overflow-hidden rounded-2xl border border-white/10 bg-[#10161d] p-2 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
                   <div className="border-b border-white/[0.07] px-3 py-2.5 sm:hidden">
                     <p className="truncate text-sm font-semibold text-white">{profile?.full_name || 'Account'}</p>
                     <p className="mt-1 text-xs text-zinc-500">{profile?.email}</p>
@@ -939,42 +772,66 @@ export default function Dashboard() {
                 await supabase.auth.signOut();
                 router.push('/auth/login');
               }}
-              className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2 text-[11px] font-medium tracking-[0.08em] text-zinc-200 uppercase transition hover:border-yellow-400/20 hover:text-yellow-200"
+              aria-label="Log out"
+              className="flex h-9 items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-2.5 text-xs font-medium text-zinc-300 transition hover:border-yellow-400/20 hover:text-yellow-200"
             >
-              Log out
+              <Icon name="logout" size={17} />
+              <span className="hidden sm:inline">Log out</span>
             </button>
           </div>
         </div>
       </nav>
 
-      <main className="relative z-10 mx-auto max-w-7xl space-y-6 px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
-        <nav aria-label="Student dashboard" className="sticky top-[65px] z-40 -mx-4 border-y border-white/[0.06] bg-[#090d13]/95 px-4 py-2 backdrop-blur-xl sm:static sm:mx-0 sm:rounded-2xl sm:border sm:bg-[#0b1017]/90 sm:p-2">
-          <div className="flex gap-2 overflow-x-auto">
-            {primaryTabs.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                aria-current={activeTab === tab.key ? 'page' : undefined}
-                onClick={() => changeTab(tab.key)}
-                className={`flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition ${activeTab === tab.key ? 'bg-yellow-400 text-slate-950 shadow-[0_8px_22px_rgba(250,204,21,0.17)]' : 'text-zinc-400 hover:bg-white/[0.05] hover:text-white'}`}
-              >
-                <span aria-hidden="true" className="text-base">{tab.icon}</span>{tab.label}
-                {tab.key === 'payments' && unpaidPayments.length > 0 && <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{unpaidPayments.length}</span>}
-              </button>
-            ))}
-            <div className="ml-auto flex shrink-0 items-center border-l border-white/[0.08] pl-2">
-              <button type="button" onClick={() => changeTab('help')} aria-current={activeTab === 'help' ? 'page' : undefined} className={`flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium transition ${activeTab === 'help' ? 'bg-yellow-400 text-slate-950' : 'text-zinc-400 hover:bg-white/[0.05] hover:text-white'}`}>
-                <span aria-hidden="true">?</span><span>Help</span>
-              </button>
-            </div>
+      <main className="relative z-10 mx-auto max-w-6xl space-y-6 px-4 pb-28 pt-5 sm:px-6 sm:py-8">
+        <nav aria-label="Student dashboard" className="ee-tabbar hidden sm:flex">
+          {primaryTabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              aria-current={activeTab === tab.key ? 'page' : undefined}
+              onClick={() => changeTab(tab.key)}
+              className={`flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition ${activeTab === tab.key ? 'bg-yellow-400 text-[#15110a] shadow-[0_8px_22px_rgba(232,187,64,0.2)]' : 'text-zinc-400 hover:bg-white/[0.05] hover:text-white'}`}
+            >
+              <Icon name={tab.icon} size={17} />
+              {tab.label}
+              {tab.key === 'payments' && unpaidPayments.length > 0 && <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{unpaidPayments.length}</span>}
+            </button>
+          ))}
+          <button type="button" onClick={() => changeTab('help')} aria-current={activeTab === 'help' ? 'page' : undefined} className={`ml-auto flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-medium transition ${activeTab === 'help' ? 'bg-yellow-400 text-[#15110a]' : 'text-zinc-400 hover:bg-white/[0.05] hover:text-white'}`}>
+            <Icon name="help" size={17} /> Help
+          </button>
+        </nav>
+
+        {/* Phone: app-style bottom navigation */}
+        <nav aria-label="Student dashboard" className="fixed inset-x-0 bottom-0 z-50 border-t border-white/[0.08] bg-[#0a0d12]/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-xl sm:hidden">
+          <div className="grid grid-cols-5">
+            {mobileTabs.map((tab) => {
+              const active = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  aria-current={active ? 'page' : undefined}
+                  onClick={() => changeTab(tab.key)}
+                  className={`relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-semibold transition ${active ? 'text-yellow-200' : 'text-zinc-500'}`}
+                >
+                  <span className={`flex h-8 w-12 items-center justify-center rounded-full transition ${active ? 'bg-yellow-400/15' : ''}`}>
+                    <Icon name={tab.icon} size={20} />
+                  </span>
+                  {tab.short}
+                  {tab.key === 'payments' && unpaidPayments.length > 0 && <span className="absolute right-3 top-1 h-2 w-2 rounded-full bg-red-500" />}
+                </button>
+              );
+            })}
           </div>
         </nav>
 
         {isTabPending && <SectionLoading />}
 
+        <div key={activeTab} className="ee-enter">
         {activeTab === 'home' && (
           <div className="space-y-6">
-            <section className="relative overflow-hidden rounded-[30px] border border-white/[0.09] bg-[radial-gradient(ellipse_at_85%_0%,rgba(250,204,21,0.12),transparent_35%),linear-gradient(135deg,#151a22_0%,#0e131a_64%,#0b1016_100%)] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.2)] sm:p-7">
+            <section className="relative overflow-hidden rounded-3xl border border-white/[0.09] bg-[radial-gradient(ellipse_at_85%_0%,rgba(232,187,64,0.12),transparent_35%),linear-gradient(135deg,#151a22_0%,#0e131a_64%,#0b1016_100%)] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.2)] sm:p-7">
               <div className="pointer-events-none absolute -right-12 -top-24 h-64 w-64 rounded-full border border-yellow-300/[0.08]" />
               <div className="pointer-events-none absolute -right-3 -top-16 h-48 w-48 rounded-full border border-yellow-300/[0.06]" />
               <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -1001,16 +858,16 @@ export default function Dashboard() {
 
             {unpaidPayments.length > 0 && <div className="flex items-start gap-3 rounded-2xl border border-red-400/15 bg-red-400/[0.07] px-4 py-3.5"><span className="mt-0.5 text-red-200" aria-hidden="true">!</span><p className="text-sm leading-6 text-red-100/90">You have {unpaidPayments.length} unpaid payment{unpaidPayments.length > 1 ? 's' : ''}. Please review your balance.</p><button type="button" onClick={() => changeTab('payments')} className="ml-auto shrink-0 text-xs font-semibold text-red-200 hover:text-white">Review fees →</button></div>}
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              {summaryCards.map((item) => <button key={item.label} type="button" onClick={() => changeTab(item.tab)} className="group rounded-2xl border border-white/[0.08] bg-[#10151d]/90 p-4 text-left shadow-[0_12px_28px_rgba(0,0,0,0.12)] transition hover:-translate-y-0.5 hover:border-yellow-300/20 hover:bg-[#141a23] sm:rounded-[22px] sm:p-5">
-                <div className="flex items-center justify-between"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{item.label}</span><span className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.03] text-sm text-yellow-200">{item.icon}</span></div>
+            <div className="ee-stagger grid gap-3 sm:grid-cols-3">
+              {summaryCards.map((item) => <button key={item.label} type="button" onClick={() => changeTab(item.tab)} className="ee-lift group rounded-2xl border border-white/[0.08] bg-[#10151d]/90 p-4 text-left hover:border-yellow-300/25 hover:bg-[#141a23] sm:rounded-3xl sm:p-5">
+                <div className="flex items-center justify-between"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{item.label}</span><IconTile name={item.icon} /></div>
                 <p className={`mt-4 text-2xl font-semibold tracking-tight ${item.accent}`}>{item.value}</p>
                 <div className="mt-2 flex items-center justify-between gap-3"><span className="text-xs text-zinc-500">{item.hint}</span><span className="text-xs text-zinc-600 transition group-hover:text-yellow-200">Open →</span></div>
               </button>)}
             </div>
 
             <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-              <section className="rounded-[26px] border border-white/[0.08] bg-[#10151d] p-5 shadow-[0_18px_42px_rgba(0,0,0,0.14)] sm:p-6">
+              <section className="rounded-3xl border border-white/[0.08] bg-[#10151d] p-5 shadow-[0_18px_42px_rgba(0,0,0,0.14)] sm:p-6">
                 <div className="mb-5 flex items-start justify-between gap-3">
                   <div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-yellow-200/70">Travel plan</p><h2 className="mt-1 text-lg font-semibold text-white">Today&apos;s trip</h2></div>
                   {todaySchedule && (
@@ -1134,7 +991,7 @@ export default function Dashboard() {
                 </div>}
               </section>
 
-              <section className="rounded-[26px] border border-white/[0.08] bg-[#10151d] p-5 shadow-[0_18px_42px_rgba(0,0,0,0.14)] sm:p-6">
+              <section className="rounded-3xl border border-white/[0.08] bg-[#10151d] p-5 shadow-[0_18px_42px_rgba(0,0,0,0.14)] sm:p-6">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
@@ -1153,7 +1010,7 @@ export default function Dashboard() {
 
                 {!myDepartureGroup ? (
                   <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 p-5 text-center">
-                    <div className="mb-3 text-3xl">🎓</div>
+                    <IconTile name="users" className="mx-auto mb-3" />
                     <p className="text-base font-medium text-zinc-300">
                       No department group assigned yet
                     </p>
@@ -1257,14 +1114,14 @@ export default function Dashboard() {
 
                     {selectionSuccess && (
                       <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-                        ✅ Departure slot confirmed! Be at your stop 5–7 minutes
+                        Departure slot confirmed! Be at your stop 5–7 minutes
                         early.
                       </div>
                     )}
 
                     {new Date().getHours() >= 10 ? (
                       <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-                        🔒 Selection closed at 10:00 AM
+                        Selection closed at 10:00 AM
                         {mySelection &&
                           todaySlots.find(
                             (slot) => slot.id === mySelection.slot_id,
@@ -1298,7 +1155,7 @@ export default function Dashboard() {
             </div>
 
             {holidays.length > 0 && (
-              <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5 shadow-[0_18px_35px_rgba(0,0,0,0.12)]">
+              <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5 shadow-[0_18px_35px_rgba(0,0,0,0.12)]">
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-yellow-500/20 bg-yellow-500/10 text-sm text-yellow-300">
@@ -1393,9 +1250,7 @@ export default function Dashboard() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-yellow-500/20 bg-yellow-500/10 text-base shadow-[0_0_20px_rgba(250,204,21,0.12)]">
-                          📅
-                        </span>
+                        <IconTile name="calendar" className="h-9 w-9" />
                         <div>
                           <p className="text-zinc-300 text-[10px] font-semibold uppercase tracking-[0.22em]">
                             Schedule overview
@@ -1412,13 +1267,13 @@ export default function Dashboard() {
                     </div>
 
                     <div className="grid gap-3 md:grid-cols-[1.5fr_0.8fr]">
-                      <div className="relative rounded-[24px] border border-white/8 bg-gradient-to-br from-zinc-900 via-zinc-900/95 to-zinc-800/70 p-4">
+                      <div className="relative rounded-3xl border border-white/8 bg-gradient-to-br from-zinc-900 via-zinc-900/95 to-zinc-800/70 p-4">
                         <div className="absolute left-6 top-5 bottom-5 w-px bg-gradient-to-b from-yellow-500/0 via-yellow-500/50 to-yellow-500/0" />
 
                         <div className="space-y-3">
                           {schedules.map((s, index) => (
                             <div key={s.id} className="relative pl-8">
-                              <span className="absolute left-2 top-5 h-3 w-3 rounded-full border border-yellow-300 bg-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.55)]" />
+                              <span className="absolute left-2 top-5 h-3 w-3 rounded-full border border-yellow-300 bg-yellow-400 shadow-[0_0_12px_rgba(232,187,64,0.55)]" />
 
                               <div className="rounded-2xl border border-white/8 bg-zinc-900/80 p-3 shadow-[0_12px_28px_rgba(0,0,0,0.14)]">
                                 <div className="flex items-center justify-between gap-3">
@@ -1450,7 +1305,7 @@ export default function Dashboard() {
                                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                                   <div className="rounded-xl border border-yellow-500/10 bg-yellow-500/5 p-3">
                                     <p className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                                      <span>🕘</span> Pickup
+                                      <Icon name="clock" size={14} /> Pickup
                                     </p>
                                     <p className="mt-2 text-base font-black text-yellow-200">
                                       {formatTime(s.arrival_time)}
@@ -1459,7 +1314,7 @@ export default function Dashboard() {
 
                                   <div className="rounded-xl border border-cyan-500/10 bg-cyan-500/5 p-3">
                                     <p className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                                      <span>🕙</span> Return
+                                      <Icon name="clock" size={14} /> Return
                                     </p>
                                     <p className="mt-2 text-base font-black text-cyan-200">
                                       {formatTime(s.departure_time)}
@@ -1473,7 +1328,7 @@ export default function Dashboard() {
                       </div>
 
                       <div className="space-y-3">
-                        <div className="rounded-[24px] border border-white/8 bg-gradient-to-br from-yellow-500/8 via-transparent to-transparent p-4">
+                        <div className="rounded-3xl border border-white/8 bg-gradient-to-br from-yellow-500/8 via-transparent to-transparent p-4">
                           <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                             Week summary
                           </p>
@@ -1526,7 +1381,7 @@ export default function Dashboard() {
                 <div className="rounded-2xl border border-white/8 bg-gradient-to-br from-zinc-800/80 to-zinc-900/80 p-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <h4 className="flex items-center gap-2 text-white font-semibold text-sm">
-                      <span className="text-base">🎓</span>
+                      <Icon name="users" size={16} />
                       Class days
                     </h4>
                     {isSundayToday && (
@@ -1556,7 +1411,7 @@ export default function Dashboard() {
                           }}
                           className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm transition ${
                             selected
-                              ? 'border-yellow-400/40 bg-yellow-400/10 text-white shadow-[0_0_0_1px_rgba(250,204,21,0.12)]'
+                              ? 'border-yellow-400/40 bg-yellow-400/10 text-white shadow-[0_0_0_1px_rgba(232,187,64,0.12)]'
                               : 'border-zinc-700 bg-zinc-900/60 text-zinc-400'
                           } ${!editable ? 'cursor-default opacity-80' : 'hover:border-zinc-500'}`}
                         >
@@ -1903,7 +1758,7 @@ export default function Dashboard() {
 
             {payments.length === 0 ? (
               <div className="text-center py-10">
-                <p className="text-3xl mb-3">💳</p>
+                <IconTile name="wallet" className="mx-auto mb-3" />
                 <p className="text-zinc-400 font-medium">
                   No payment records yet
                 </p>
@@ -1939,7 +1794,7 @@ export default function Dashboard() {
                             : 'bg-red-950 text-red-400 border border-red-800'
                         }`}
                       >
-                        {p.status === 'paid' ? '✓ Paid' : '⚠ Unpaid'}
+                        {p.status === 'paid' ? '✓ Paid' : 'Unpaid'}
                       </span>
                     </div>
                   </div>
@@ -2022,7 +1877,7 @@ export default function Dashboard() {
 
             {helpSuccess && (
               <div className="bg-green-950/60 border border-green-800 text-green-400 px-4 py-3 rounded-xl text-sm">
-                ✅ Message sent! Admin will respond shortly.
+                Message sent! The team will reply shortly.
               </div>
             )}
 
@@ -2063,7 +1918,7 @@ export default function Dashboard() {
 
         {activeTab === 'profile' && (
           <div className="space-y-4">
-            <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(250,204,21,0.14),_transparent_28%),linear-gradient(135deg,_rgba(18,22,30,0.96),_rgba(11,15,20,0.96))] p-5 shadow-[0_30px_60px_rgba(0,0,0,0.2)] sm:p-6">
+            <div className="overflow-hidden rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(232,187,64,0.14),_transparent_28%),linear-gradient(135deg,_rgba(18,22,30,0.96),_rgba(11,15,20,0.96))] p-5 shadow-[0_30px_60px_rgba(0,0,0,0.2)] sm:p-6">
               <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                 <div className="flex items-center gap-4">
                   <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-yellow-500/20 bg-gradient-to-br from-yellow-300/30 to-yellow-500/10 text-2xl font-black text-yellow-200">
@@ -2106,9 +1961,9 @@ export default function Dashboard() {
             )}
 
             <div className="grid gap-4 lg:grid-cols-2">
-              <div className="rounded-[28px] border border-white/10 bg-[#0d131c] p-5 sm:p-6">
+              <div className="rounded-3xl border border-white/10 bg-[#0d131c] p-5 sm:p-6">
                 <div className="mb-4 flex items-center gap-2">
-                  <span className="text-lg">👤</span>
+                  <Icon name="user" size={18} />
                   <h3 className="text-white font-bold text-lg">
                     Account details
                   </h3>
@@ -2146,9 +2001,9 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="rounded-[28px] border border-white/10 bg-[#0d131c] p-5 sm:p-6">
+              <div className="rounded-3xl border border-white/10 bg-[#0d131c] p-5 sm:p-6">
                 <div className="mb-4 flex items-center gap-2">
-                  <span className="text-lg">🔒</span>
+                  <Icon name="shield" size={18} />
                   <h3 className="text-white font-bold text-lg">
                     Change password
                   </h3>
@@ -2157,7 +2012,7 @@ export default function Dashboard() {
                 <div className="space-y-4">
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm z-10">
-                      🔒
+                      <Icon name="shield" size={16} />
                     </span>
                     <PasswordInput
                       autoComplete="new-password"
@@ -2169,11 +2024,11 @@ export default function Dashboard() {
                   </div>
 
                   {passwordError && (
-                    <p className="text-red-400 text-sm">⚠️ {passwordError}</p>
+                    <p role="alert" className="ee-enter text-sm text-red-300">{passwordError}</p>
                   )}
                   {passwordSuccess && (
                     <p className="text-green-400 text-sm">
-                      ✅ Password updated successfully!
+                      Password updated successfully.
                     </p>
                   )}
 
@@ -2189,6 +2044,7 @@ export default function Dashboard() {
             </div>
           </div>
         )}
+        </div>
       </main>
     </div>
   );

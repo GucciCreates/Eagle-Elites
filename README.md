@@ -55,6 +55,14 @@ The public homepage (`app/page.tsx`, `components/marketing/`) shows live route f
 - **Fees shown in the fare calculator** come from `lib/onboarding/pricing.ts`. Keep it in step with `public.onboarding_amount_due()` in the database.
 - **Google sign-in** must be enabled in Supabase; see [docs/GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md).
 
+## Design system
+
+- **Colours** live in `app/globals.css` under `@theme`. Tailwind's `yellow-*` and `zinc-*` scales are re-tuned to the Eagle Elites gold and blue-black, so existing classes stay on-brand. Change a colour there, not in individual pages.
+- **Shared styles:** `ee-card`, `ee-inset`, `ee-input`, `ee-label`, `ee-btn` + `ee-btn-primary`/`ee-btn-secondary`, `ee-chip`, `ee-tabbar`, `ee-eyebrow`. The admin light theme has overrides for each.
+- **Motion:** `ee-enter` (fade up on mount; add `key` to replay on tab change), `ee-stagger` (children one after another), `ee-reveal` (on scroll, CSS-only), `ee-pop` (menus), `ee-lift` (hover), `ee-skeleton` (loading). All are switched off for visitors who prefer reduced motion.
+- **Icons:** `components/ui/icons.tsx` (`<Icon name="bus" />`, `<IconTile name="wallet" />`). Use these instead of emoji.
+- **Loading screens:** `components/ui/brand-loader.tsx`.
+
 ## Database migrations
 
 Migration files are kept in `supabase/migrations/` with their existing timestamped names. Apply them to the intended Supabase project in migration order, review each migration before applying it, and take a database backup before any schema change. In particular, `20261010_rebuild_departure_schema.sql` drops and recreates departure tables and removes/re-adds a profile column; do not run it against data that must be preserved without a reviewed migration plan.

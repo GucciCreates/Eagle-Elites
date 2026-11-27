@@ -26,7 +26,7 @@ export default function FareCalculator({ routes }: { routes: LiveRoute[] }) {
   const badge = seatBadge(route.seatsLeft);
 
   return (
-    <div className="rounded-[2rem] border border-yellow-300/15 bg-[linear-gradient(160deg,rgba(250,204,21,0.08),rgba(11,16,24,0.95)_45%)] p-5 shadow-2xl shadow-black/40 sm:p-7">
+    <div className="rounded-[2rem] border border-yellow-300/15 bg-[linear-gradient(160deg,rgba(232,187,64,0.08),rgba(11,16,24,0.95)_45%)] p-5 shadow-2xl shadow-black/40 sm:p-7">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-yellow-300">Fare calculator</p>
         {badge && (
@@ -87,7 +87,7 @@ export default function FareCalculator({ routes }: { routes: LiveRoute[] }) {
       <div className="mt-5 grid gap-2 sm:grid-cols-2">
         <Link
           href="/auth/signup"
-          className="inline-flex min-h-12 items-center justify-center rounded-xl bg-yellow-400 px-4 text-sm font-bold text-slate-950 hover:bg-yellow-300"
+          className="ee-btn ee-btn-primary min-h-12"
         >
           {route.seatsLeft === 0 ? 'Join the waitlist' : 'Reserve this route'}
         </Link>

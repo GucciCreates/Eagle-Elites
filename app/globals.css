@@ -1,14 +1,46 @@
 @import 'tailwindcss';
 
-:root {
-  --background: #05070b;
-  --foreground: #f5f7fb;
-  --panel: rgba(15, 19, 26, 0.82);
-  --panel-strong: rgba(17, 24, 39, 0.9);
-  --stroke: rgba(255, 255, 255, 0.08);
-  --muted: #a4acbb;
-  --yellow: #facc15;
-  --yellow-strong: #fbbf24;
+/* ==========================================================================
+   Eagle Elites design system
+   Brand colours are defined once here. Tailwind's yellow and zinc scales are
+   re-tuned to the brand, so every existing `yellow-*` / `zinc-*` class across
+   the app picks up the refined gold and cool ink palette automatically.
+   ========================================================================== */
+
+@theme {
+  /* Brand gold: warmer and calmer than stock yellow, easy on bright phones. */
+  --color-yellow-50: #fefaec;
+  --color-yellow-100: #fcf2cf;
+  --color-yellow-200: #f7e3a3;
+  --color-yellow-300: #f1cf6c;
+  --color-yellow-400: #e8bb40;
+  --color-yellow-500: #d39f25;
+  --color-yellow-600: #ad7e18;
+  --color-yellow-700: #866115;
+  --color-yellow-800: #5f4512;
+  --color-yellow-900: #3d2d0d;
+  --color-yellow-950: #221906;
+
+  /* Cool ink neutrals that match the blue-black brand background. */
+  --color-zinc-50: #f6f7f9;
+  --color-zinc-100: #eceef2;
+  --color-zinc-200: #d6dae1;
+  --color-zinc-300: #b6bdc8;
+  --color-zinc-400: #8e97a6;
+  --color-zinc-500: #737c8c;
+  --color-zinc-600: #525a68;
+  --color-zinc-700: #343b47;
+  --color-zinc-800: #1e242d;
+  --color-zinc-900: #131820;
+  --color-zinc-950: #0b0e13;
+
+  --color-brand: #e8bb40;
+  --color-brand-soft: #f1cf6c;
+  --color-ink: #06080c;
+  --color-surface: #0d1219;
+  --color-surface-raised: #121821;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @theme inline {
@@ -18,26 +50,279 @@
   --font-mono: var(--font-geist-mono);
 }
 
+:root {
+  --background: #06080c;
+  --foreground: #f5f7fb;
+  --yellow: #e8bb40;
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
 }
 
 html {
   scroll-behavior: smooth;
-}
-
-html:focus-within {
-  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
 }
 
 :focus-visible {
-  outline: 3px solid var(--yellow);
+  outline: 2px solid var(--yellow);
   outline-offset: 3px;
 }
 
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(232, 187, 64, 0.08), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.07), transparent 30%),
+    var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  letter-spacing: -0.015em;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms var(--ease-out-soft);
+}
+
+button:not(:disabled):active,
+a[class*='rounded']:active {
+  transform: scale(0.98);
+}
+
+select {
+  color-scheme: dark;
+}
+
+::selection {
+  background: rgba(232, 187, 64, 0.35);
+  color: white;
+}
+
+/* Thin, unobtrusive scrollbars for tab rows and panels. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+/* ==========================================================================
+   Shared components (use these instead of repeating long class strings)
+   ========================================================================== */
+@layer components {
+  .ee-card {
+    border-radius: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(19, 24, 32, 0.92), rgba(13, 18, 25, 0.92));
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
+    padding: 1.25rem;
+  }
+
+  .ee-inset {
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.025);
+    padding: 1rem;
+  }
+
+  .ee-input {
+    width: 100%;
+    min-height: 2.75rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-zinc-700);
+    background: var(--color-zinc-950);
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    color: white;
+    outline: none;
+  }
+
+  .ee-input::placeholder {
+    color: var(--color-zinc-500);
+  }
+
+  .ee-input:focus {
+    border-color: var(--color-yellow-400);
+    box-shadow: 0 0 0 3px rgba(232, 187, 64, 0.16);
+  }
+
+  .ee-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-zinc-300);
+  }
+
+  .ee-eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--color-yellow-300);
+  }
+
+  .ee-btn {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    padding: 0.625rem 1.125rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .ee-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  .ee-btn-primary {
+    background: linear-gradient(180deg, var(--color-yellow-300), var(--color-yellow-400));
+    color: #15110a;
+    box-shadow: 0 10px 24px rgba(232, 187, 64, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+
+  .ee-btn-primary:not(:disabled):hover {
+    filter: brightness(1.06);
+    box-shadow: 0 14px 30px rgba(232, 187, 64, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+
+  .ee-btn-secondary {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.04);
+    color: white;
+    font-weight: 600;
+  }
+
+  .ee-btn-secondary:not(:disabled):hover {
+    border-color: rgba(232, 187, 64, 0.4);
+    background: rgba(255, 255, 255, 0.07);
+  }
+
+  .ee-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-zinc-200);
+  }
+
+  /* Segmented tab bar used by every dashboard. */
+  .ee-tabbar {
+    display: flex;
+    gap: 0.25rem;
+    overflow-x: auto;
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(11, 14, 19, 0.85);
+    padding: 0.3rem;
+    backdrop-filter: blur(16px);
+  }
+}
+
+/* ==========================================================================
+   Motion. Everything below is switched off for reduced-motion users.
+   ========================================================================== */
+@keyframes ee-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ee-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ee-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Page / tab content entering. Re-mount with a `key` to replay. */
+.ee-enter {
+  animation: ee-fade-up 420ms var(--ease-out-soft) both;
+}
+
+/* Children enter one after another. */
+.ee-stagger > * {
+  animation: ee-fade-up 480ms var(--ease-out-soft) both;
+}
+.ee-stagger > *:nth-child(2) { animation-delay: 50ms; }
+.ee-stagger > *:nth-child(3) { animation-delay: 100ms; }
+.ee-stagger > *:nth-child(4) { animation-delay: 150ms; }
+.ee-stagger > *:nth-child(5) { animation-delay: 200ms; }
+.ee-stagger > *:nth-child(6) { animation-delay: 250ms; }
+.ee-stagger > *:nth-child(n + 7) { animation-delay: 300ms; }
+
+/* Dropdowns and popovers. */
+.ee-pop {
+  transform-origin: top right;
+  animation: ee-pop 180ms var(--ease-out-soft) both;
+}
+
+/* Loading placeholders. */
+.ee-skeleton {
+  border-radius: 0.75rem;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(255, 255, 255, 0.09) 37%, rgba(255, 255, 255, 0.04) 63%);
+  background-size: 200% 100%;
+  animation: ee-shimmer 1.4s linear infinite;
+}
+
+/* Hover lift for clickable cards. */
+.ee-lift {
+  transition:
+    transform 220ms var(--ease-out-soft),
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+.ee-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.32);
+}
+
+/* Sections reveal while scrolling: CSS-only, no JavaScript. Browsers without
+   scroll-driven animations simply show the content. */
+@supports (animation-timeline: view()) {
+  .ee-reveal {
+    animation: ee-fade-up linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 35%;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  html,
-  html:focus-within {
+  html {
     scroll-behavior: auto;
   }
 
@@ -46,103 +331,18 @@ html:focus-within {
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
-}
 
-body {
-  min-height: 100vh;
-  background:
-    radial-gradient(
-      circle at top left,
-      rgba(250, 204, 21, 0.12),
-      transparent 25%
-    ),
-    radial-gradient(
-      circle at bottom right,
-      rgba(59, 130, 246, 0.1),
-      transparent 28%
-    ),
-    var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
-  letter-spacing: -0.02em;
-}
-
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-  background-size: 24px 24px;
-  mask-image: radial-gradient(circle at center, black 35%, transparent 100%);
-}
-
-button,
-input,
-select,
-textarea {
-  transition: all 180ms ease;
-}
-
-::selection {
-  background: rgba(250, 204, 21, 0.35);
-  color: white;
-}
-
-@layer utilities {
-  .glass-panel {
-    background: linear-gradient(
-      180deg,
-      rgba(17, 24, 39, 0.8),
-      rgba(9, 12, 18, 0.9)
-    );
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
-    backdrop-filter: blur(14px);
+  .ee-reveal {
+    animation: none !important;
   }
 
-  .soft-ring {
-    box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.02),
-      0 10px 25px rgba(0, 0, 0, 0.32);
-  }
-}
-
-/* Reduce the glare of saturated gold accents on small, bright phone screens. */
-@media (max-width: 639px) {
-  :root {
-    --background: #101318;
-    --yellow: #d8b85f;
-    --yellow-strong: #dfc36f;
-  }
-
-  body {
-    background:
-      radial-gradient(circle at top left, rgba(216, 184, 95, 0.045), transparent 25%),
-      radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.07), transparent 28%),
-      var(--background);
-  }
-
-  [class~='bg-yellow-400'],
-  [class~='bg-yellow-300'],
-  [class~='bg-[#facc15]'] {
-    background-color: #d8b85f !important;
-  }
-
-  [class~='text-yellow-300'],
-  [class~='text-yellow-200'] {
-    color: #e4cc86 !important;
-  }
-
-  [class~='bg-gradient-to-r'][class~='from-yellow-300'],
-  [class~='bg-gradient-to-r'][class~='from-[#facc15]'] {
-    background-image: none !important;
-    background-color: #d8b85f !important;
+  /* SVG <animate> ignores CSS durations, so hide those moving parts. */
+  .ee-motion-only {
+    display: none;
   }
 }
 
@@ -259,7 +459,7 @@ textarea {
 .admin-shell[data-admin-theme='light'] [class*='text-yellow-300'],
 .admin-shell[data-admin-theme='light'] [class*='text-yellow-400'],
 .admin-shell[data-admin-theme='light'] [class*='text-amber-200'],
-.admin-shell[data-admin-theme='light'] [class*='text-[#facc15]'] {
+.admin-shell[data-admin-theme='light'] [class*='text-[#e8bb40]'] {
   color: #80620a !important;
 }
 
@@ -280,7 +480,7 @@ textarea {
 
 .admin-shell[data-admin-theme='light'] [class*='bg-yellow-400/'],
 .admin-shell[data-admin-theme='light'] [class*='bg-yellow-500/'],
-.admin-shell[data-admin-theme='light'] [class*='bg-[#facc15]/'] {
+.admin-shell[data-admin-theme='light'] [class*='bg-[#e8bb40]/'] {
   background-color: #f8efcf !important;
 }
 
@@ -321,7 +521,41 @@ textarea {
   color: #8993a3 !important;
 }
 
-/* ---- Landing page motion (disabled by the reduced-motion rule above) ---- */
+
+/* Shared ee-* components in the admin light theme. */
+.admin-shell[data-admin-theme='light'] .ee-card {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-stroke) !important;
+  box-shadow: 0 10px 30px rgb(32 41 57 / 0.06) !important;
+}
+
+.admin-shell[data-admin-theme='light'] .ee-inset,
+.admin-shell[data-admin-theme='light'] .ee-chip {
+  background: var(--admin-inset) !important;
+  border-color: var(--admin-stroke) !important;
+  color: var(--admin-ink) !important;
+}
+
+.admin-shell[data-admin-theme='light'] .ee-tabbar {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-stroke) !important;
+}
+
+.admin-shell[data-admin-theme='light'] .ee-btn-secondary {
+  background: var(--admin-surface) !important;
+  border-color: #cfd6e0 !important;
+  color: var(--admin-ink) !important;
+}
+
+.admin-shell[data-admin-theme='light'] .ee-input {
+  background: var(--admin-surface) !important;
+  border-color: #cfd6e0 !important;
+  color: var(--admin-ink) !important;
+}
+
+/* ==========================================================================
+   Landing page motion
+   ========================================================================== */
 @keyframes ee-ride {
   0% { top: 2.1rem; }
   45%, 55% { top: 5.6rem; }
@@ -347,7 +581,7 @@ textarea {
 }
 
 .ee-marquee {
-  animation: ee-marquee 32s linear infinite;
+  animation: ee-marquee 36s linear infinite;
 }
 
 .ee-marquee:hover {
@@ -356,4 +590,36 @@ textarea {
 
 .ee-marquee-mask {
   mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
+}
+
+@keyframes ee-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.ee-float {
+  animation: ee-float 7s ease-in-out infinite;
+}
+
+@keyframes ee-glow {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.06); }
+}
+
+.ee-glow {
+  animation: ee-glow 9s ease-in-out infinite;
+}
+
+/* Animated gold sheen for headline accents. */
+@keyframes ee-sheen {
+  to { background-position: 200% center; }
+}
+
+.ee-gold-text {
+  background: linear-gradient(100deg, #f7e3a3 0%, #e8bb40 30%, #fff4cf 50%, #e8bb40 70%, #d39f25 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: ee-sheen 6s linear infinite;
 }

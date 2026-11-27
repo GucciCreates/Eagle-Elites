@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Logo from '@/components/brand/logo';
+import Icon, { IconTile, type IconName } from '@/components/ui/icons';
 import CoverageSearch from '@/components/marketing/coverage-search';
 import FareCalculator from '@/components/marketing/fare-calculator';
 import SignupCta from '@/components/marketing/signup-cta';
@@ -10,12 +11,12 @@ import type { LandingData } from '@/lib/public/landing-data';
 import { seatBadge } from '@/lib/public/seats';
 
 const VEHICLES = [
-  { name: 'Coaster', note: 'Main campus runs', icon: '🚌' },
-  { name: 'Executive Coaster', note: 'Extra legroom', icon: '🚌' },
-  { name: 'Toyota Hiace', note: 'Smaller routes', icon: '🚐' },
-  { name: 'Hiace Grand Cabin', note: 'High roof, AC', icon: '🚐' },
-  { name: 'Mercedes van', note: 'Premium groups', icon: '🚙' },
-];
+  { name: 'Coaster', note: 'Main campus runs', icon: 'bus' },
+  { name: 'Executive Coaster', note: 'Extra legroom', icon: 'bus' },
+  { name: 'Toyota Hiace', note: 'Smaller routes', icon: 'van' },
+  { name: 'Hiace Grand Cabin', note: 'High roof, AC', icon: 'van' },
+  { name: 'Mercedes van', note: 'Premium groups', icon: 'car' },
+] satisfies { name: string; note: string; icon: IconName }[];
 
 const STEPS = [
   { title: 'Create your account', body: 'Sign up with Google in one tap, or with your email.' },
@@ -24,22 +25,22 @@ const STEPS = [
   { title: 'Get approved & ride', body: `The team reviews applications within about ${EXPECTED_REVIEW_HOURS} business hours. Then your seat, vehicle and driver show up in your dashboard.` },
 ];
 
-const PORTAL_FEATURES = [
-  { icon: '🎟️', title: 'Daily seat confirmation', body: 'See tomorrow’s vehicle, driver and contact, and confirm your seat in a tap.' },
-  { icon: '🗓️', title: 'Weekly timetable', body: 'Set arrival and departure per day to match your classes. Change a trip up to 8 hours before it.' },
-  { icon: '💬', title: 'WhatsApp alerts', body: 'Approvals, fee reminders, holidays and vehicle changes come straight to WhatsApp.' },
-  { icon: '🧾', title: 'Payments in one place', body: 'Monthly fee status, receipts and history — no more chasing screenshots.' },
-  { icon: '🛟', title: 'Built-in help desk', body: 'Raise an issue from your dashboard and track the reply.' },
-  { icon: '🎁', title: 'Free annual trip', body: 'Registered passengers get a free annual trip with us.' },
+const PORTAL_FEATURES: { icon: IconName; title: string; body: string }[] = [
+  { icon: 'ticket', title: 'Daily seat confirmation', body: 'See tomorrow’s vehicle, driver and contact, and confirm your seat in a tap.' },
+  { icon: 'calendar', title: 'Weekly timetable', body: 'Set arrival and departure per day to match your classes. Change a trip up to 8 hours before it.' },
+  { icon: 'chat', title: 'WhatsApp alerts', body: 'Approvals, fee reminders, holidays and vehicle changes come straight to WhatsApp.' },
+  { icon: 'receipt', title: 'Payments in one place', body: 'Monthly fee status, receipts and history — no more chasing screenshots.' },
+  { icon: 'lifebuoy', title: 'Built-in help desk', body: 'Raise an issue from your dashboard and track the reply.' },
+  { icon: 'gift', title: 'Free annual trip', body: 'Registered passengers get a free annual trip with us.' },
 ];
 
-const SAFETY = [
-  { title: 'Live GPS tracking', body: 'Know where the vehicle is — no more waiting at the stop guessing.' },
-  { title: 'Attendance on every trip', body: 'Drivers mark each passenger present or absent as they board.' },
-  { title: 'Guardian on file', body: 'A parent or guardian contact is part of every application.' },
-  { title: 'Assigned, registered drivers', body: 'Each trip has a named driver and contact you can see in advance.' },
-  { title: '24/7 WhatsApp support', body: 'A real person on WhatsApp, any time of day.' },
-  { title: 'Registered company', body: `${BRAND.legalName}. ${BRAND.registration}.` },
+const SAFETY: { icon: IconName; title: string; body: string }[] = [
+  { icon: 'gps', title: 'Live GPS tracking', body: 'Know where the vehicle is — no more waiting at the stop guessing.' },
+  { icon: 'clipboard', title: 'Attendance on every trip', body: 'Drivers mark each passenger present or absent as they board.' },
+  { icon: 'users', title: 'Guardian on file', body: 'A parent or guardian contact is part of every application.' },
+  { icon: 'user', title: 'Assigned, registered drivers', body: 'Each trip has a named driver and contact you can see in advance.' },
+  { icon: 'chat', title: '24/7 WhatsApp support', body: 'A real person on WhatsApp, any time of day.' },
+  { icon: 'shield', title: 'Registered company', body: `${BRAND.legalName}. ${BRAND.registration}.` },
 ];
 
 const FAQ = [
@@ -75,8 +76,8 @@ const FAQ = [
 
 function SectionHeading({ eyebrow, title, body }: { eyebrow: string; title: string; body?: string }) {
   return (
-    <div className="max-w-2xl">
-      <p className="text-xs font-bold uppercase tracking-[0.22em] text-yellow-300">{eyebrow}</p>
+    <div className="ee-reveal max-w-2xl">
+      <p className="ee-eyebrow">{eyebrow}</p>
       <h2 className="mt-3 text-3xl font-black tracking-tight text-balance sm:text-4xl">{title}</h2>
       {body && <p className="mt-3 text-sm leading-7 text-zinc-400 sm:text-base">{body}</p>}
     </div>
@@ -90,9 +91,9 @@ function LiveTripCard() {
     { name: 'Campus gate', time: '7:50 AM', done: false },
   ];
   return (
-    <div className="relative mx-auto w-full max-w-md">
-      <div aria-hidden="true" className="absolute -inset-10 -z-10 rounded-full bg-yellow-300/10 blur-3xl" />
-      <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#0d131c]/95 shadow-2xl shadow-black/50">
+    <div className="ee-enter relative mx-auto w-full max-w-md [animation-delay:200ms]">
+      <div aria-hidden="true" className="ee-glow absolute -inset-10 -z-10 rounded-full bg-yellow-300/10 blur-3xl" />
+      <div className="ee-float overflow-hidden rounded-[2rem] border border-white/10 bg-[#0d131c]/95 shadow-2xl shadow-black/50">
         <div className="flex items-center justify-between border-b border-dashed border-white/15 px-6 py-4">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-500">Boarding pass</p>
@@ -105,7 +106,7 @@ function LiveTripCard() {
 
         <div className="relative px-6 py-6">
           <div aria-hidden="true" className="absolute bottom-10 left-[35px] top-10 w-0.5 bg-gradient-to-b from-yellow-300 via-yellow-300/60 to-zinc-700" />
-          <div aria-hidden="true" className="ee-ride absolute left-[27px] flex h-[18px] w-[18px] items-center justify-center rounded-full bg-yellow-300 text-[10px] shadow-[0_0_0_6px_rgba(250,204,21,0.18)]">
+          <div aria-hidden="true" className="ee-ride absolute left-[27px] flex h-[18px] w-[18px] items-center justify-center rounded-full bg-yellow-300 text-[10px] shadow-[0_0_0_6px_rgba(232,187,64,0.18)]">
             ▲
           </div>
           <ol className="relative space-y-6">
@@ -169,16 +170,16 @@ export default function LandingPage({ data }: { data: LandingData }) {
       <main>
         {/* HERO */}
         <section id="home" className="relative isolate -mt-[68px] scroll-mt-24 overflow-hidden pt-[68px]">
-          <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_12%_10%,rgba(250,204,21,0.16),transparent_34%),radial-gradient(circle_at_92%_70%,rgba(56,189,248,0.10),transparent_32%)]" />
+          <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_12%_10%,rgba(232,187,64,0.16),transparent_34%),radial-gradient(circle_at_92%_70%,rgba(56,189,248,0.10),transparent_32%)]" />
           <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:44px_44px] [mask-image:radial-gradient(circle_at_30%_30%,black,transparent_70%)]" />
           <div className="mx-auto grid max-w-7xl gap-14 px-5 pb-20 pt-8 sm:px-8 sm:pt-20 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:pb-28">
-            <div>
+            <div className="ee-stagger">
               <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-yellow-300/25 bg-yellow-300/[0.06] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-yellow-100">
                 <span className="ee-pulse h-2 w-2 shrink-0 rounded-full bg-yellow-300" />
-                Admissions open<span className="hidden sm:inline"> · {BRAND.cities.join(' · ')}</span>
+                Admissions open<span className="hidden sm:inline">· {BRAND.cities.join(' · ')}</span>
               </p>
               <h1 className="max-w-3xl text-[2.75rem] font-black leading-[0.98] tracking-[-0.05em] text-balance sm:text-6xl xl:text-7xl">
-                Your daily ride to campus, <span className="bg-gradient-to-r from-yellow-200 via-yellow-300 to-amber-500 bg-clip-text text-transparent">handled.</span>
+                Your daily ride to campus, <span className="ee-gold-text">handled.</span>
               </h1>
               <p className="mt-6 max-w-xl text-base leading-7 text-zinc-300 sm:text-lg sm:leading-8">
                 Door-to-campus transport for students and staff, with live GPS, your own timetable, and WhatsApp updates. Book your seat in minutes{lowestFare !== null ? `, from ${formatPkr(lowestFare)} a month` : ''}.
@@ -264,7 +265,7 @@ export default function LandingPage({ data }: { data: LandingData }) {
                   {routes.map((route) => {
                     const badge = seatBadge(route.seatsLeft);
                     return (
-                      <article key={route.id} className="group flex flex-col rounded-2xl border border-white/10 bg-[#0b1018] p-5 transition hover:-translate-y-0.5 hover:border-yellow-300/30">
+                      <article key={route.id} className="ee-reveal ee-lift group flex flex-col rounded-2xl border border-white/10 bg-[#0b1018] p-5 hover:border-yellow-300/30">
                         <div className="flex items-start justify-between gap-3">
                           <h3 className="text-lg font-bold leading-6">{route.name}</h3>
                           {badge && <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${badge.tone}`}>{badge.text}</span>}
@@ -315,7 +316,7 @@ export default function LandingPage({ data }: { data: LandingData }) {
             <SectionHeading eyebrow="How it works" title="From sign-up to your first ride in four steps" />
             <ol className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               {STEPS.map((step, i) => (
-                <li key={step.title} className="relative rounded-2xl border border-white/10 bg-white/[0.025] p-6">
+                <li key={step.title} className="ee-reveal ee-lift relative rounded-2xl border border-white/10 bg-white/[0.025] p-6 hover:border-yellow-300/25">
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-400 text-sm font-black text-slate-950">{i + 1}</span>
                   <h3 className="mt-5 text-lg font-bold">{step.title}</h3>
                   <p className="mt-2 text-sm leading-6 text-zinc-400">{step.body}</p>
@@ -327,7 +328,7 @@ export default function LandingPage({ data }: { data: LandingData }) {
 
         {/* PORTAL */}
         <section className="px-5 pb-20 sm:px-8">
-          <div className="mx-auto max-w-7xl rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_90%_10%,rgba(250,204,21,0.10),transparent_40%),#0b1018] p-6 sm:p-10">
+          <div className="mx-auto max-w-7xl rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_90%_10%,rgba(232,187,64,0.10),transparent_40%),#0b1018] p-6 sm:p-10">
             <SectionHeading
               eyebrow="Your rider portal"
               title="Everything about your commute, in one place"
@@ -335,9 +336,9 @@ export default function LandingPage({ data }: { data: LandingData }) {
             />
             <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {PORTAL_FEATURES.map((f) => (
-                <article key={f.title} className="rounded-2xl border border-white/10 bg-black/20 p-5">
-                  <span className="text-2xl" aria-hidden="true">{f.icon}</span>
-                  <h3 className="mt-3 font-bold">{f.title}</h3>
+                <article key={f.title} className="ee-reveal ee-lift rounded-2xl border border-white/10 bg-black/20 p-5 hover:border-yellow-300/25">
+                  <IconTile name={f.icon} />
+                  <h3 className="mt-4 font-bold">{f.title}</h3>
                   <p className="mt-2 text-sm leading-6 text-zinc-400">{f.body}</p>
                 </article>
               ))}
@@ -355,8 +356,8 @@ export default function LandingPage({ data }: { data: LandingData }) {
             />
             <div className="grid gap-3 sm:grid-cols-2">
               {SAFETY.map((s) => (
-                <div key={s.title} className="flex gap-4 rounded-2xl border border-white/10 bg-[#0b1018] p-5">
-                  <span aria-hidden="true" className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/15 text-sm text-emerald-300">✓</span>
+                <div key={s.title} className="ee-reveal ee-lift flex gap-4 rounded-2xl border border-white/10 bg-[#0b1018] p-5 hover:border-emerald-300/25">
+                  <IconTile name={s.icon} tone="green" />
                   <div>
                     <h3 className="font-bold">{s.title}</h3>
                     <p className="mt-1 text-sm leading-6 text-zinc-400">{s.body}</p>
@@ -377,8 +378,8 @@ export default function LandingPage({ data }: { data: LandingData }) {
             />
             <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               {VEHICLES.map((v) => (
-                <div key={v.name} className="flex flex-col items-center rounded-2xl border border-white/10 bg-[#0b1018] p-5 text-center">
-                  <span className="text-4xl" aria-hidden="true">{v.icon}</span>
+                <div key={v.name} className="ee-reveal ee-lift group flex flex-col items-center rounded-2xl border border-white/10 bg-[#0b1018] p-6 text-center hover:border-yellow-300/25">
+                  <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-yellow-300/10 text-yellow-200 transition-transform duration-300 group-hover:scale-110"><Icon name={v.icon} size={30} /></span>
                   <span className="mt-3 text-sm font-bold text-zinc-100">{v.name}</span>
                   <span className="mt-1 text-xs text-zinc-500">{v.note}</span>
                 </div>
@@ -398,7 +399,7 @@ export default function LandingPage({ data }: { data: LandingData }) {
                     {item.q}
                     <span aria-hidden="true" className="text-xl text-yellow-300 transition group-open:rotate-45">+</span>
                   </summary>
-                  <p className="pb-5 text-sm leading-7 text-zinc-400">{item.a}</p>
+                  <p className="ee-enter pb-5 text-sm leading-7 text-zinc-400">{item.a}</p>
                 </details>
               ))}
             </div>
@@ -407,7 +408,7 @@ export default function LandingPage({ data }: { data: LandingData }) {
 
         {/* FINAL CTA */}
         <section className="px-5 py-20 sm:px-8">
-          <div className="relative mx-auto max-w-5xl overflow-hidden rounded-[2.5rem] border border-yellow-300/20 bg-[radial-gradient(circle_at_50%_0%,rgba(250,204,21,0.22),transparent_60%),#0b1018] px-6 py-14 text-center sm:px-12">
+          <div className="ee-reveal relative mx-auto max-w-5xl overflow-hidden rounded-[2.5rem] border border-yellow-300/20 bg-[radial-gradient(circle_at_50%_0%,rgba(232,187,64,0.22),transparent_60%),#0b1018] px-6 py-14 text-center sm:px-12">
             <h2 className="mx-auto max-w-2xl text-3xl font-black tracking-tight text-balance sm:text-5xl">Seats fill up every semester. Reserve yours today.</h2>
             <p className="mx-auto mt-4 max-w-xl text-zinc-300">It takes about five minutes. Use your Google account and you won’t even need a new password.</p>
             <div className="mt-8">

@@ -348,16 +348,16 @@ export default function OnboardingPayment() {
 
           <section className="grid gap-2 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4 text-xs text-zinc-400 sm:grid-cols-3">
             <p>
-              🏦 Payments go only to the registered account{' '}
+              Payments go only to the registered account{' '}
               <span className="text-zinc-200">{settings.account_title}</span>.
               We never ask you to pay a personal number.
             </p>
             <p>
-              🔒 Your receipt and ID are stored privately and visible only to
+              Your receipt and ID are stored privately and visible only to
               our admin team.
             </p>
             <p>
-              💬 Questions?{' '}
+              Questions?{' '}
               <a
                 href="https://wa.me/923225166580"
                 target="_blank"

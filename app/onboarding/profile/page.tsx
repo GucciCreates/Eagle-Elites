@@ -459,7 +459,7 @@ export default function OnboardingProfile() {
                   onClick={() => set('userType', type)}
                   className={`rounded-xl border py-3 text-sm font-semibold transition ${form.userType === type ? 'border-yellow-400 bg-yellow-400 text-black' : 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-500'}`}
                 >
-                  {type === 'student' ? '🎓 Student' : '👨‍🏫 Faculty / Staff'}
+                  {type === 'student' ? 'Student' : 'Faculty / Staff'}
                 </button>
               ))}
             </div>
@@ -718,7 +718,7 @@ export default function OnboardingProfile() {
                 onClick={() => set('wantsAc', ac)}
                 className={`rounded-xl border px-3 py-3 text-sm transition ${form.wantsAc === ac ? 'border-yellow-400 bg-yellow-400/10 text-white' : 'border-zinc-700 bg-zinc-900 text-zinc-300'}`}
               >
-                {ac ? `❄️ AC (+${formatPkr(AC_SURCHARGE)})` : '🚐 Standard'}
+                {ac ? `AC (+${formatPkr(AC_SURCHARGE)})` : 'Standard'}
               </button>
             ))}
           </div>
@@ -788,7 +788,7 @@ export default function OnboardingProfile() {
                 htmlFor="preferredMorning"
                 className="mb-1.5 block text-sm font-medium text-zinc-300"
               >
-                🌅 Morning pickup
+                Morning pickup
               </label>
               <TimeSelect
                 id="preferredMorning"
@@ -803,7 +803,7 @@ export default function OnboardingProfile() {
                 htmlFor="preferredEvening"
                 className="mb-1.5 block text-sm font-medium text-zinc-300"
               >
-                🌆 Evening return
+                Evening return
               </label>
               <TimeSelect
                 id="preferredEvening"

@@ -92,7 +92,7 @@ export default function FilePicker({
             />
           ) : (
             <p className="mb-3 rounded-xl bg-zinc-900 px-3 py-6 text-center text-sm text-zinc-300">
-              📄 {file.name}
+              {file.name}
             </p>
           )}
           <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
@@ -131,7 +131,7 @@ export default function FilePicker({
               onClick={() => cameraRef.current?.click()}
               className={`${button} sm:hidden`}
             >
-              📷 Take photo
+              Take photo
             </button>
             <button
               type="button"
@@ -139,7 +139,7 @@ export default function FilePicker({
               onClick={() => fileRef.current?.click()}
               className={button}
             >
-              {busy ? 'Preparing…' : '📁 Choose file'}
+              {busy ? 'Preparing…' : 'Choose file'}
             </button>
           </div>
         </>

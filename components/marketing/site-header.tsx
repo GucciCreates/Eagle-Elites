@@ -68,7 +68,7 @@ export default function SiteHeader() {
           {signedIn ? (
             <Link
               href={signedIn.href}
-              className="rounded-xl bg-yellow-400 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-yellow-300"
+              className="ee-btn ee-btn-primary min-h-10 px-4 py-2"
             >
               {signedIn.label} →
             </Link>
@@ -82,7 +82,7 @@ export default function SiteHeader() {
               </Link>
               <Link
                 href="/auth/signup"
-                className="rounded-xl bg-yellow-400 px-4 py-2.5 text-sm font-bold text-slate-950 shadow-lg shadow-yellow-500/10 transition hover:bg-yellow-300"
+                className="ee-btn ee-btn-primary min-h-10 px-4 py-2"
               >
                 Book my seat
               </Link>
