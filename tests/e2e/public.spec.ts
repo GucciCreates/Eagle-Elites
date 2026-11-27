@@ -33,6 +33,19 @@ test.describe('public site', () => {
     expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([]);
   });
 
+  test('landing page does not download the sign-in SDK before it loads', async ({ page }) => {
+    let loaded = false;
+    const early: Promise<string>[] = [];
+    page.on('load', () => { loaded = true; });
+    page.on('response', (response) => {
+      if (!loaded && response.url().endsWith('.js')) early.push(response.text().catch(() => ''));
+    });
+    await page.goto('/', { waitUntil: 'load' });
+    const scripts = await Promise.all(early);
+    expect(scripts.length).toBeGreaterThan(0);
+    expect(scripts.some((source) => source.includes('GoTrueClient')), 'Supabase SDK loaded before the landing page finished').toBe(false);
+  });
+
   test('unknown pages show the not-found screen', async ({ page }) => {
     const response = await page.goto('/this-page-does-not-exist');
     expect(response?.status()).toBe(404);

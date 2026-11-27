@@ -26,11 +26,24 @@ Effort: S (< ½ day) · M (½–2 days) · L (> 2 days).
 
 | # | Finding | Sev. | Effort | Phase |
 |---|---|---|---|---|
-| P1 | `app/dashboard/page.tsx` (~2,000 lines) and `app/admin/dashboard/page.tsx` (~2,700 lines) are single client components; every tab ships in one bundle. | Medium | L | 2 |
-| P2 | Admin dashboard loads all students, applications, messages, activity and fee history up front with `select('*')` and no pagination. | Medium | M | 2 |
+| P1 ✅ | `app/admin/dashboard/page.tsx` (~2,700 lines) and the rider dashboard (~2,000 lines) are single client components. **Measured:** the admin page's own code is ~23 KB compressed of ~240 KB loaded; React, Next.js and the Supabase SDK make up the rest. The five tabs already in their own files (Applications, Times, WhatsApp, Settings, proof viewer) now download only when opened. Splitting the remaining inline tabs would save ~10 KB for a large, risky rewrite, so it's left for when those tabs are next reworked. The bigger win was the landing page: it no longer downloads the Supabase SDK before it shows (see §2.1). | Medium | L | 2 ✅ |
+| P2 ✅ | Admin dashboard loaded every student column, every help message, announcement and departure slot ever written, and up to 5,000 fee payments, all up front. **Now:** only the student columns the screens use (falls back to the old query if a column is missing); all open/unread messages plus the latest 100 closed ones; the latest 100 announcements with the true total in the badge; departure slots from the last 14 days (older dates load when picked); fee payments only when the Fees tab opens, for the chosen month plus the latest 100; the monthly attendance report only on its tab. | Medium | M | 2 ✅ |
 | P5 | Rider dashboard used `.single()` for optional rows (today's trip, timetable, departure choice), so the database answered 406 and logged an error for every student without one. **Fixed in Phase 1** (`maybeSingle`). | Low | S | 1 ✅ |
-| P3 | Indexes vs. filters not yet reviewed for `profiles(status, role)`, `payments(student_id)`, `help_messages(status)`. | Low | S | 2 |
-| P4 | No Lighthouse baseline. | Low | S | 2 |
+| P3 ✅ | Indexes for the dashboards' filters: `supabase/migrations/20261127020000_performance_indexes.sql` (+ rollback). Adds indexes only, tested on PostgreSQL 16: re-runs cleanly, row counts unchanged, rollback removes them, and the slot, fee and student queries switch from full scans to index scans. **Owner to apply.** | Low | S | 2 ✅ |
+| P4 ✅ | Lighthouse baseline recorded in §2.1. | Low | S | 2 ✅ |
+
+### 2.1 Measurements (27 Nov 2026)
+
+Production build, served locally against the test backend; Lighthouse 12.8.2 mobile preset, median of 3 runs. "JS before load" is the compressed JavaScript the browser fetches before the page's `load` event (prefetching for later pages happens after it).
+
+| Page | JS before load: before → after | Lighthouse performance | Largest paint | Blocking time |
+|---|---|---|---|---|
+| `/` (landing) | 214 KB → **149 KB** (−30%) | 86 → **89** | 3.4 s → **3.1 s** | 279 → **221 ms** |
+| `/auth/login` | 220 KB → 220 KB | 96 → 95 (noise) | 2.6 → 2.7 s | 143 → 191 ms |
+| `/demo` | 230 KB → 230 KB | 91 → 91 | 3.1 → 3.1 s | 178 → 174 ms |
+| `/admin/dashboard` | 247 KB → 242 KB | — (sign-in needed) | — | — |
+
+Accessibility 96–100, best practices 100, SEO 100 on the landing page and sign-in (the demo scores 66 for SEO on purpose: it's marked `noindex`). The landing page's remaining delay is layout and paint work for the styled hero on a throttled phone, not JavaScript size. The admin data changes don't show in these numbers because the test backend holds only a few rows; they grow with the real database (every message, slot and payment was being downloaded on each visit).
 
 ## 3. UX, accessibility, SEO, quality
 
@@ -72,7 +85,7 @@ Reviewed all 60 policies exported from `pg_policies` in the live project.
 ## 5. Plan
 
 1. **Phase 1, security and correctness (done):** S1, S2, S4–S8 and P5 in code + one new migration with rollback, tested on PostgreSQL 16. S3 needs the owner check in §4; S9/S10 await a decision.
-2. **Phase 2, performance:** P1–P4.
+2. **Phase 2, performance (done):** P1–P4; the index migration awaits the owner.
 3. **Phase 3, UI/UX:** U1–U4.
 4. **Phase 4, accessibility and SEO:** A1–A2 and a full WCAG 2.2 AA pass.
 5. **Phase 5, quality and operations:** Q1–Q2, CI, docs.
