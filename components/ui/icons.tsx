@@ -31,7 +31,15 @@ export type IconName =
   | 'sun'
   | 'moon'
   | 'arrow-right'
-  | 'arrow-left';
+  | 'arrow-left'
+  | 'arrow-up-right'
+  | 'phone'
+  | 'mail'
+  | 'search'
+  | 'snow'
+  | 'plus'
+  | 'whatsapp'
+  | 'seat';
 
 const PATHS: Record<IconName, string> = {
   ticket: 'M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4V8Zm11-2v12',
@@ -64,6 +72,14 @@ const PATHS: Record<IconName, string> = {
   moon: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z',
   'arrow-right': 'M5 12h14m-5-5 5 5-5 5',
   'arrow-left': 'M19 12H5m5-5-5 5 5 5',
+  'arrow-up-right': 'M7 17 17 7m-8 0h8v8',
+  phone: 'M5 4h3.5l1.5 4-2 1.5a11 11 0 0 0 6.5 6.5L16 14l4 1.5V19a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1Z',
+  mail: 'M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5v-11Zm.5.5L12 12.5 19.5 7',
+  search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm9 2-4-4',
+  snow: 'M12 3v18m-7.8-4.5 15.6-9m-15.6 0 15.6 9M9.5 4.5 12 7l2.5-2.5m-5 15L12 17l2.5 2.5',
+  plus: 'M12 5v14m-7-7h14',
+  whatsapp: 'M12 20.5a8.5 8.5 0 1 0-7.3-4.2L3.5 20.5l4.3-1.1a8.5 8.5 0 0 0 4.2 1.1Zm-3-11.8c.2-.5.5-.7.9-.7h.5c.2 0 .4.1.5.4l.8 1.8c.1.2 0 .5-.1.6l-.6.7a6.5 6.5 0 0 0 3 2.9l.7-.7c.2-.2.4-.2.6-.1l1.8.8c.3.1.4.3.4.5v.5c0 .4-.2.8-.7 1-1 .5-2.5.4-4.4-.8a10 10 0 0 1-3.1-3.4c-.9-1.6-.8-2.8-.3-3.5Z',
+  seat: 'M7 4h7a2 2 0 0 1 2 2v7H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm-2 9v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3M8 17v3m8-3v3',
 };
 
 export default function Icon({

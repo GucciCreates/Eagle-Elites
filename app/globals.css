@@ -27,7 +27,7 @@
   --color-zinc-200: #d6dae1;
   --color-zinc-300: #b6bdc8;
   --color-zinc-400: #8e97a6;
-  --color-zinc-500: #737c8c;
+  --color-zinc-500: #7d8696;
   --color-zinc-600: #525a68;
   --color-zinc-700: #343b47;
   --color-zinc-800: #1e242d;
@@ -46,8 +46,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-archivo);
+  --font-mono: var(--font-plex-mono);
 }
 
 :root {
@@ -78,8 +78,8 @@ body {
     radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.07), transparent 30%),
     var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
-  letter-spacing: -0.015em;
+  font-family: var(--font-archivo), Arial, Helvetica, sans-serif;
+  letter-spacing: -0.01em;
   text-rendering: optimizeLegibility;
 }
 
@@ -95,8 +95,8 @@ textarea {
     transform 160ms var(--ease-out-soft);
 }
 
-button:not(:disabled):active,
-a[class*='rounded']:active {
+button:not(:disabled):not(.ee-btn):active,
+a[class*='rounded']:not(.ee-btn):active {
   transform: scale(0.98);
 }
 
@@ -171,45 +171,236 @@ select {
     color: var(--color-yellow-300);
   }
 
+  /* ----------------------------------------------------------------------
+     Buttons: one system everywhere.
+     Sizes: default 48px (touch-friendly), .ee-btn-lg 56px.
+     Variants: primary (gold), secondary (outline), light (white), whatsapp,
+     ghost, and ink / ink-outline for light surfaces.
+     States: hover, focus-visible ring, pressed, disabled, busy
+     (aria-busy="true" blocks repeat taps; add data-loading="true" to
+     replace the label with a spinner).
+     ---------------------------------------------------------------------- */
   .ee-btn {
+    --ee-spinner: #15110a;
+    position: relative;
     display: inline-flex;
-    min-height: 2.75rem;
+    min-height: 3rem;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    border-radius: 0.75rem;
-    padding: 0.625rem 1.125rem;
-    font-size: 0.875rem;
-    font-weight: 700;
+    border: 1px solid transparent;
+    border-radius: 0.875rem;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.9375rem;
+    font-weight: 650;
+    line-height: 1.2;
+    letter-spacing: -0.005em;
     white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      color 160ms ease,
+      box-shadow 200ms ease,
+      transform 160ms var(--ease-out-soft);
   }
 
-  .ee-btn:disabled {
+  /* A trailing arrow nudges forward on hover. */
+  .ee-btn > svg:last-child:not(:first-child) {
+    transition: transform 200ms var(--ease-out-soft);
+  }
+
+  .ee-btn:not(:disabled):hover > svg:last-child:not(:first-child) {
+    transform: translateX(3px);
+  }
+
+  .ee-btn:focus-visible {
+    outline: 2px solid var(--color-yellow-300);
+    outline-offset: 3px;
+  }
+
+  .ee-btn:not(:disabled):not([aria-busy='true']):active {
+    transform: translateY(1px) scale(0.985);
+  }
+
+  .ee-btn:disabled,
+  .ee-btn[aria-disabled='true'] {
     cursor: not-allowed;
-    opacity: 0.55;
+    opacity: 0.5;
+    box-shadow: none;
   }
 
+  /* Busy buttons ignore repeat taps. data-loading also swaps the label for a spinner. */
+  .ee-btn[aria-busy='true'] {
+    pointer-events: none;
+  }
+
+  .ee-btn[data-loading='true'] {
+    color: transparent !important;
+  }
+
+  .ee-btn[data-loading='true'] > * {
+    visibility: hidden;
+  }
+
+  .ee-btn[data-loading='true']::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 999px;
+    border: 2px solid var(--ee-spinner);
+    border-top-color: transparent;
+    animation: ee-spin 700ms linear infinite;
+  }
+
+  .ee-btn-lg {
+    min-height: 3.5rem;
+    border-radius: 1rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  /* Gold: solid fill, a bright top edge and a darker base, like a physical key. */
   .ee-btn-primary {
-    background: linear-gradient(180deg, var(--color-yellow-300), var(--color-yellow-400));
+    border-color: rgba(120, 84, 12, 0.35);
+    background: var(--color-yellow-300);
     color: #15110a;
-    box-shadow: 0 10px 24px rgba(232, 187, 64, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.45),
+      inset 0 -2px 0 rgba(120, 84, 12, 0.22),
+      0 1px 2px rgba(0, 0, 0, 0.35);
   }
 
   .ee-btn-primary:not(:disabled):hover {
-    filter: brightness(1.06);
-    box-shadow: 0 14px 30px rgba(232, 187, 64, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    background: #f5d97f;
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -2px 0 rgba(120, 84, 12, 0.22),
+      0 8px 20px -6px rgba(232, 187, 64, 0.45);
   }
 
+  .ee-btn-primary:not(:disabled):active {
+    background: var(--color-yellow-400);
+    box-shadow: inset 0 2px 3px rgba(120, 84, 12, 0.3);
+  }
+
+  /* Outline on dark backgrounds. */
   .ee-btn-secondary {
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    --ee-spinner: #fff;
+    border-color: rgba(255, 255, 255, 0.16);
     background: rgba(255, 255, 255, 0.04);
     color: white;
-    font-weight: 600;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
   .ee-btn-secondary:not(:disabled):hover {
-    border-color: rgba(232, 187, 64, 0.4);
-    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.32);
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .ee-btn-secondary:not(:disabled):active {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  /* White, for Google sign-in and other high-contrast actions. */
+  .ee-btn-light {
+    border-color: rgba(0, 0, 0, 0.08);
+    background: #fff;
+    color: #12161c;
+    box-shadow:
+      inset 0 -2px 0 rgba(0, 0, 0, 0.08),
+      0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+
+  .ee-btn-light:not(:disabled):hover {
+    background: #f3f5f8;
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 -2px 0 rgba(0, 0, 0, 0.08),
+      0 8px 20px -8px rgba(0, 0, 0, 0.5);
+  }
+
+  .ee-btn-whatsapp {
+    border-color: rgba(4, 80, 36, 0.35);
+    background: #25d366;
+    color: #04170d;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      inset 0 -2px 0 rgba(4, 80, 36, 0.25),
+      0 1px 2px rgba(0, 0, 0, 0.35);
+  }
+
+  .ee-btn-whatsapp:not(:disabled):hover {
+    background: #3ade79;
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      inset 0 -2px 0 rgba(4, 80, 36, 0.25),
+      0 8px 20px -6px rgba(37, 211, 102, 0.4);
+  }
+
+  .ee-btn-whatsapp:not(:disabled):active {
+    background: #20bd5a;
+    box-shadow: inset 0 2px 3px rgba(4, 80, 36, 0.3);
+  }
+
+  .ee-btn-ghost {
+    --ee-spinner: #fff;
+    color: var(--color-zinc-200);
+  }
+
+  .ee-btn-ghost:not(:disabled):hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: white;
+  }
+
+  /* Ink buttons for light surfaces (the fare receipt). */
+  .ee-btn-ink {
+    --ee-spinner: #fff;
+    background: #15110a;
+    color: #fff;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 1px 2px rgba(0, 0, 0, 0.25);
+  }
+
+  .ee-btn-ink:not(:disabled):hover {
+    background: #000;
+    transform: translateY(-1px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 18px -8px rgba(0, 0, 0, 0.55);
+  }
+
+  .ee-btn-ink-outline {
+    border-color: rgba(21, 17, 10, 0.25);
+    color: #15110a;
+  }
+
+  .ee-btn-ink-outline:not(:disabled):hover {
+    border-color: rgba(21, 17, 10, 0.6);
+    background: rgba(255, 255, 255, 0.45);
+  }
+
+  .ee-btn-ink:focus-visible,
+  .ee-btn-ink-outline:focus-visible {
+    outline-color: #15110a;
+  }
+
+  /* Heavy "signage" display type for marketing headlines. */
+  .ee-display {
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 0.98;
+  }
+
+  .ee-mono {
+    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-feature-settings: 'zero' 0;
+    letter-spacing: 0;
   }
 
   .ee-chip {
@@ -260,6 +451,12 @@ select {
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes ee-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -636,4 +833,53 @@ select {
   background-clip: text;
   color: transparent;
   animation: ee-sheen 6s linear infinite;
+}
+
+/* ==========================================================================
+   Transit line (landing hero). One orchestrated moment: the line draws
+   itself, then the stations light up in order. Static for reduced motion.
+   ========================================================================== */
+.ee-network-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(180deg, black, transparent 85%);
+}
+
+.ee-line-track {
+  background: linear-gradient(180deg, var(--color-yellow-300), var(--color-yellow-500));
+  transform-origin: top;
+  animation: ee-draw 900ms var(--ease-out-soft) both;
+}
+
+.ee-station {
+  animation: ee-station-in 420ms var(--ease-out-soft) both;
+}
+
+@keyframes ee-draw {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes ee-station-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Fare receipt: torn paper edge. */
+.ee-receipt::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 -9px 0;
+  height: 10px;
+  background: conic-gradient(from -45deg at bottom, #f4efe2 90deg, transparent 0) 50% / 16px 100%;
 }

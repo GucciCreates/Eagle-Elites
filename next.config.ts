@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
   experimental: {
     agentUpgrade: "security",
     agentFeedback: true,
+    // Styles arrive with the HTML instead of a render-blocking request.
+    // Tailwind keeps the CSS small, so this mainly speeds up first visits.
+    inlineCss: true,
   },
   cacheComponents: true,
   partialPrefetching: true,
