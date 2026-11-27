@@ -14,17 +14,14 @@ export default function GoogleButton({
   /** "light" is the high-contrast white button used on the landing page. */
   variant?: 'dark' | 'light';
 }) {
-  const look =
-    variant === 'light'
-      ? 'min-h-14 rounded-2xl border-white bg-white text-base text-slate-900 shadow-lg shadow-black/20 hover:bg-zinc-100'
-      : 'rounded-xl border-zinc-700 bg-zinc-900/70 text-sm text-zinc-100 hover:border-zinc-500 hover:bg-zinc-800';
+  const look = variant === 'light' ? 'ee-btn-light ee-btn-lg' : 'ee-btn-secondary';
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={loading || disabled}
       aria-busy={loading}
-      className={`flex w-full items-center justify-center gap-3 border px-4 py-3 font-semibold transition ${look} focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/50 disabled:cursor-not-allowed disabled:opacity-60`}
+      className={`ee-btn ${look} w-full gap-3`}
     >
       {loading ? (
         <span

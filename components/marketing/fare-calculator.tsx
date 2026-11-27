@@ -96,12 +96,12 @@ export default function FareCalculator({ routes }: { routes: LiveRoute[] }) {
             href={whatsappLink(`Hi Eagle Elites, the ${route.name} route shows as full. Please add me to the waitlist.`)}
             target="_blank"
             rel="noopener noreferrer"
-            className="ee-btn bg-[#15110a] text-white [--ee-spinner:#fff] hover:bg-black"
+            className="ee-btn ee-btn-ink"
           >
             Join the waitlist
           </a>
         ) : (
-          <Link prefetch={false} href="/auth/signup" className="ee-btn bg-[#15110a] text-white [--ee-spinner:#fff] hover:bg-black">
+          <Link prefetch={false} href="/auth/signup" className="ee-btn ee-btn-ink">
             Reserve this route <Icon name="arrow-right" size={16} />
           </Link>
         )}
@@ -111,7 +111,7 @@ export default function FareCalculator({ routes }: { routes: LiveRoute[] }) {
           )}
           target="_blank"
           rel="noopener noreferrer"
-          className="ee-btn border border-[#15110a]/25 text-[#15110a] hover:border-[#15110a]/60 hover:bg-white/40"
+          className="ee-btn ee-btn-ink-outline"
         >
           <Icon name="whatsapp" size={18} /> Ask about timings
         </a>
