@@ -3,12 +3,12 @@ import { Archivo, IBM_Plex_Mono } from 'next/font/google';
 import { BRAND, siteUrl } from '@/lib/brand';
 import './globals.css';
 
-// Archivo has a width axis: expanded cuts read like road and transit signage
-// for headlines, normal width for body text. One family, one font file.
+// Archivo: a grotesque with the plain, sturdy shapes of road and transit
+// signage. Weight axis only: the width axis doubled the file and cost
+// mid-range phones ~180 ms of main-thread work.
 const archivo = Archivo({
   variable: '--font-archivo',
   subsets: ['latin'],
-  axes: ['wdth'],
   display: 'swap',
 });
 

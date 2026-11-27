@@ -6,8 +6,12 @@ test.describe('public site', () => {
     const errors = trackErrors(page);
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Your daily ride to campus');
-    await expect(page.getByText('Wah Cantt → Islamabad').first()).toBeVisible();
-    await expect(page.getByText('Only 3 seats left').first()).toBeVisible();
+    const fares = page.locator('#fares');
+    const airUni = fares.getByRole('listitem').filter({ hasText: 'E-9 / Air Uni' });
+    await expect(airUni).toContainText('Hassan Abdal');
+    await expect(airUni).toContainText('PKR 11,000');
+    await expect(airUni).toContainText('Full · join waitlist');
+    await expect(fares.getByText('Only 3 seats left')).toBeVisible();
 
     const calculator = page.locator('dl[aria-live="polite"]');
     await page.getByLabel('Your route').selectOption('r3');
@@ -19,10 +23,38 @@ test.describe('public site', () => {
     expect(errors).toEqual([]);
   });
 
+  test('area search answers instantly with the route, fare and seats', async ({ page }) => {
+    const errors = trackErrors(page);
+    await page.goto('/');
+    await page.getByLabel('Is my area covered?').fill('b17');
+    const hero = page.locator('#home');
+    await expect(hero.getByText(/Yes, we pick up at/)).toContainText('B-17 MultiGardens');
+    await expect(hero.getByText('Rawalpindi → H-11 / NUST')).toBeVisible();
+    await expect(hero.getByRole('link', { name: /^Reserve/ }).first()).toHaveAttribute('href', '/auth/signup');
+    // The route line switches to that route and marks the stop.
+    await expect(page.getByRole('complementary', { name: 'Route line' }).getByText('Your stop')).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
   test('area search offers to request a new stop', async ({ page }) => {
     await page.goto('/');
-    await page.getByPlaceholder(/Type your sector or area/).fill('Lahore');
-    await expect(page.getByRole('link', { name: /Request a stop at “Lahore”/ })).toHaveAttribute('href', /wa\.me/);
+    await page.getByLabel('Is my area covered?').fill('Lahore');
+    await expect(page.getByText(/isn.t on our list yet/)).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Ask for a stop here' })).toHaveAttribute('href', /wa\.me\/.*Lahore/);
+  });
+
+  test('campus pages list the routes to that campus', async ({ page }) => {
+    const errors = trackErrors(page);
+    await page.goto('/campus/nust');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Daily transport to NUST');
+    await expect(page.getByRole('heading', { name: 'Routes to NUST' })).toBeVisible();
+    await expect(page.getByText('PKR 8,000')).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
+  test('the portal can be added to the home screen', async ({ request }) => {
+    const manifest = await (await request.get('/manifest.webmanifest')).json();
+    expect(manifest).toMatchObject({ start_url: '/dashboard', display: 'standalone' });
   });
 
   test('demo opens without touching the real session', async ({ page }) => {
@@ -56,7 +88,7 @@ test.describe('public site', () => {
 test.describe('phone layout', () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 
-  for (const path of ['/', '/auth/login', '/auth/signup', '/demo']) {
+  for (const path of ['/', '/campus/nust', '/auth/login', '/auth/signup', '/demo']) {
     test(`${path} has no sideways scrolling`, async ({ page }) => {
       await page.goto(path);
       await page.waitForLoadState('networkidle');
