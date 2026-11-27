@@ -55,6 +55,16 @@ The public homepage (`app/page.tsx`, `components/marketing/`) shows live route f
 - **Fees shown in the fare calculator** come from `lib/onboarding/pricing.ts`. Keep it in step with `public.onboarding_amount_due()` in the database.
 - **Google sign-in** must be enabled in Supabase; see [docs/GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md).
 
+## Security model
+
+- **Route protection:** `proxy.ts` (Next 16's replacement for `middleware.ts`) verifies the Supabase session before `/dashboard`, `/onboarding/*`, `/admin/*` and `/driver/*` render, and redirects signed-out visitors to the right login. It does no database lookups, by design.
+- **Authorization** (who can read or change which rows) is enforced by Postgres row-level security and triggers in `supabase/migrations/`. Dashboards also check the role in the browser as a fallback.
+- **Drivers** read their roster only through `driver_trip_roster(date)` (name, institution, last 4 CNIC digits for their own trips), not the `profiles` table.
+- **API routes** validate input with `lib/api/validate.ts` and return errors as `{ ok: false, error }`. The cron secret is compared in constant time.
+- **Demo:** `/demo` shows the rider dashboard with sample data. It never reads or writes a real session.
+- **Passwords:** minimum 8 characters (`PASSWORD_MIN_LENGTH` in `lib/auth/form.ts`). Set the same value in Supabase → Authentication → Policies → Minimum password length.
+- The full audit and remaining items are in [docs/AUDIT.md](docs/AUDIT.md).
+
 ## Design system
 
 - **Colours** live in `app/globals.css` under `@theme`. Tailwind's `yellow-*` and `zinc-*` scales are re-tuned to the Eagle Elites gold and blue-black, so existing classes stay on-brand. Change a colour there, not in individual pages.
@@ -67,7 +77,7 @@ The public homepage (`app/page.tsx`, `components/marketing/`) shows live route f
 
 Migration files are kept in `supabase/migrations/` with their existing timestamped names. Apply them to the intended Supabase project in migration order, review each migration before applying it, and take a database backup before any schema change. In particular, `20261010_rebuild_departure_schema.sql` drops and recreates departure tables and removes/re-adds a profile column; do not run it against data that must be preserved without a reviewed migration plan.
 
-The later migrations cover RLS hardening, application settings, time options, WhatsApp opt-in/logging, and onboarding updates. The security rollback script is in `supabase/rollback/`; use it only when intentionally reverting its matching migration.
+`20261127000000_driver_roster_privacy.sql` limits what drivers can read about students; its rollback is in `supabase/rollback/`. The later migrations cover RLS hardening, application settings, time options, WhatsApp opt-in/logging, and onboarding updates. The security rollback script is in `supabase/rollback/`; use it only when intentionally reverting its matching migration.
 
 ## WhatsApp templates
 

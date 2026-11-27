@@ -1,0 +1,2066 @@
+'use client';
+
+import Link from 'next/link';
+import { PASSWORD_MIN_LENGTH, validateNewPassword } from '@/lib/auth/form';
+import BrandLoader from '@/components/ui/brand-loader';
+import Logo from '@/components/brand/logo';
+import Icon, { IconTile, type IconName } from '@/components/ui/icons';
+import PasswordInput from '@/components/password-input';
+import { useEffect, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { getPostLoginPath } from '@/lib/auth/post-login-path';
+import {
+  getPakistanDate,
+  getPakistanDateForWeekday,
+} from '@/lib/date/pakistan';
+import { createClient } from '@/lib/supabase/client';
+import TimeSelect from '@/components/time-select';
+import WhatsAppOptInCard from '@/components/whatsapp-opt-in-card';
+import SectionLoading from '@/components/section-loading';
+import {
+  fetchTimeOptionsForGroup,
+  type TimeOption,
+} from '@/lib/time-options';
+
+import {
+  fromScheduleRows,
+  DAYS,
+  getNextWeekStart,
+  canChangeTime,
+  formatTime,
+  formatDate,
+  getNextWeekRange,
+  type Profile,
+  type DepartureGroup,
+  type DepartureSlot,
+  type DepartureSelection,
+  type DailyAssignment,
+  type WeeklySchedule,
+  type Payment,
+  type Notification,
+  type Holiday,
+  type PickupPoint,
+  type WeeklyScheduleRow,
+  type DashboardTab,
+  type ScheduleView,
+} from '@/lib/dashboard/student';
+
+/** Sample identity used only by the public /demo page. Never mixed with a real session. */
+const DEMO_SESSION = {
+  user: { id: 'demo-user', email: 'demo@student.eagleelites.com' },
+  profile: { full_name: 'Demo Student', email: 'demo@student.eagleelites.com', role: 'student' },
+};
+
+export default function RiderDashboard({ demo = false }: { demo?: boolean }) {
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [assignment, setAssignment] = useState<DailyAssignment | null>(null);
+  const [schedules, setSchedules] = useState<WeeklySchedule[]>([]);
+  const [pickupPoints, setPickupPoints] = useState<PickupPoint[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [classDays, setClassDays] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<DashboardTab>('home');
+  const [isTabPending, startTabTransition] = useTransition();
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [scheduleView, setScheduleView] = useState<ScheduleView>('overview');
+  const [myDepartureGroup, setMyDepartureGroup] =
+    useState<DepartureGroup | null>(null);
+  const [todaySlots, setTodaySlots] = useState<DepartureSlot[]>([]);
+  const [mySelection, setMySelection] = useState<DepartureSelection | null>(
+    null,
+  );
+  const [selectedSlotId, setSelectedSlotId] = useState('');
+  const [savingSelection, setSavingSelection] = useState(false);
+  const [selectionSuccess, setSelectionSuccess] = useState(false);
+
+  const [scheduleForm, setScheduleForm] = useState<
+    Record<
+      string,
+      {
+        pickup_point_id: string;
+        arrival_time: string;
+        departure_time: string;
+      }
+    >
+  >({});
+  const [submittingSchedule, setSubmittingSchedule] = useState(false);
+  const [scheduleSuccess, setScheduleSuccess] = useState(false);
+
+  const [changeDay, setChangeDay] = useState('');
+  const [changeType, setChangeType] = useState<'arrival' | 'departure'>(
+    'arrival',
+  );
+  const [changeTime, setChangeTime] = useState('');
+  const [changingTime, setChangingTime] = useState(false);
+  const [changeError, setChangeError] = useState('');
+  const [changeSuccess, setChangeSuccess] = useState(false);
+
+  const [helpMessage, setHelpMessage] = useState('');
+  const [sendingHelp, setSendingHelp] = useState(false);
+  const [helpSuccess, setHelpSuccess] = useState(false);
+
+  const [newPassword, setNewPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+
+  const [confirmingSeat, setConfirmingSeat] = useState(false);
+  const [scheduleError, setScheduleError] = useState('');
+  const [timeOptions, setTimeOptions] = useState<{
+    arrival: TimeOption[];
+    departure: TimeOption[];
+  }>({ arrival: [], departure: [] });
+
+  const router = useRouter();
+  const [supabase] = useState(() => createClient());
+  const changeTab = (tab: DashboardTab) =>
+    startTabTransition(() => setActiveTab(tab));
+  const [todayInfo] = useState(() => {
+    if (typeof window === 'undefined') {
+      return {
+        todayName: 'Monday',
+        nextWeekRange: '—',
+        isSundayToday: false,
+        isFridaySaturdayToday: false,
+      };
+    }
+
+    const now = new Date();
+    const weekdayIndex = now.getDay() === 0 ? 6 : now.getDay() - 1;
+
+    return {
+      todayName: DAYS[weekdayIndex],
+      nextWeekRange: getNextWeekRange(),
+      isSundayToday: now.getDay() === 0,
+      isFridaySaturdayToday: [5, 6].includes(now.getDay()),
+    };
+  });
+
+  const { todayName, nextWeekRange, isSundayToday, isFridaySaturdayToday } =
+    todayInfo;
+
+  useEffect(() => {
+    const init = async () => {
+      if (demo) {
+        try {
+          const demoSession = DEMO_SESSION;
+
+          setProfile({
+            id: demoSession.user.id,
+            full_name: demoSession.profile.full_name,
+            email: demoSession.profile.email,
+            role: demoSession.profile.role,
+            fee_status: 'paid',
+            institution: 'North Campus',
+            route_id: 'demo-route',
+          });
+
+          setAssignment({
+            id: 'demo-assignment',
+            driver_name: 'Ammar Hassan',
+            driver_contact: '+92 300 1234567',
+            seat_confirmed: true,
+            confirmed_at: new Date().toISOString(),
+            coasters: { coaster_number: '12' },
+          });
+
+          setSchedules([
+            {
+              id: 'demo-mon',
+              day_of_week: 'Monday',
+              arrival_time: '07:15',
+              departure_time: '18:30',
+              change_count: 0,
+              last_changed_at: new Date().toISOString(),
+              pickup_points: { name: 'Main Gate' },
+            },
+            {
+              id: 'demo-tue',
+              day_of_week: 'Tuesday',
+              arrival_time: '07:15',
+              departure_time: '18:30',
+              change_count: 0,
+              last_changed_at: new Date().toISOString(),
+              pickup_points: { name: 'Main Gate' },
+            },
+            {
+              id: 'demo-wed',
+              day_of_week: 'Wednesday',
+              arrival_time: '07:15',
+              departure_time: '18:30',
+              change_count: 0,
+              last_changed_at: new Date().toISOString(),
+              pickup_points: { name: 'Main Gate' },
+            },
+          ]);
+
+          setPickupPoints([
+            { id: 'demo-pick-1', name: 'Main Gate', route_id: 'demo-route' },
+            { id: 'demo-pick-2', name: 'Library', route_id: 'demo-route' },
+          ]);
+
+          setPayments([
+            {
+              id: 'demo-payment-1',
+              amount: 3200,
+              month: 'October',
+              status: 'paid',
+              paid_at: new Date().toISOString(),
+            },
+            {
+              id: 'demo-payment-2',
+              amount: 3200,
+              month: 'September',
+              status: 'paid',
+              paid_at: new Date().toISOString(),
+            },
+          ]);
+
+          setNotifications([
+            {
+              id: 'demo-note-1',
+              title: 'Demo mode active',
+              message: 'This dashboard is running in local demo mode.',
+              type: 'info',
+              created_at: new Date().toISOString(),
+            },
+          ]);
+
+          setHolidays([
+            {
+              id: 'demo-holiday',
+              date: new Date().toISOString(),
+              reason: 'National holiday',
+            },
+          ]);
+
+          setClassDays(['Monday', 'Wednesday', 'Friday']);
+          setLoading(false);
+          return;
+        } catch {
+          setLoading(false);
+        }
+        return;
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/auth/login');
+        return;
+      }
+
+      const today = getPakistanDate();
+      const weekStart = getNextWeekStart();
+
+      const [
+        { data: profileData },
+        { data: assignmentData },
+        { data: schedulesData },
+        { data: paymentsData },
+        { data: notificationsData },
+        { data: holidaysData },
+        { data: timetableData },
+      ] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single(),
+        supabase
+          .from('daily_assignments')
+          .select('*, coasters(coaster_number)')
+          .eq('student_id', session.user.id)
+          .eq('assignment_date', today)
+          .maybeSingle(),
+        supabase
+          .from('weekly_schedules')
+          .select('*, pickup_points(name)')
+          .eq('student_id', session.user.id)
+          .eq('week_start', weekStart),
+        supabase
+          .from('payments')
+          .select('*')
+          .eq('student_id', session.user.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('notifications')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(20),
+        supabase
+          .from('holidays')
+          .select('*')
+          .gte('date', today)
+          .order('date')
+          .limit(5),
+        supabase
+          .from('student_timetables')
+          .select('*')
+          .eq('student_id', session.user.id)
+          .maybeSingle(),
+      ]);
+
+      if (profileData) {
+        setProfile(profileData);
+        const nextPath = getPostLoginPath(profileData.status);
+        if (nextPath !== '/dashboard') {
+          router.push(nextPath);
+          return;
+        }
+      }
+      if (assignmentData) setAssignment(assignmentData);
+      if (schedulesData)
+        setSchedules(fromScheduleRows(schedulesData as WeeklyScheduleRow[]));
+      void fetchTimeOptionsForGroup(
+        supabase,
+        profileData?.departure_group_id ?? null,
+      ).then(setTimeOptions);
+      if (paymentsData) setPayments(paymentsData);
+      if (notificationsData) {
+        setNotifications(notificationsData);
+        setUnreadCount(notificationsData.length);
+      }
+      if (holidaysData) setHolidays(holidaysData);
+      if (timetableData) setClassDays(timetableData.class_days);
+
+      // These lookups are independent, so run them together.
+      const groupId = profileData?.departure_group_id ?? null;
+      const [groupRes, slotsRes, selectionRes, pickupsRes] = await Promise.all([
+        groupId
+          ? supabase
+              .from('departure_groups')
+              .select('id, university, department')
+              .eq('id', groupId)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        groupId
+          ? supabase
+              .from('departure_slots')
+              .select('*')
+              .eq('group_id', groupId)
+              .eq('slot_date', today)
+              .order('slot_number')
+          : Promise.resolve({ data: null }),
+        groupId
+          ? supabase
+              .from('departure_selections')
+              .select('*')
+              .eq('student_id', session.user.id)
+              .eq('selection_date', today)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        profileData?.route_id
+          ? supabase
+              .from('pickup_points')
+              .select('*')
+              .eq('route_id', profileData.route_id)
+          : supabase.from('pickup_points').select('*'),
+      ]);
+
+      if (groupId) {
+        if (groupRes.data) setMyDepartureGroup(groupRes.data as DepartureGroup);
+        if (slotsRes.data) setTodaySlots(slotsRes.data as DepartureSlot[]);
+        if (selectionRes.data) {
+          const selection = selectionRes.data as DepartureSelection;
+          setMySelection(selection);
+          setSelectedSlotId(selection.slot_id);
+        }
+      } else {
+        setMyDepartureGroup(null);
+        setTodaySlots([]);
+        setMySelection(null);
+        setSelectedSlotId('');
+      }
+      if (pickupsRes.data) setPickupPoints(pickupsRes.data as PickupPoint[]);
+
+      setLoading(false);
+    };
+    init();
+  }, [demo, router, supabase]);
+
+  const handleScheduleSubmit = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) return;
+    setSubmittingSchedule(true);
+    const weekStart = getNextWeekStart();
+    const entries = Object.entries(scheduleForm).filter(
+      ([, v]) => v.pickup_point_id && v.arrival_time && v.departure_time,
+    );
+    if (entries.length === 0) {
+      setSubmittingSchedule(false);
+      return;
+    }
+    setScheduleError('');
+    const { error: upsertError } = await supabase
+      .from('weekly_schedules')
+      .upsert(
+        entries.map(([day, vals]) => ({
+          student_id: session.user.id,
+          week_start: weekStart,
+          day_of_week: day,
+          pickup_point_id: vals.pickup_point_id,
+          morning_departure: vals.arrival_time,
+          evening_departure: vals.departure_time,
+        })),
+        { onConflict: 'student_id,week_start,day_of_week' },
+      );
+    if (upsertError) {
+      setScheduleError(
+        upsertError.message.includes('not an available option')
+          ? 'One of the selected times is no longer available. Please pick again.'
+          : 'Could not save your schedule. Please try again.',
+      );
+      setSubmittingSchedule(false);
+      return;
+    }
+    const { data } = await supabase
+      .from('weekly_schedules')
+      .select('*, pickup_points(name)')
+      .eq('student_id', session.user.id)
+      .eq('week_start', weekStart);
+    if (data) setSchedules(fromScheduleRows(data as WeeklyScheduleRow[]));
+    setScheduleSuccess(true);
+    setTimeout(() => setScheduleSuccess(false), 3000);
+    setSubmittingSchedule(false);
+  };
+
+  const handleTimeChange = async () => {
+    if (!changeDay || !changeTime) return;
+    setChangingTime(true);
+    setChangeError('');
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      setChangingTime(false);
+      return;
+    }
+    const weekStart = getNextWeekStart();
+    const schedule = schedules.find((s) => s.day_of_week === changeDay);
+    if (!schedule) {
+      setChangeError('No schedule found for this day.');
+      setChangingTime(false);
+      return;
+    }
+    if (schedule.change_count >= 1) {
+      setChangeError(
+        'You have already used your one allowed change for this day.',
+      );
+      setChangingTime(false);
+      return;
+    }
+    const tripTime =
+      changeType === 'arrival'
+        ? schedule.arrival_time
+        : schedule.departure_time;
+    const tripDate = getPakistanDateForWeekday(weekStart, changeDay);
+    const { allowed, reason } = canChangeTime(tripDate, tripTime);
+    if (!allowed) {
+      setChangeError(reason);
+      setChangingTime(false);
+      return;
+    }
+    const updateData =
+      changeType === 'arrival'
+        ? {
+            morning_departure: changeTime,
+            change_count: 1,
+            last_changed_at: new Date().toISOString(),
+          }
+        : {
+            evening_departure: changeTime,
+            change_count: 1,
+            last_changed_at: new Date().toISOString(),
+          };
+    const { error: updateError } = await supabase
+      .from('weekly_schedules')
+      .update(updateData)
+      .eq('student_id', session.user.id)
+      .eq('week_start', weekStart)
+      .eq('day_of_week', changeDay);
+    if (updateError) {
+      setChangeError(
+        updateError.message.includes('not an available option')
+          ? 'That time is no longer available. Please pick another.'
+          : 'Could not change the time. Please try again.',
+      );
+      setChangingTime(false);
+      return;
+    }
+    const { data } = await supabase
+      .from('weekly_schedules')
+      .select('*, pickup_points(name)')
+      .eq('student_id', session.user.id)
+      .eq('week_start', weekStart);
+    if (data) setSchedules(fromScheduleRows(data as WeeklyScheduleRow[]));
+    setChangeSuccess(true);
+    setChangeDay('');
+    setChangeTime('');
+    setTimeout(() => setChangeSuccess(false), 3000);
+    setChangingTime(false);
+  };
+
+  const handleConfirmSeat = async () => {
+    if (!assignment) return;
+    setConfirmingSeat(true);
+    await supabase
+      .from('daily_assignments')
+      .update({
+        seat_confirmed: true,
+        confirmed_at: new Date().toISOString(),
+      })
+      .eq('id', assignment.id);
+    setAssignment((prev) => (prev ? { ...prev, seat_confirmed: true } : prev));
+    setConfirmingSeat(false);
+  };
+
+  const handleSaveDepartureSelection = async () => {
+    if (!selectedSlotId) return;
+    setSavingSelection(true);
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      setSavingSelection(false);
+      return;
+    }
+
+    const selectionDate = getPakistanDate();
+
+    const { data: savedSelection } = await supabase
+      .from('departure_selections')
+      .upsert(
+        {
+          student_id: session.user.id,
+          slot_id: selectedSlotId,
+          selection_date: selectionDate,
+        },
+        { onConflict: 'student_id,selection_date' },
+      )
+      .select()
+      .single();
+
+    if (savedSelection) {
+      setMySelection(savedSelection as DepartureSelection);
+      setSelectionSuccess(true);
+      setTimeout(() => setSelectionSuccess(false), 3000);
+    }
+
+    setSavingSelection(false);
+  };
+
+  const handleSendHelp = async () => {
+    if (!helpMessage.trim()) return;
+    setSendingHelp(true);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      setSendingHelp(false);
+      return;
+    }
+    await supabase
+      .from('help_messages')
+      .insert({ student_id: session.user.id, message: helpMessage });
+    setHelpMessage('');
+    setHelpSuccess(true);
+    setTimeout(() => setHelpSuccess(false), 3000);
+    setSendingHelp(false);
+  };
+
+  const handleChangePassword = async () => {
+    const invalid = validateNewPassword(newPassword);
+    if (invalid) {
+      setPasswordError(invalid);
+      return;
+    }
+    setChangingPassword(true);
+    setPasswordError('');
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      setPasswordError(error.message);
+      setChangingPassword(false);
+      return;
+    }
+    setPasswordSuccess(true);
+    setNewPassword('');
+    setTimeout(() => setPasswordSuccess(false), 3000);
+    setChangingPassword(false);
+  };
+
+  const handleSaveTimetable = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) return;
+    await supabase.from('student_timetables').upsert(
+      {
+        student_id: session.user.id,
+        class_days: classDays,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'student_id' },
+    );
+  };
+
+  const todaySchedule = schedules.find((s) => s.day_of_week === todayName);
+  const unpaidPayments = payments.filter((p) => p.status === 'unpaid');
+
+  const summaryCards = [
+    {
+      label: 'Fee status',
+      value: profile?.fee_status === 'paid' ? 'Paid' : 'Pending',
+      hint: profile?.fee_status === 'paid' ? 'All clear' : 'Action needed',
+      accent:
+        profile?.fee_status === 'paid' ? 'text-emerald-300' : 'text-red-300',
+      icon: 'wallet' as IconName,
+      tab: 'payments' as DashboardTab,
+    },
+    {
+      label: 'Scheduled days',
+      value: `${schedules.length || 0}`,
+      hint: `For next week · ${nextWeekRange}`,
+      accent: 'text-yellow-300',
+      icon: 'route' as IconName,
+      tab: 'schedule' as DashboardTab,
+    },
+    {
+      label: 'Class days',
+      value: `${classDays.length || 0}`,
+      hint: 'Selected days',
+      accent: 'text-cyan-300',
+      icon: 'calendar' as IconName,
+      tab: 'timetable' as DashboardTab,
+    },
+  ];
+
+  const tabs: Array<{ key: DashboardTab; label: string; short: string; icon: IconName }> = [
+    { key: 'home', label: 'Home', short: 'Home', icon: 'home' },
+    { key: 'schedule', label: 'My schedule', short: 'Schedule', icon: 'route' },
+    { key: 'payments', label: 'Payments', short: 'Payments', icon: 'wallet' },
+    { key: 'timetable', label: 'Timetable', short: 'Classes', icon: 'calendar' },
+    { key: 'profile', label: 'My profile', short: 'Profile', icon: 'user' },
+    { key: 'help', label: 'Help & support', short: 'Help', icon: 'help' },
+  ];
+  const primaryTabs = tabs.filter((tab) => tab.key !== 'help');
+  const mobileTabs = tabs.filter((tab) => tab.key !== 'help');
+  const profileMenuTabs = tabs.filter((tab) =>
+    ['profile', 'help'].includes(tab.key),
+  );
+  const scheduleTabs: Array<{ key: ScheduleView; label: string }> = [
+    { key: 'overview', label: 'Overview' },
+    { key: 'change', label: 'Request Time Change' },
+  ];
+
+  if (loading) return <BrandLoader label="Loading your dashboard" />;
+
+  return (
+      <div className="relative min-h-screen overflow-x-clip bg-[#080b10] text-white">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 left-[-5rem] h-96 w-96 rounded-full bg-yellow-400/[0.06] blur-3xl" />
+      </div>
+
+      <nav className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#0b0f14]/90 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
+          <Logo size={38} subtitle="Rider portal" />
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowNotifications(!showNotifications);
+                  setUnreadCount(0);
+                }}
+                className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/8 bg-white/[0.03] text-sm text-zinc-300 transition hover:border-yellow-400/20 hover:text-yellow-200"
+              >
+                <Icon name="bell" size={18} />
+                <span className="sr-only">Announcements</span>
+                {unreadCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-yellow-400 text-[10px] font-bold text-black">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {showNotifications && (
+                <div className="ee-pop absolute right-0 top-12 z-50 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-white/10 bg-[#10161d] shadow-[0_20px_50px_rgba(0,0,0,0.32)]">
+                  <div className="border-b border-white/5 p-4">
+                    <p className="text-sm font-bold text-white">
+                      Announcements
+                    </p>
+                  </div>
+                  <div className="max-h-72 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="p-6 text-center">
+                        <p className="text-sm text-zinc-500">
+                          No announcements yet
+                        </p>
+                      </div>
+                    ) : (
+                      notifications.map((n) => (
+                        <div
+                          key={n.id}
+                          className="border-b border-white/5 p-4 transition hover:bg-white/3"
+                        >
+                          <p className="text-sm font-medium text-white">
+                            {n.title}
+                          </p>
+                          <p className="mt-1 text-xs text-zinc-400">
+                            {n.message}
+                          </p>
+                          <p className="mt-2 text-[10px] uppercase tracking-[0.18em] text-zinc-600">
+                            {formatDate(n.created_at)}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="relative">
+              <button
+                type="button"
+                aria-label="Open profile menu"
+                aria-haspopup="menu"
+                aria-expanded={showProfileMenu}
+                onClick={() => setShowProfileMenu((open) => !open)}
+                className="flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-2 transition hover:border-yellow-400/25 hover:bg-white/[0.07]"
+              >
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-white/12 to-yellow-400/12 text-[11px] font-semibold text-white">
+                  {profile?.full_name?.charAt(0)?.toUpperCase() || 'S'}
+                </span>
+                <span className="hidden max-w-32 text-left sm:block">
+                  <span className="block truncate text-[11px] font-medium leading-none text-white">
+                    {profile?.full_name}
+                  </span>
+                  <span className={`mt-1 inline-flex items-center rounded-full border px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.12em] ${profile?.fee_status === 'paid' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : 'border-red-500/20 bg-red-500/10 text-red-300'}`}>
+                    {profile?.fee_status === 'paid' ? 'Paid' : 'Unpaid'}
+                  </span>
+                </span>
+                <span className="hidden text-[10px] text-zinc-500 sm:inline" aria-hidden="true">▾</span>
+              </button>
+              {showProfileMenu && (
+                <nav aria-label="Account and more sections" className="ee-pop absolute right-0 top-12 z-[60] w-60 overflow-hidden rounded-2xl border border-white/10 bg-[#10161d] p-2 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
+                  <div className="border-b border-white/[0.07] px-3 py-2.5 sm:hidden">
+                    <p className="truncate text-sm font-semibold text-white">{profile?.full_name || 'Account'}</p>
+                    <p className="mt-1 text-xs text-zinc-500">{profile?.email}</p>
+                  </div>
+                  <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">More</p>
+                  {profileMenuTabs.map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => {
+                        changeTab(tab.key);
+                        setShowProfileMenu(false);
+                      }}
+                      className={`flex min-h-10 w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition ${activeTab === tab.key ? 'bg-yellow-400/10 font-semibold text-yellow-200' : 'text-zinc-300 hover:bg-white/[0.05] hover:text-white'}`}
+                    >
+                      {tab.label}
+                      {activeTab === tab.key && <span aria-hidden="true">✓</span>}
+                    </button>
+                  ))}
+                </nav>
+              )}
+            </div>
+
+            <button
+              onClick={async () => {
+                if (!demo) await supabase.auth.signOut();
+                router.push(demo ? '/' : '/auth/login');
+              }}
+              aria-label="Log out"
+              className="flex h-9 items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-2.5 text-xs font-medium text-zinc-300 transition hover:border-yellow-400/20 hover:text-yellow-200"
+            >
+              <Icon name="logout" size={17} />
+              <span className="hidden sm:inline">Log out</span>
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {demo && (
+        <div role="status" className="relative z-40 border-b border-yellow-400/20 bg-yellow-400/[0.08] px-4 py-2.5 text-center text-sm text-yellow-100">
+          You&apos;re viewing a demo with sample data. Nothing here is saved.{' '}
+          <Link href="/auth/signup" className="font-semibold underline underline-offset-4 hover:text-white">Create your account</Link>
+        </div>
+      )}
+
+      <main className="relative z-10 mx-auto max-w-6xl space-y-6 px-4 pb-28 pt-5 sm:px-6 sm:py-8">
+        <nav aria-label="Student dashboard" className="ee-tabbar hidden sm:flex">
+          {primaryTabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              aria-current={activeTab === tab.key ? 'page' : undefined}
+              onClick={() => changeTab(tab.key)}
+              className={`flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition ${activeTab === tab.key ? 'bg-yellow-400 text-[#15110a] shadow-[0_8px_22px_rgba(232,187,64,0.2)]' : 'text-zinc-400 hover:bg-white/[0.05] hover:text-white'}`}
+            >
+              <Icon name={tab.icon} size={17} />
+              {tab.label}
+              {tab.key === 'payments' && unpaidPayments.length > 0 && <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{unpaidPayments.length}</span>}
+            </button>
+          ))}
+          <button type="button" onClick={() => changeTab('help')} aria-current={activeTab === 'help' ? 'page' : undefined} className={`ml-auto flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-medium transition ${activeTab === 'help' ? 'bg-yellow-400 text-[#15110a]' : 'text-zinc-400 hover:bg-white/[0.05] hover:text-white'}`}>
+            <Icon name="help" size={17} /> Help
+          </button>
+        </nav>
+
+        {/* Phone: app-style bottom navigation */}
+        <nav aria-label="Student dashboard" className="fixed inset-x-0 bottom-0 z-50 border-t border-white/[0.08] bg-[#0a0d12]/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-xl sm:hidden">
+          <div className="grid grid-cols-5">
+            {mobileTabs.map((tab) => {
+              const active = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  aria-current={active ? 'page' : undefined}
+                  onClick={() => changeTab(tab.key)}
+                  className={`relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-semibold transition ${active ? 'text-yellow-200' : 'text-zinc-500'}`}
+                >
+                  <span className={`flex h-8 w-12 items-center justify-center rounded-full transition ${active ? 'bg-yellow-400/15' : ''}`}>
+                    <Icon name={tab.icon} size={20} />
+                  </span>
+                  {tab.short}
+                  {tab.key === 'payments' && unpaidPayments.length > 0 && <span className="absolute right-3 top-1 h-2 w-2 rounded-full bg-red-500" />}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+
+        {isTabPending && <SectionLoading />}
+
+        <div key={activeTab} className="ee-enter">
+        {activeTab === 'home' && (
+          <div className="space-y-6">
+            <section className="relative overflow-hidden rounded-3xl border border-white/[0.09] bg-[radial-gradient(ellipse_at_85%_0%,rgba(232,187,64,0.12),transparent_35%),linear-gradient(135deg,#151a22_0%,#0e131a_64%,#0b1016_100%)] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.2)] sm:p-7">
+              <div className="pointer-events-none absolute -right-12 -top-24 h-64 w-64 rounded-full border border-yellow-300/[0.08]" />
+              <div className="pointer-events-none absolute -right-3 -top-16 h-48 w-48 rounded-full border border-yellow-300/[0.06]" />
+              <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-yellow-200/75">Your campus commute</p>
+                  <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">Welcome, {profile?.full_name?.split(' ')[0] || 'student'}</h1>
+                  <p className="mt-2 text-sm text-zinc-400">A clear view of your rides, schedule, and account.</p>
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    {profile?.institution && <span className="inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-black/20 px-3 py-2 text-xs font-medium text-zinc-200"><span className="text-yellow-300" aria-hidden="true">⌖</span>{profile.institution}</span>}
+                    {profile?.route_id && <span className="inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-black/20 px-3 py-2 text-xs font-medium text-zinc-300"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Route assigned</span>}
+                  </div>
+                </div>
+                <div className="flex shrink-0 flex-wrap items-center gap-2 sm:flex-col sm:items-end">
+                  <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-medium text-zinc-300">{todayName}</span>
+                  <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${profile?.fee_status === 'paid' ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200' : 'border-amber-300/20 bg-amber-300/10 text-amber-100'}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${profile?.fee_status === 'paid' ? 'bg-emerald-300' : 'bg-amber-300'}`} />
+                    {profile?.fee_status === 'paid' ? 'Account up to date' : 'Fee payment pending'}
+                  </span>
+                </div>
+              </div>
+            </section>
+
+            {isFridaySaturdayToday && <div className="flex items-start gap-3 rounded-2xl border border-yellow-400/15 bg-yellow-400/[0.07] px-4 py-3.5"><span className="mt-0.5 text-yellow-200" aria-hidden="true">◷</span><p className="text-sm leading-6 text-yellow-100/90">Submit your schedule for next week before Sunday midnight.</p><button type="button" onClick={() => changeTab('schedule')} className="ml-auto shrink-0 text-xs font-semibold text-yellow-200 hover:text-white">Open schedule →</button></div>}
+
+            {unpaidPayments.length > 0 && <div className="flex items-start gap-3 rounded-2xl border border-red-400/15 bg-red-400/[0.07] px-4 py-3.5"><span className="mt-0.5 text-red-200" aria-hidden="true">!</span><p className="text-sm leading-6 text-red-100/90">You have {unpaidPayments.length} unpaid payment{unpaidPayments.length > 1 ? 's' : ''}. Please review your balance.</p><button type="button" onClick={() => changeTab('payments')} className="ml-auto shrink-0 text-xs font-semibold text-red-200 hover:text-white">Review fees →</button></div>}
+
+            <div className="ee-stagger grid gap-3 sm:grid-cols-3">
+              {summaryCards.map((item) => <button key={item.label} type="button" onClick={() => changeTab(item.tab)} className="ee-lift group rounded-2xl border border-white/[0.08] bg-[#10151d]/90 p-4 text-left hover:border-yellow-300/25 hover:bg-[#141a23] sm:rounded-3xl sm:p-5">
+                <div className="flex items-center justify-between"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{item.label}</span><IconTile name={item.icon} /></div>
+                <p className={`mt-4 text-2xl font-semibold tracking-tight ${item.accent}`}>{item.value}</p>
+                <div className="mt-2 flex items-center justify-between gap-3"><span className="text-xs text-zinc-500">{item.hint}</span><span className="text-xs text-zinc-600 transition group-hover:text-yellow-200">Open →</span></div>
+              </button>)}
+            </div>
+
+            <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+              <section className="rounded-3xl border border-white/[0.08] bg-[#10151d] p-5 shadow-[0_18px_42px_rgba(0,0,0,0.14)] sm:p-6">
+                <div className="mb-5 flex items-start justify-between gap-3">
+                  <div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-yellow-200/70">Travel plan</p><h2 className="mt-1 text-lg font-semibold text-white">Today&apos;s trip</h2></div>
+                  {todaySchedule && (
+                    <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/[0.07] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-200"><span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />Scheduled</span>
+                  )}
+                </div>
+
+                {todaySchedule ? (
+                  <>
+                    <div className="relative mb-5 h-24 overflow-hidden rounded-2xl border border-white/[0.07] bg-[#0b1016]">
+                      <div className="absolute inset-0 flex items-center px-4">
+                        <div className="h-0.5 w-full bg-zinc-700" />
+                      </div>
+                      <div className="absolute inset-0 flex items-center justify-around px-8">
+                        {[...Array(6)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="h-2 w-2 rounded-full bg-yellow-400/30"
+                          />
+                        ))}
+                      </div>
+                      <div className="absolute left-3 top-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                        home
+                      </div>
+                      <div className="absolute right-3 top-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                        {profile?.institution || 'destination'}
+                      </div>
+                      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" aria-hidden="true">
+                        <svg viewBox="0 0 48 32" className="h-8 w-12 text-yellow-300" fill="none">
+                          <path d="M8 5.5h25a5 5 0 0 1 5 5V24H7V6.5a1 1 0 0 1 1-1Z" fill="currentColor" fillOpacity=".16" stroke="currentColor" strokeWidth="1.6" />
+                          <path d="M10 9h10v7H10zM23 9h10v7H23zM38 14h3.5a2 2 0 0 1 2 2v5H38" stroke="currentColor" strokeWidth="1.5" />
+                          <path d="M10 20h28" stroke="currentColor" strokeWidth="1.5" />
+                          <circle cx="14" cy="25" r="3" fill="#0b0f14" stroke="currentColor" strokeWidth="1.5" />
+                          <circle cx="33" cy="25" r="3" fill="#0b0f14" stroke="currentColor" strokeWidth="1.5" />
+                        </svg>
+                      </div>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <path strokeLinejoin="round" d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6M8 9h.01M12 9h.01M16 9h.01M8 12h.01M16 12h.01" />
+                        </svg>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3.5">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                          Pickup
+                        </p>
+                        <p className="mt-2 text-xl font-black text-white">
+                          {formatTime(todaySchedule.arrival_time)}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3.5">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                          Return
+                        </p>
+                        <p className="mt-2 text-xl font-black text-white">
+                          {formatTime(todaySchedule.departure_time)}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3.5">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                          Pickup point
+                        </p>
+                        <p className="mt-2 text-sm font-bold text-white">
+                          {todaySchedule.pickup_points?.name}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3.5">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                          Time changes
+                        </p>
+                        <p
+                          className={`mt-2 text-sm font-bold ${todaySchedule.change_count >= 1 ? 'text-red-400' : 'text-emerald-400'}`}
+                        >
+                          {todaySchedule.change_count}/1 used
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                ) : !profile?.route_id ? (
+                  <div className="rounded-2xl border border-sky-300/15 bg-[radial-gradient(circle_at_90%_0%,rgba(56,189,248,0.1),transparent_38%),#0b1119] p-5 sm:p-6">
+                    <div className="flex items-start gap-4">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-sky-300/15 bg-sky-300/10 text-sky-200" aria-hidden="true">i</span>
+                      <div>
+                        <p className="font-semibold text-white">Your route is not assigned yet</p>
+                        <p className="mt-2 text-sm leading-6 text-zinc-400">The transport team needs to assign a route before your pickup times appear here. Send a message with your name and institution, and they’ll guide you through the next step.</p>
+                        <button type="button" onClick={() => changeTab('help')} className="mt-4 inline-flex min-h-10 items-center rounded-xl bg-yellow-400 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-yellow-300">Get help with route assignment</button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 p-5 text-center sm:p-6">
+                    <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-700 bg-black/20 text-zinc-400" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="1.6">
+                        <circle cx="12" cy="12" r="9" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2" />
+                      </svg>
+                    </span>
+                    <p className="text-base font-medium text-zinc-300">
+                      No trip scheduled for today
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-zinc-500">
+                      Submit your schedule every Sunday for the next week.
+                    </p>
+                  </div>
+                )}
+
+                {todaySchedule && assignment && <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Your ride</p>
+                    <p className="mt-2 text-lg font-semibold text-yellow-200">Vehicle {assignment.coasters?.coaster_number ? `#${assignment.coasters.coaster_number}` : 'assigned'}</p>
+                    <p className="mt-1 text-sm text-zinc-300">{assignment.driver_name || 'Driver details pending'}</p>
+                    {assignment.driver_contact && <a href={`tel:${assignment.driver_contact}`} className="mt-2 inline-flex text-xs font-medium text-zinc-400 transition hover:text-yellow-200">Call driver · {assignment.driver_contact}</a>}
+                  </div>
+                  <div className={`rounded-xl border p-4 ${assignment.seat_confirmed ? 'border-emerald-400/15 bg-emerald-400/[0.06]' : 'border-white/[0.07] bg-white/[0.025]'}`}>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Seat confirmation</p>
+                    <p className="mt-2 text-sm font-semibold text-white">{assignment.seat_confirmed ? `Confirmed · ${formatDate(assignment.confirmed_at)}` : 'Please confirm your seat'}</p>
+                    {!assignment.seat_confirmed && <button type="button" onClick={handleConfirmSeat} disabled={confirmingSeat} className="mt-3 inline-flex min-h-9 items-center rounded-lg bg-yellow-400 px-3 py-2 text-xs font-bold text-slate-950 transition hover:bg-yellow-300 disabled:opacity-50">{confirmingSeat ? 'Confirming…' : 'Confirm seat'}</button>}
+                  </div>
+                </div>}
+              </section>
+
+              <section className="rounded-3xl border border-white/[0.08] bg-[#10151d] p-5 shadow-[0_18px_42px_rgba(0,0,0,0.14)] sm:p-6">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                      Departure selection
+                    </p>
+                    <h3 className="mt-1 text-lg font-bold text-white">
+                      Today&apos;s departure slots
+                    </h3>
+                  </div>
+                  {mySelection && (
+                    <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[10px] font-medium text-emerald-300">
+                      ✓ Slot selected
+                    </span>
+                  )}
+                </div>
+
+                {!myDepartureGroup ? (
+                  <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 p-5 text-center">
+                    <IconTile name="users" className="mx-auto mb-3" />
+                    <p className="text-base font-medium text-zinc-300">
+                      No department group assigned yet
+                    </p>
+                    <p className="mt-2 text-sm text-zinc-500">
+                      Contact admin or complete your profile setup.
+                    </p>
+                  </div>
+                ) : todaySlots.length === 0 ? (
+                  <div className="overflow-hidden rounded-2xl border border-sky-300/15 bg-[radial-gradient(circle_at_90%_0%,rgba(56,189,248,0.1),transparent_38%),#0b1119]">
+                    <div className="flex items-start gap-4 p-5">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-sky-300/15 bg-sky-300/10 text-sky-200" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="1.7">
+                          <circle cx="12" cy="12" r="9" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2" />
+                        </svg>
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-200/80">Daily schedule</p>
+                        <p className="mt-1 text-base font-semibold text-white">
+                          Today&apos;s departure times are being prepared
+                        </p>
+                        <p className="mt-2 text-sm leading-6 text-zinc-400">
+                          Your group&apos;s slots will appear here as soon as the transport team posts them. You can check back later or ask the team about today&apos;s schedule.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-3 border-t border-white/[0.06] bg-black/10 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+                      <span className="text-xs text-zinc-500">Your assigned group: {myDepartureGroup.university} · {myDepartureGroup.department}</span>
+                      <a
+                        href="https://wa.me/923225166580?text=Hi%20Eagle%20Elites%2C%20please%20share%20today%27s%20departure%20slots%20for%20my%20group."
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-10 items-center justify-center rounded-xl border border-white/10 px-3 py-2 text-sm font-medium text-zinc-200 transition hover:border-sky-300/30 hover:bg-white/[0.04] hover:text-white"
+                      >
+                        Ask about today&apos;s schedule <span className="ml-2" aria-hidden="true">↗</span>
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mb-4 rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-3">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-yellow-200/80">
+                        Assigned group
+                      </p>
+                      <p className="mt-1 text-lg font-bold text-white">
+                        {myDepartureGroup.university}
+                      </p>
+                      <p className="text-sm text-zinc-300">
+                        {myDepartureGroup.department}
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      {todaySlots.map((slot) => (
+                        <button
+                          key={slot.id}
+                          type="button"
+                          disabled={
+                            slot.status !== 'available' ||
+                            new Date().getHours() >= 10
+                          }
+                          onClick={() => setSelectedSlotId(slot.id)}
+                          className={`w-full rounded-2xl border p-3 text-left transition ${
+                            selectedSlotId === slot.id
+                              ? 'border-yellow-400 bg-yellow-500/10'
+                              : slot.status === 'available'
+                                ? 'border-zinc-700 bg-zinc-900 hover:border-zinc-500'
+                                : 'border-red-800 bg-red-950/40 opacity-80'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                                Slot {slot.slot_number}
+                              </p>
+                              <p className="mt-1 text-base font-bold text-white">
+                                Pickup: {slot.pickup_time}
+                              </p>
+                              <p className="mt-1 text-sm text-zinc-300">
+                                Departs: {slot.departure_time}
+                              </p>
+                              {slot.status === 'unavailable' && (
+                                <p className="mt-1 text-xs text-red-300">
+                                  — Unavailable
+                                </p>
+                              )}
+                              {slot.notes && (
+                                <p className="mt-2 text-xs text-zinc-400">
+                                  {slot.notes}
+                                </p>
+                              )}
+                            </div>
+
+                            {selectedSlotId === slot.id && (
+                              <span className="text-lg text-yellow-300">✓</span>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    {selectionSuccess && (
+                      <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+                        Departure slot confirmed! Be at your stop 5–7 minutes
+                        early.
+                      </div>
+                    )}
+
+                    {new Date().getHours() >= 10 ? (
+                      <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                        Selection closed at 10:00 AM
+                        {mySelection &&
+                          todaySlots.find(
+                            (slot) => slot.id === mySelection.slot_id,
+                          ) && (
+                            <div className="mt-2 text-xs text-red-100">
+                              Your confirmed slot:{' '}
+                              {
+                                todaySlots.find(
+                                  (slot) => slot.id === mySelection.slot_id,
+                                )?.departure_time
+                              }
+                            </div>
+                          )}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSaveDepartureSelection}
+                        disabled={savingSelection || !selectedSlotId}
+                        className="mt-4 w-full rounded-xl bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 px-4 py-3 text-sm font-bold text-black transition hover:brightness-105 disabled:opacity-60"
+                      >
+                        {savingSelection
+                          ? 'Confirming...'
+                          : 'Confirm This Slot →'}
+                      </button>
+                    )}
+                  </>
+                )}
+              </section>
+
+            </div>
+
+            {holidays.length > 0 && (
+              <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5 shadow-[0_18px_35px_rgba(0,0,0,0.12)]">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-yellow-500/20 bg-yellow-500/10 text-sm text-yellow-300">
+                      ⏸
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+                        Service schedule
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-white">
+                        No-service days
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-full border border-zinc-700 bg-zinc-800 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-zinc-400">
+                    {holidays.length} dates
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {holidays.map((h) => (
+                    <div
+                      key={h.id}
+                      className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-[#0b1015] px-3 py-2.5"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="h-2 w-2 rounded-full bg-yellow-400" />
+                        <span className="text-sm text-zinc-300">
+                          {h.reason}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-yellow-300">
+                        {formatDate(h.date)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'schedule' && (
+          <div className="space-y-5">
+            {!profile?.route_id && (
+              <div className="flex flex-col gap-3 rounded-2xl border border-sky-300/15 bg-sky-300/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                <div>
+                  <p className="font-semibold text-white">Route assignment needed</p>
+                  <p className="mt-1 text-sm text-zinc-400">Weekly pickup options will appear after the transport team assigns your route.</p>
+                </div>
+                <button type="button" onClick={() => changeTab('help')} className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-yellow-300/30 hover:text-white">Open Help</button>
+              </div>
+            )}
+            <div className="rounded-2xl border border-white/10 bg-[#0d131c] p-2">
+              <div className="flex flex-wrap gap-2">
+                {scheduleTabs.map((item) => (
+                  <button
+                    key={item.key}
+                    onClick={() => setScheduleView(item.key)}
+                    className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
+                      scheduleView === item.key
+                        ? 'bg-yellow-400 text-black'
+                        : 'text-zinc-400 hover:bg-white/4 hover:text-white'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {scheduleView === 'overview' && (
+              <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 space-y-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="text-white font-bold text-lg">
+                      Weekly Schedule
+                    </h3>
+                    <p className="mt-1 text-zinc-400 text-xs uppercase tracking-[0.18em]">
+                      {nextWeekRange}
+                    </p>
+                  </div>
+
+                  {!isSundayToday && (
+                    <span className="inline-flex items-center rounded-full border border-zinc-700 bg-zinc-800/80 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-zinc-400">
+                      Submission opens Sunday
+                    </span>
+                  )}
+                </div>
+
+                {schedules.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <IconTile name="calendar" className="h-9 w-9" />
+                        <div>
+                          <p className="text-zinc-300 text-[10px] font-semibold uppercase tracking-[0.22em]">
+                            Schedule overview
+                          </p>
+                          <h4 className="mt-1 text-white text-sm font-semibold">
+                            Weekly trip plan
+                          </h4>
+                        </div>
+                      </div>
+
+                      <div className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                        {schedules.length} active
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-[1.5fr_0.8fr]">
+                      <div className="relative rounded-3xl border border-white/8 bg-gradient-to-br from-zinc-900 via-zinc-900/95 to-zinc-800/70 p-4">
+                        <div className="absolute left-6 top-5 bottom-5 w-px bg-gradient-to-b from-yellow-500/0 via-yellow-500/50 to-yellow-500/0" />
+
+                        <div className="space-y-3">
+                          {schedules.map((s, index) => (
+                            <div key={s.id} className="relative pl-8">
+                              <span className="absolute left-2 top-5 h-3 w-3 rounded-full border border-yellow-300 bg-yellow-400 shadow-[0_0_12px_rgba(232,187,64,0.55)]" />
+
+                              <div className="rounded-2xl border border-white/8 bg-zinc-900/80 p-3 shadow-[0_12px_28px_rgba(0,0,0,0.14)]">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-3">
+                                    <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-yellow-500/20 bg-yellow-500/10 text-[10px] font-black text-yellow-200">
+                                      {s.day_of_week.slice(0, 2).toUpperCase()}
+                                    </span>
+                                    <div>
+                                      <p className="text-white font-semibold text-sm">
+                                        {s.day_of_week}
+                                      </p>
+                                      <p className="mt-1 text-[11px] text-zinc-400">
+                                        {s.pickup_points?.name}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <span
+                                    className={`rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] ${
+                                      index === 0
+                                        ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+                                        : 'border-cyan-500/20 bg-cyan-500/10 text-cyan-300'
+                                    }`}
+                                  >
+                                    {index === 0 ? 'Today' : 'Trip'}
+                                  </span>
+                                </div>
+
+                                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                  <div className="rounded-xl border border-yellow-500/10 bg-yellow-500/5 p-3">
+                                    <p className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                                      <Icon name="clock" size={14} /> Pickup
+                                    </p>
+                                    <p className="mt-2 text-base font-black text-yellow-200">
+                                      {formatTime(s.arrival_time)}
+                                    </p>
+                                  </div>
+
+                                  <div className="rounded-xl border border-cyan-500/10 bg-cyan-500/5 p-3">
+                                    <p className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                                      <Icon name="clock" size={14} /> Return
+                                    </p>
+                                    <p className="mt-2 text-base font-black text-cyan-200">
+                                      {formatTime(s.departure_time)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="rounded-3xl border border-white/8 bg-gradient-to-br from-yellow-500/8 via-transparent to-transparent p-4">
+                          <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                            Week summary
+                          </p>
+                          <div className="mt-4 space-y-3">
+                            <div className="rounded-xl border border-white/8 bg-zinc-900/75 p-3">
+                              <p className="text-zinc-500 text-[10px] uppercase tracking-[0.2em]">
+                                Days on route
+                              </p>
+                              <p className="mt-2 text-2xl font-black text-white">
+                                {schedules.length}
+                              </p>
+                            </div>
+
+                            <div className="rounded-xl border border-white/8 bg-zinc-900/75 p-3">
+                              <p className="text-zinc-500 text-[10px] uppercase tracking-[0.2em]">
+                                Pickup points
+                              </p>
+                              <p className="mt-2 text-lg font-bold text-yellow-200">
+                                {
+                                  new Set(
+                                    schedules
+                                      .map((day) => day.pickup_points?.name)
+                                      .filter(Boolean),
+                                  ).size
+                                }
+                              </p>
+                            </div>
+
+                            <div className="rounded-xl border border-white/8 bg-zinc-900/75 p-3">
+                              <p className="text-zinc-500 text-[10px] uppercase tracking-[0.2em]">
+                                Travel window
+                              </p>
+                              <p className="mt-2 text-sm font-semibold text-cyan-200">
+                                {formatTime(
+                                  schedules[0]?.arrival_time || '07:15',
+                                )}{' '}
+                                -{' '}
+                                {formatTime(
+                                  schedules[0]?.departure_time || '18:30',
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="rounded-2xl border border-white/8 bg-gradient-to-br from-zinc-800/80 to-zinc-900/80 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <h4 className="flex items-center gap-2 text-white font-semibold text-sm">
+                      <Icon name="users" size={16} />
+                      Class days
+                    </h4>
+                    {isSundayToday && (
+                      <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-emerald-300">
+                        Active
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {DAYS.map((day) => {
+                      const selected = classDays.includes(day);
+                      const editable = isSundayToday;
+
+                      return (
+                        <button
+                          key={day}
+                          type="button"
+                          disabled={!editable}
+                          onClick={() => {
+                            if (!isSundayToday) return;
+                            setClassDays((prev) =>
+                              prev.includes(day)
+                                ? prev.filter((d) => d !== day)
+                                : [...prev, day],
+                            );
+                          }}
+                          className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm transition ${
+                            selected
+                              ? 'border-yellow-400/40 bg-yellow-400/10 text-white shadow-[0_0_0_1px_rgba(232,187,64,0.12)]'
+                              : 'border-zinc-700 bg-zinc-900/60 text-zinc-400'
+                          } ${!editable ? 'cursor-default opacity-80' : 'hover:border-zinc-500'}`}
+                        >
+                          <span>{day}</span>
+                          <span
+                            className={`flex h-5 w-5 items-center justify-center rounded-md text-[10px] font-bold ${
+                              selected
+                                ? 'bg-yellow-400 text-black'
+                                : 'border border-zinc-600 text-zinc-500'
+                            }`}
+                          >
+                            {selected ? '✓' : ''}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {!isSundayToday && (
+                    <p className="mt-3 text-xs text-zinc-500">
+                      Class day preferences are read-only until Sunday
+                      submission opens.
+                    </p>
+                  )}
+                </div>
+
+                {isSundayToday ? (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-white/8 bg-zinc-800/60 p-4">
+                      <p className="text-zinc-400 text-xs uppercase tracking-widest font-semibold">
+                        Submit next week
+                      </p>
+                      <p className="mt-2 text-sm text-zinc-300">
+                        Pick your pickup point and times for each day you are
+                        travelling.
+                      </p>
+                    </div>
+
+                    {DAYS.map((day) => (
+                      <div
+                        key={day}
+                        className={`rounded-xl border p-4 space-y-3 transition ${
+                          scheduleForm[day]?.pickup_point_id ||
+                          scheduleForm[day]?.arrival_time ||
+                          scheduleForm[day]?.departure_time
+                            ? 'border-yellow-500/30 bg-yellow-500/5'
+                            : 'border-zinc-700 bg-zinc-800/60'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-white font-semibold text-sm">
+                            {day}
+                          </p>
+                          <span
+                            className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] ${
+                              scheduleForm[day]?.pickup_point_id ||
+                              scheduleForm[day]?.arrival_time ||
+                              scheduleForm[day]?.departure_time
+                                ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-200'
+                                : 'border-zinc-700 bg-zinc-900 text-zinc-500'
+                            }`}
+                          >
+                            {scheduleForm[day]?.pickup_point_id ||
+                            scheduleForm[day]?.arrival_time ||
+                            scheduleForm[day]?.departure_time
+                              ? 'Selected'
+                              : 'Not selected'}
+                          </span>
+                        </div>
+
+                        <select
+                          value={scheduleForm[day]?.pickup_point_id || ''}
+                          onChange={(e) =>
+                            setScheduleForm((prev) => ({
+                              ...prev,
+                              [day]: {
+                                ...prev[day],
+                                pickup_point_id: e.target.value,
+                              },
+                            }))
+                          }
+                          className="w-full px-3 py-2.5 bg-zinc-700 border border-zinc-600 rounded-lg text-white text-sm focus:outline-none focus:border-yellow-400 transition"
+                        >
+                          <option value="">No class / skip this day</option>
+                          {pickupPoints.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label
+                              htmlFor={`${day}-arrival`}
+                              className="block text-zinc-500 text-xs mb-1"
+                            >
+                              Pickup time
+                            </label>
+                            <TimeSelect
+                              id={`${day}-arrival`}
+                              options={timeOptions.arrival}
+                              placeholder="Select…"
+                              value={scheduleForm[day]?.arrival_time || ''}
+                              onChange={(value) =>
+                                setScheduleForm((prev) => ({
+                                  ...prev,
+                                  [day]: {
+                                    ...prev[day],
+                                    arrival_time: value,
+                                  },
+                                }))
+                              }
+                              className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded-lg text-white text-sm focus:outline-none focus:border-yellow-400 transition"
+                            />
+                          </div>
+                          <div>
+                            <label
+                              htmlFor={`${day}-departure`}
+                              className="block text-zinc-500 text-xs mb-1"
+                            >
+                              Return time
+                            </label>
+                            <TimeSelect
+                              id={`${day}-departure`}
+                              options={timeOptions.departure}
+                              placeholder="Select…"
+                              value={scheduleForm[day]?.departure_time || ''}
+                              onChange={(value) =>
+                                setScheduleForm((prev) => ({
+                                  ...prev,
+                                  [day]: {
+                                    ...prev[day],
+                                    departure_time: value,
+                                  },
+                                }))
+                              }
+                              className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded-lg text-white text-sm focus:outline-none focus:border-yellow-400 transition"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {scheduleError && (
+                      <div className="bg-red-950/60 border border-red-800 text-red-400 px-4 py-3 rounded-xl text-sm">
+                        {scheduleError}
+                      </div>
+                    )}
+                    {scheduleSuccess && (
+                      <div className="bg-green-950/60 border border-green-800 text-green-400 px-4 py-3 rounded-xl text-sm">
+                        Schedule submitted successfully.
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleScheduleSubmit}
+                      disabled={submittingSchedule}
+                      className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold py-3.5 rounded-xl transition disabled:opacity-40 flex items-center justify-center gap-2"
+                    >
+                      {submittingSchedule ? (
+                        <>
+                          <svg
+                            className="animate-spin h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8v8z"
+                            />
+                          </svg>
+                          Submitting...
+                        </>
+                      ) : (
+                        'Submit Schedule →'
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-zinc-700 bg-zinc-800/40 px-4 py-3 text-sm text-zinc-400">
+                    Submission opens Sunday · {nextWeekRange}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {scheduleView === 'change' && (
+              <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 space-y-5">
+                <div>
+                  <h3 className="text-white font-bold text-lg">
+                    Request Time Change
+                  </h3>
+                  <p className="text-zinc-500 text-sm mt-1">
+                    Requests are reviewed by admin. One change per day, at least
+                    8 hours before the trip.
+                  </p>
+                </div>
+
+                {schedules.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-zinc-400">
+                      No schedule found for this week
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest">
+                        Select day
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {schedules.map((s) => (
+                          <button
+                            key={s.id}
+                            onClick={() =>
+                              s.change_count < 1 && setChangeDay(s.day_of_week)
+                            }
+                            className={`px-3 py-2.5 rounded-xl text-xs font-medium border transition-all ${
+                              changeDay === s.day_of_week
+                                ? 'bg-yellow-400 text-black border-yellow-400'
+                                : s.change_count >= 1
+                                  ? 'bg-zinc-800 text-zinc-600 border-zinc-700 cursor-not-allowed'
+                                  : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:border-zinc-500'
+                            }`}
+                          >
+                            <p>{s.day_of_week.slice(0, 3)}</p>
+                            <p
+                              className={`text-xs mt-0.5 ${s.change_count >= 1 ? 'text-red-500' : 'text-green-500'}`}
+                            >
+                              {s.change_count >= 1 ? 'Used' : 'Available'}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {changeDay && (
+                      <>
+                        <div className="space-y-2">
+                          <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest">
+                            Which trip
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {(['arrival', 'departure'] as const).map((type) => (
+                              <button
+                                key={type}
+                                onClick={() => {
+                                  setChangeType(type);
+                                  setChangeTime('');
+                                }}
+                                className={`px-4 py-3 rounded-xl text-sm font-medium border transition-all ${changeType === type ? 'bg-yellow-400 text-black border-yellow-400' : 'bg-zinc-800 text-zinc-400 border-zinc-700'}`}
+                              >
+                                {type === 'arrival' ? 'Pickup' : 'Return'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label
+                            htmlFor="change-time"
+                            className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest"
+                          >
+                            New time
+                          </label>
+                          <TimeSelect
+                            id="change-time"
+                            options={timeOptions[changeType]}
+                            value={changeTime}
+                            onChange={setChangeTime}
+                            className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white focus:outline-none focus:border-yellow-400 transition"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {changeError && (
+                      <div className="bg-red-950/60 border border-red-800 text-red-400 px-4 py-3 rounded-xl text-sm">
+                        {changeError}
+                      </div>
+                    )}
+                    {changeSuccess && (
+                      <div className="bg-green-950/60 border border-green-800 text-green-400 px-4 py-3 rounded-xl text-sm">
+                        Time change request submitted successfully.
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleTimeChange}
+                      disabled={!changeDay || !changeTime || changingTime}
+                      className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold py-3.5 rounded-xl transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {changingTime ? (
+                        <>
+                          <svg
+                            className="animate-spin h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8v8z"
+                            />
+                          </svg>
+                          Updating...
+                        </>
+                      ) : (
+                        'Submit Request →'
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'payments' && (
+          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 space-y-4">
+            <div>
+              <h3 className="text-white font-bold text-lg">Payment History</h3>
+              <p className="text-zinc-500 text-sm mt-1">
+                Monthly transport fee receipts
+              </p>
+            </div>
+
+            {payments.length === 0 ? (
+              <div className="text-center py-10">
+                <IconTile name="wallet" className="mx-auto mb-3" />
+                <p className="text-zinc-400 font-medium">
+                  No payment records yet
+                </p>
+                <p className="text-zinc-600 text-sm mt-1">
+                  Your payment history will appear here
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {payments.map((p) => (
+                  <div
+                    key={p.id}
+                    className="bg-zinc-800/60 border border-zinc-700/50 rounded-xl p-4 flex items-center justify-between"
+                  >
+                    <div>
+                      <p className="text-white font-semibold text-sm">
+                        {p.month}
+                      </p>
+                      <p className="text-zinc-500 text-xs mt-0.5">
+                        {p.paid_at
+                          ? `Paid on ${formatDate(p.paid_at)}`
+                          : 'Not yet paid'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-yellow-400 font-bold">
+                        PKR {p.amount.toLocaleString()}
+                      </p>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          p.status === 'paid'
+                            ? 'bg-green-950 text-green-400 border border-green-800'
+                            : 'bg-red-950 text-red-400 border border-red-800'
+                        }`}
+                      >
+                        {p.status === 'paid' ? '✓ Paid' : 'Unpaid'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'timetable' && (
+          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 space-y-5">
+            <div>
+              <h3 className="text-white font-bold text-lg">
+                University Timetable
+              </h3>
+              <p className="text-zinc-500 text-sm mt-1">
+                Select your class days so admin can plan your schedule
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {DAYS.map((day) => (
+                <button
+                  key={day}
+                  onClick={() =>
+                    setClassDays((prev) =>
+                      prev.includes(day)
+                        ? prev.filter((d) => d !== day)
+                        : [...prev, day],
+                    )
+                  }
+                  className={`px-4 py-3 rounded-xl text-sm font-medium border transition-all text-left ${
+                    classDays.includes(day)
+                      ? 'bg-yellow-400 text-black border-yellow-400'
+                      : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:border-zinc-500'
+                  }`}
+                >
+                  <span className="mr-2">
+                    {classDays.includes(day) ? '✓' : '○'}
+                  </span>
+                  {day}
+                </button>
+              ))}
+            </div>
+
+            {classDays.length > 0 && (
+              <div className="bg-zinc-800 rounded-xl p-3">
+                <p className="text-zinc-400 text-xs mb-1">Selected days</p>
+                <p className="text-white font-medium text-sm">
+                  {classDays.join(', ')}
+                </p>
+              </div>
+            )}
+
+            <button
+              onClick={handleSaveTimetable}
+              className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold py-3.5 rounded-xl transition"
+            >
+              Save Timetable →
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'help' && (
+          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 space-y-5">
+            <div>
+              <h3 className="text-white font-bold text-lg">Contact Admin</h3>
+              <p className="text-zinc-500 text-sm mt-1">
+                Send a message to the Eagle Elites admin team
+              </p>
+            </div>
+
+            <textarea
+              value={helpMessage}
+              onChange={(e) => setHelpMessage(e.target.value)}
+              rows={5}
+              placeholder="Describe your issue or question..."
+              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition resize-none"
+            />
+
+            {helpSuccess && (
+              <div className="bg-green-950/60 border border-green-800 text-green-400 px-4 py-3 rounded-xl text-sm">
+                Message sent! The team will reply shortly.
+              </div>
+            )}
+
+            <button
+              onClick={handleSendHelp}
+              disabled={!helpMessage.trim() || sendingHelp}
+              className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold py-3.5 rounded-xl transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {sendingHelp ? (
+                <>
+                  <svg
+                    className="animate-spin h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8z"
+                    />
+                  </svg>
+                  Sending...
+                </>
+              ) : (
+                'Send Message →'
+              )}
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'profile' && (
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(232,187,64,0.14),_transparent_28%),linear-gradient(135deg,_rgba(18,22,30,0.96),_rgba(11,15,20,0.96))] p-5 shadow-[0_30px_60px_rgba(0,0,0,0.2)] sm:p-6">
+              <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-yellow-500/20 bg-gradient-to-br from-yellow-300/30 to-yellow-500/10 text-2xl font-black text-yellow-200">
+                    {profile?.full_name?.charAt(0)?.toUpperCase() || 'S'}
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-400">
+                      Student profile
+                    </p>
+                    <h3 className="mt-2 text-2xl font-black text-white">
+                      {profile?.full_name || 'Student'}
+                    </h3>
+                    <p className="mt-1 text-sm text-zinc-400">
+                      {profile?.email}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 md:justify-end">
+                  <span className="inline-flex items-center rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                    {profile?.fee_status === 'paid'
+                      ? 'Fees paid'
+                      : 'Fees pending'}
+                  </span>
+                  <span className="inline-flex items-center rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300">
+                    {profile?.role || 'Student'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {profile && (
+              <WhatsAppOptInCard
+                profileId={profile.id}
+                phone={profile.phone}
+                optIn={profile.whatsapp_opt_in}
+                demo={demo}
+              />
+            )}
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-3xl border border-white/10 bg-[#0d131c] p-5 sm:p-6">
+                <div className="mb-4 flex items-center gap-2">
+                  <Icon name="user" size={18} />
+                  <h3 className="text-white font-bold text-lg">
+                    Account details
+                  </h3>
+                </div>
+
+                <div className="space-y-3">
+                  {[
+                    { label: 'Full Name', value: profile?.full_name },
+                    { label: 'Email', value: profile?.email },
+                    { label: 'Role', value: profile?.role },
+                    {
+                      label: 'Destination',
+                      value: profile?.institution || 'Not assigned yet',
+                    },
+                    {
+                      label: 'Fee status',
+                      value:
+                        profile?.fee_status === 'paid'
+                          ? 'Paid in full'
+                          : 'Pending',
+                    },
+                  ].map((item) => (
+                    <div
+                      key={item.label}
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-white/3 px-3 py-3"
+                    >
+                      <p className="text-zinc-500 text-xs uppercase tracking-[0.2em]">
+                        {item.label}
+                      </p>
+                      <p className="text-white text-sm font-medium text-right capitalize">
+                        {item.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-white/10 bg-[#0d131c] p-5 sm:p-6">
+                <div className="mb-4 flex items-center gap-2">
+                  <Icon name="shield" size={18} />
+                  <h3 className="text-white font-bold text-lg">
+                    Change password
+                  </h3>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm z-10">
+                      <Icon name="shield" size={16} />
+                    </span>
+                    <PasswordInput
+                      autoComplete="new-password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder={`New password (at least ${PASSWORD_MIN_LENGTH} characters)`}
+                      className="w-full pl-10 pr-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-yellow-400 transition"
+                    />
+                  </div>
+
+                  {passwordError && (
+                    <p role="alert" className="ee-enter text-sm text-red-300">{passwordError}</p>
+                  )}
+                  {passwordSuccess && (
+                    <p className="text-green-400 text-sm">
+                      Password updated successfully.
+                    </p>
+                  )}
+
+                  <button
+                    onClick={handleChangePassword}
+                    disabled={changingPassword || !newPassword}
+                    className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold py-3 rounded-xl transition disabled:opacity-30"
+                  >
+                    {changingPassword ? 'Updating...' : 'Update Password →'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        </div>
+      </main>
+    </div>
+  );
+}
