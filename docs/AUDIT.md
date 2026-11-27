@@ -67,7 +67,7 @@ Reviewed all 60 policies exported from `pg_policies` in the live project.
 - **Storage `payment-proofs`:** students insert and read only inside their own folder (`<user id>/…`); admins read all; no update or delete policies, and the app uploads unique file names, so files can't be overwritten.
 - **Fixed in `20261127010000_tighten_student_policies`:** S11 (student DELETE on schedules and departure choices) and S12 (vehicle list visible to signed-out visitors).
 - **Left as is:** `bookings` is not used anywhere in the code, but students can insert rows into it. It's harmless; drop it once you're sure nothing outside the app uses it.
-- **Still to confirm:** the `payment-proofs` bucket is set to *private* (`select id, public from storage.buckets;` should show `public = false`).
+- **Confirmed private:** `storage.buckets` shows `payment-proofs` with `public = false` (checked 27 Nov 2026), so files can't be opened through public URLs.
 
 ## 5. Plan
 
