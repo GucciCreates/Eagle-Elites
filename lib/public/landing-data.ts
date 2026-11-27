@@ -10,10 +10,15 @@ export type LiveRoute = {
   seatsLeft: number | null;
 };
 
+/** A named stop on a route (public pickup_points table). */
+export type PickupStop = { name: string; routeId: string };
+
 export type LandingData = {
   routes: LiveRoute[];
   routesAvailable: boolean;
   pickupZones: string[];
+  /** Stops per route; empty when the table is unavailable. */
+  pickupStops: PickupStop[];
   institutions: string[];
 };
 
@@ -66,7 +71,7 @@ export async function getLandingData(): Promise<LandingData> {
   'use cache';
   cacheLife('minutes');
 
-  const [routes, availability, zones, groups] = await Promise.all([
+  const [routes, availability, zones, groups, points] = await Promise.all([
     rest<{ id: string; name: string; price: number }[]>(
       'routes?select=id,name,price&order=price.asc,name.asc',
     ),
@@ -79,6 +84,9 @@ export async function getLandingData(): Promise<LandingData> {
     ),
     rest<{ university: string }[]>(
       'departure_groups?select=university&active=eq.true&order=university.asc',
+    ),
+    rest<{ name: string; route_id: string | null }[]>(
+      'pickup_points?select=name,route_id&order=name.asc',
     ),
   ]);
 
@@ -105,6 +113,9 @@ export async function getLandingData(): Promise<LandingData> {
       seatsLeft: seatsByRoute.get(route.id) ?? null,
     })),
     pickupZones: pickupZones.length ? pickupZones : FALLBACK_PICKUP_ZONES,
+    pickupStops: (Array.isArray(points) ? points : [])
+      .filter((p): p is { name: string; route_id: string } => Boolean(p.name?.trim() && p.route_id))
+      .map((p) => ({ name: p.name.trim(), routeId: p.route_id })),
     institutions: institutions.length ? institutions : FALLBACK_INSTITUTIONS,
   };
 }

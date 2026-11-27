@@ -1,22 +1,24 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Logo from '@/components/brand/logo';
+import Icon from '@/components/ui/icons';
 import { useSessionDestination } from '@/lib/auth/use-session-destination';
+import { WHATSAPP_GENERAL } from '@/lib/brand';
 
 const NAV = [
-  ['Fares', '#fares'],
-  ['Coverage', '#coverage'],
-  ['How it works', '#how-it-works'],
-  ['Safety', '#safety'],
-  ['FAQ', '#faq'],
-  ['Contact', '#contact'],
+  ['Fares', '/#fares'],
+  ['Your day', '/#your-day'],
+  ['How it works', '/#how-it-works'],
+  ['Parents', '/#parents'],
+  ['FAQ', '/#faq'],
 ] as const;
 
 export default function SiteHeader() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
   const session = useSessionDestination();
 
   useEffect(() => {
@@ -28,7 +30,11 @@ export default function SiteHeader() {
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setOpen(false);
+      toggleRef.current?.focus();
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
@@ -38,100 +44,83 @@ export default function SiteHeader() {
 
   return (
     <header
-      className={`sticky top-0 z-50 border-b transition-colors ${
-        scrolled || open
-          ? 'border-white/10 bg-[#070b10]/90 backdrop-blur-xl'
-          : 'border-transparent bg-transparent'
+      className={`sticky top-0 z-50 border-b transition-colors duration-300 ${
+        scrolled || open ? 'border-white/10 bg-[#070b10]/92 backdrop-blur-xl' : 'border-transparent bg-transparent'
       }`}
     >
-      <nav
-        aria-label="Main navigation"
-        className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3 sm:px-8"
-      >
-        <a href="#home" onClick={close} className="rounded-xl" aria-label="Eagle Elites home">
+      <nav aria-label="Main navigation" className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
+        <Link href="/" onClick={close} className="rounded-xl">
           <Logo />
-        </a>
+        </Link>
 
         <div className="hidden items-center gap-1 lg:flex">
           {NAV.map(([label, href]) => (
-            <a
-              key={href}
-              href={href}
-              className="rounded-lg px-3 py-2 text-sm text-zinc-300 transition hover:bg-white/[0.04] hover:text-white"
-            >
+            <a key={href} href={href} className="rounded-lg px-3 py-2 text-sm text-zinc-300 transition hover:bg-white/[0.05] hover:text-white">
               {label}
             </a>
           ))}
         </div>
 
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="flex items-center gap-2">
+          <a href={WHATSAPP_GENERAL} target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp" className="ee-btn ee-btn-ghost hidden h-11 w-11 px-0 text-[#25d366] md:inline-flex">
+            <Icon name="whatsapp" size={22} />
+          </a>
           {signedIn ? (
-            <Link
-              href={signedIn.href}
-              className="ee-btn ee-btn-primary min-h-10 px-4 py-2"
-            >
-              {signedIn.label} →
+            <Link prefetch={false} href={signedIn.href} className="ee-btn ee-btn-primary hidden min-h-11 px-4 md:inline-flex">
+              {signedIn.label} <Icon name="arrow-right" size={16} />
             </Link>
           ) : (
             <>
-              <Link
-                href="/auth/login"
-                className="rounded-xl px-3 py-2 text-sm font-medium text-zinc-300 transition hover:text-white"
-              >
+              <Link prefetch={false} href="/auth/login" className="ee-btn ee-btn-ghost hidden min-h-11 px-3 md:inline-flex">
                 Log in
               </Link>
-              <Link
-                href="/auth/signup"
-                className="ee-btn ee-btn-primary min-h-10 px-4 py-2"
-              >
-                Book my seat
+              <Link prefetch={false} href="/auth/signup" className="ee-btn ee-btn-primary hidden min-h-11 px-4 md:inline-flex">
+                Reserve my seat
               </Link>
             </>
           )}
+          <button
+            ref={toggleRef}
+            type="button"
+            className="ee-btn ee-btn-secondary h-12 w-12 px-0 lg:hidden"
+            aria-label={open ? 'Close menu' : 'Open menu'}
+            aria-expanded={open}
+            aria-controls="mobile-navigation"
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? (
+              <Icon name="plus" size={22} className="rotate-45" />
+            ) : (
+              <svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" aria-hidden="true">
+                <path d="M4 7h16M4 12h16M4 17h10" />
+              </svg>
+            )}
+          </button>
         </div>
-
-        <button
-          type="button"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/15 text-xl md:hidden"
-          aria-label={open ? 'Close navigation menu' : 'Open navigation menu'}
-          aria-expanded={open}
-          aria-controls="mobile-navigation"
-          onClick={() => setOpen((v) => !v)}
-        >
-          <span aria-hidden="true">{open ? '×' : '☰'}</span>
-        </button>
       </nav>
 
       {open && (
-        <div id="mobile-navigation" className="border-t border-white/10 px-5 pb-5 pt-3 md:hidden">
-          <div className="grid gap-1">
+        <div id="mobile-navigation" className="ee-enter border-t border-white/10 px-5 pb-5 pt-2 lg:hidden">
+          <div className="grid">
             {NAV.map(([label, href]) => (
-              <a
-                key={href}
-                href={href}
-                onClick={close}
-                className="rounded-xl px-3 py-3 text-sm text-zinc-200 hover:bg-white/5"
-              >
+              <a key={href} href={href} onClick={close} className="flex min-h-12 items-center justify-between border-b border-white/[0.06] text-base text-zinc-200">
                 {label}
+                <Icon name="arrow-right" size={16} className="text-zinc-600" />
               </a>
             ))}
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 border-t border-white/10 pt-4">
+          <div className="mt-4 grid grid-cols-2 gap-2">
             {signedIn ? (
-              <Link
-                href={signedIn.href}
-                onClick={close}
-                className="col-span-2 rounded-xl bg-yellow-400 px-3 py-3 text-center text-sm font-bold text-slate-950"
-              >
+              <Link prefetch={false} href={signedIn.href} onClick={close} className="ee-btn ee-btn-primary col-span-2">
                 {signedIn.label}
               </Link>
             ) : (
               <>
-                <Link href="/auth/login" onClick={close} className="rounded-xl border border-white/15 px-3 py-3 text-center text-sm font-medium">
+                <Link prefetch={false} href="/auth/login" onClick={close} className="ee-btn ee-btn-secondary">
                   Log in
                 </Link>
-                <Link href="/auth/signup" onClick={close} className="rounded-xl bg-yellow-400 px-3 py-3 text-center text-sm font-bold text-slate-950">
-                  Book my seat
+                <Link prefetch={false} href="/auth/signup" onClick={close} className="ee-btn ee-btn-primary">
+                  Reserve my seat
                 </Link>
               </>
             )}
