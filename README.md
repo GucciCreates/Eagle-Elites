@@ -77,7 +77,7 @@ The public homepage (`app/page.tsx`, `components/marketing/`) shows live route f
 
 Migration files are kept in `supabase/migrations/` with their existing timestamped names. Apply them to the intended Supabase project in migration order, review each migration before applying it, and take a database backup before any schema change. In particular, `20261010_rebuild_departure_schema.sql` drops and recreates departure tables and removes/re-adds a profile column; do not run it against data that must be preserved without a reviewed migration plan.
 
-`20261127000000_driver_roster_privacy.sql` limits what drivers can read about students; its rollback is in `supabase/rollback/`. The later migrations cover RLS hardening, application settings, time options, WhatsApp opt-in/logging, and onboarding updates. The security rollback script is in `supabase/rollback/`; use it only when intentionally reverting its matching migration.
+`20261127000000_driver_roster_privacy.sql` limits what drivers can read about students, and `20261127010000_tighten_student_policies.sql` removes student deletes on schedules/departure choices and hides the vehicle list from signed-out visitors; their rollbacks are in `supabase/rollback/`. The later migrations cover RLS hardening, application settings, time options, WhatsApp opt-in/logging, and onboarding updates. The security rollback script is in `supabase/rollback/`; use it only when intentionally reverting its matching migration.
 
 ## WhatsApp templates
 

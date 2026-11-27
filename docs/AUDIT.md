@@ -11,12 +11,14 @@ Effort: S (< ½ day) · M (½–2 days) · L (> 2 days).
 |---|---|---|---|---|---|
 | S1 ✅ | Private pages (`/dashboard`, `/onboarding/*`, `/admin/*`, `/driver/*`) only check sign-in **inside the browser**, after the page has loaded. | A signed-out visitor still receives the page code and a flash of the layout; the server never refuses them. Data is still protected by RLS, but there's no server-side gate. | High | S | 1 ✅ |
 | S2 ✅ | Drivers can read the **entire profile row** of every student ever assigned to them, on any date (policy `Drivers read assigned students` + the driver clause of `Restrict profile reads to account scope`). | Exposes phone, guardian contact, payment reference and amount, transaction ID and ID-card/proof file paths to drivers. The driver screen only needs name, institution and last 4 CNIC digits for that day's trip. | High | S | 1 ✅ |
-| S3 | The base tables (`profiles`, `payments`, `routes`, `pickup_points`, `notifications`, `help_messages`, `holidays`, `coasters`, `admin_users`, `weekly_schedules`, `student_timetables`, expenses) and the `payment-proofs` storage bucket were created in the Supabase dashboard, so their original policies **are not in the repo** and can't be reviewed here. | Any permissive policy created there (e.g. "read for all users") would override what the migrations intend. | High (unknown) | S for owner | 1 — owner to run the check in §4 |
+| S3 ✅ | The base tables and the `payment-proofs` bucket were created in the Supabase dashboard, so their policies weren't in the repo. **Reviewed from the live database on 27 Nov 2026** (see §6): no private data is exposed to signed-out users or other students; storage is private, insert-only and per-student. Two gaps found → S11, S12. | — | — | 1 ✅ |
 | S4 ✅ | `/api/cron/fee-reminders` compares the secret with `!==`. | Timing-unsafe comparison; low practical risk but trivial to fix. | Low | S | 1 ✅ |
 | S5 ✅ | API routes accept loosely validated JSON (no UUID/date/length checks; mixed `{error}` vs `{ok,error}` shapes). | Bad input reaches the database; inconsistent errors make the UI harder to handle. | Medium | S | 1 ✅ |
 | S6 ✅ | Minimum password length is 6. | Weak passwords on accounts that hold personal and payment data. | Medium | S (+ Supabase setting) | 1 ✅ |
 | S7 ✅ | "Try the demo" writes a fake session to `localStorage`, and `/dashboard` trusts it **before** checking for a real session. | A real signed-in student who once clicked the demo sees fake data; the two modes can mix. | Medium | S | 1 ✅ |
 | S8 ✅ | WhatsApp sends one recipient at a time, with a separate duplicate-check query per recipient. | Large announcements can exceed Vercel's function time limit and stop half-way. | Medium | S | 1 ✅ |
+| S11 ✅ | `weekly_schedules` and `departure_selections` student policies were `FOR ALL`, including DELETE (unused by the app). Deleting and re-adding a schedule day reset `change_count` to 0, bypassing the one-change-per-day rule. | Medium | S | 1b ✅ |
+| S12 ✅ | `coasters` (vehicle numbers, capacity, maintenance status) was readable by signed-out visitors. | Low | S | 1b ✅ |
 | S9 | The **10:00 AM departure-slot cutoff** is enforced only in the student's browser; the database accepts changes after 10:00. | A student can still change their slot after cutoff by calling the API directly. | Medium | S | **Needs owner decision** |
 | S10 | The **8-hour trip-time-change rule** is enforced only in the browser; the database enforces "one change per day" but not the 8 hours. | Same as S9. | Medium | S | **Needs owner decision** |
 
@@ -55,6 +57,17 @@ order by schemaname, tablename, policyname;
 ```
 
 Look especially for any policy on `profiles`, `payments` or `storage.objects` (bucket `payment-proofs`) whose `roles` include `anon` or `public`, or whose `qual` is `true`.
+
+## 6. Live policy review (27 Nov 2026)
+
+Reviewed all 60 policies exported from `pg_policies` in the live project.
+
+- **Fine:** `profiles` (own row or privileged only, after the driver migration), `payments`, `help_messages`, `fee_payments`, `whatsapp_messages`, `admin_activity_log`, `expenses`, `monthly_summaries`, `driver_trips`, `app_settings`, `notifications` (audience-scoped), `drivers`, `daily_assignments` (restrictive scope + guard triggers).
+- **Public read by design (landing page / onboarding):** `routes`, `pickup_points`, `pickup_zones` (active only), `departure_groups`, `departure_slots`, `holidays`, `time_options`.
+- **Storage `payment-proofs`:** students insert and read only inside their own folder (`<user id>/…`); admins read all; no update or delete policies, and the app uploads unique file names, so files can't be overwritten.
+- **Fixed in `20261127010000_tighten_student_policies`:** S11 (student DELETE on schedules and departure choices) and S12 (vehicle list visible to signed-out visitors).
+- **Left as is:** `bookings` is not used anywhere in the code, but students can insert rows into it. It's harmless; drop it once you're sure nothing outside the app uses it.
+- **Still to confirm:** the `payment-proofs` bucket is set to *private* (`select id, public from storage.buckets;` should show `public = false`).
 
 ## 5. Plan
 
