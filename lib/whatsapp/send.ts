@@ -97,9 +97,51 @@ export type Recipient = {
   full_name?: string | null;
 };
 
+const SEND_CONCURRENCY = 5;
+const LOG_BATCH = 25;
+const LOOKUP_BATCH = 200;
+
+type LogRow = {
+  student_id: string | null;
+  phone: string | null;
+  event: WhatsAppEvent;
+  template: string;
+  status: SendResult['status'];
+  error: string | null;
+  provider_message_id: string | null;
+  dedupe_key: string | null;
+};
+
+/** Keys that were already delivered, looked up in a few batched queries. */
+async function alreadySent(service: SupabaseClient, keys: string[]) {
+  const sent = new Set<string>();
+  for (let i = 0; i < keys.length; i += LOOKUP_BATCH) {
+    const { data } = await service
+      .from('whatsapp_messages')
+      .select('dedupe_key')
+      .eq('status', 'sent')
+      .in('dedupe_key', keys.slice(i, i + LOOKUP_BATCH));
+    for (const row of data ?? []) if (row.dedupe_key) sent.add(row.dedupe_key as string);
+  }
+  return sent;
+}
+
+async function writeLog(service: SupabaseClient, rows: LogRow[]) {
+  if (rows.length === 0) return;
+  const { error } = await service.from('whatsapp_messages').insert(rows);
+  if (!error) return;
+  // A duplicate "sent" key (unique index) rejects the whole batch: retry
+  // row by row so the other attempts are still recorded.
+  for (const row of rows) {
+    await service.from('whatsapp_messages').insert(row);
+  }
+}
+
 /**
  * Sends one event to many recipients, logging each attempt to
  * `whatsapp_messages`. `dedupeKey` (per recipient) skips repeats.
+ * Duplicate checks are batched and messages go out a few at a time, so large
+ * audiences finish well inside the serverless time limit.
  */
 export async function sendToRecipients(
   service: SupabaseClient | null,
@@ -109,42 +151,58 @@ export async function sendToRecipients(
   dedupeKey?: (recipient: Recipient) => string,
 ) {
   const summary = { sent: 0, failed: 0, skipped: 0 };
+  const template = getTemplateName(event);
 
-  for (const recipient of recipients) {
-    const key = dedupeKey?.(recipient);
+  const keyed = recipients.map((recipient) => ({ recipient, key: dedupeKey?.(recipient) ?? null }));
+  const keys = [...new Set(keyed.map((item) => item.key).filter((key): key is string => Boolean(key)))];
+  const sent = service && keys.length ? await alreadySent(service, keys) : new Set<string>();
 
-    if (key && service) {
-      const { data: existing } = await service
-        .from('whatsapp_messages')
-        .select('id')
-        .eq('dedupe_key', key)
-        .eq('status', 'sent')
-        .maybeSingle();
-      if (existing) {
-        summary.skipped += 1;
-        continue;
-      }
+  // Skip already-delivered keys and duplicates within this same run.
+  const seen = new Set<string>();
+  const queue = keyed.filter(({ key }) => {
+    if (!key) return true;
+    if (sent.has(key) || seen.has(key)) {
+      summary.skipped += 1;
+      return false;
     }
+    seen.add(key);
+    return true;
+  });
 
-    const result = recipient.phone
-      ? await sendTemplate(recipient.phone, event, buildParams(recipient))
-      : ({ status: 'skipped', error: 'No phone number' } as SendResult);
+  let pending: LogRow[] = [];
+  const flush = async () => {
+    if (!service) return;
+    const rows = pending;
+    pending = [];
+    await writeLog(service, rows);
+  };
 
-    summary[result.status] += 1;
-
-    if (service) {
-      await service.from('whatsapp_messages').insert({
+  let next = 0;
+  const worker = async () => {
+    while (next < queue.length) {
+      const { recipient, key } = queue[next++];
+      const result = recipient.phone
+        ? await sendTemplate(recipient.phone, event, buildParams(recipient))
+        : ({ status: 'skipped', error: 'No phone number' } as SendResult);
+      summary[result.status] += 1;
+      pending.push({
         student_id: recipient.id,
         phone: normalizePkPhone(recipient.phone) ?? recipient.phone,
         event,
-        template: getTemplateName(event),
+        template,
         status: result.status,
         error: result.error ?? null,
         provider_message_id: result.messageId ?? null,
-        dedupe_key: result.status === 'sent' ? (key ?? null) : null,
+        dedupe_key: result.status === 'sent' ? key : null,
       });
+      if (pending.length >= LOG_BATCH) await flush();
     }
-  }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.min(SEND_CONCURRENCY, queue.length) }, worker),
+  );
+  await flush();
 
   return summary;
 }

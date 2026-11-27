@@ -44,22 +44,8 @@ export default function Login() {
     window.history.replaceState(null, '', window.location.pathname);
   }, []);
 
-  const handleDemoLogin = () => {
-    const demoSession = {
-      user: {
-        id: 'demo-user',
-        email: 'demo@student.eagleelites.com',
-      },
-      profile: {
-        full_name: 'Demo Student',
-        email: 'demo@student.eagleelites.com',
-        role: 'student',
-      },
-    };
-
-    localStorage.setItem('ee_demo_session', JSON.stringify(demoSession));
-    router.push('/dashboard');
-  };
+  // The demo lives on its own public page and never touches the real session.
+  const handleDemoLogin = () => router.push('/demo');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

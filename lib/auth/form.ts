@@ -1,4 +1,5 @@
-export const PASSWORD_MIN_LENGTH = 6;
+// Keep in step with Supabase: Authentication → Policies → Minimum password length.
+export const PASSWORD_MIN_LENGTH = 8;
 
 export function normalizeEmail(value: string) {
   return value.trim().toLowerCase();

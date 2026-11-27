@@ -44,6 +44,17 @@ export default function DriverDashboard() {
       setStudents({});
       return;
     }
+    // Roster comes from a narrow database function that returns only what a
+    // driver needs (migration 20261127000000_driver_roster_privacy).
+    const { data: rosterRows, error: rosterError } = await supabase.rpc('driver_trip_roster', { p_date: date });
+    if (!rosterError) {
+      setStudents(Object.fromEntries(
+        ((rosterRows ?? []) as { student_id: string; full_name: string; institution: string | null; cnic_last4: string | null }[])
+          .map((row) => [row.student_id, { id: row.student_id, full_name: row.full_name, institution: row.institution, cnic_last4: row.cnic_last4 }]),
+      ));
+      return;
+    }
+    // Fallback until that migration is applied (function not found).
     const ids = tripRows.map((trip) => trip.student_id);
     const { data: profileRows, error: profilesError } = await supabase
       .from('profiles')

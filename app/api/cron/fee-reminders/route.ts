@@ -1,6 +1,7 @@
 import { NextResponse, connection } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { sendToRecipients, type Recipient } from '@/lib/whatsapp/send';
+import { safeEqual } from '@/lib/api/validate';
 
 /**
  * Monthly fee reminders, triggered by Vercel Cron (see vercel.json):
@@ -11,7 +12,8 @@ import { sendToRecipients, type Recipient } from '@/lib/whatsapp/send';
 export async function GET(request: Request) {
   await connection(); // always run at request time, never prerender
   const secret = process.env.CRON_SECRET;
-  if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) {
+  const header = request.headers.get('authorization') ?? '';
+  if (!secret || !safeEqual(header, `Bearer ${secret}`)) {
     return NextResponse.json(
       { ok: false, error: 'Unauthorized' },
       { status: 401 },
