@@ -6,7 +6,7 @@ import GoogleButton from '@/components/auth/google-button';
 import { friendlyAuthError } from '@/lib/auth/form';
 import { startGoogleSignIn } from '@/lib/auth/google';
 import { useSessionDestination } from '@/lib/auth/use-session-destination';
-import { createClient } from '@/lib/supabase/client';
+import { loadSupabaseClient } from '@/lib/supabase/lazy-client';
 
 /**
  * Primary conversion block: Google sign-up (one tap), email sign-up, and a
@@ -26,7 +26,7 @@ export default function SignupCta({
     setLoading(true);
     setError('');
     try {
-      await startGoogleSignIn(createClient(), 'student');
+      await startGoogleSignIn(await loadSupabaseClient(), 'student');
     } catch (reason) {
       setError(
         friendlyAuthError(

@@ -39,6 +39,24 @@ test.describe('signed-in staff', () => {
     expect(errors).toEqual([]);
   });
 
+  test('admin Fees, Messages and Announcements tabs open', async ({ page }) => {
+    const errors = trackErrors(page);
+    await page.goto('/admin/dashboard');
+    const sidebar = page.getByRole('complementary', { name: 'Admin sections' });
+    await sidebar.getByRole('button', { name: /Fees/ }).click();
+    await expect(page.getByRole('heading', { name: 'Fee collection dashboard' })).toBeVisible();
+    await sidebar.getByRole('button', { name: /Messages/ }).click();
+    await expect(page.getByRole('heading', { name: 'Help Messages' })).toBeVisible();
+    await sidebar.getByRole('button', { name: /Announcements/ }).click();
+    await expect(page.getByText('Winter timings')).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
+  test('signed-in staff see their dashboard link on the landing page', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('link', { name: 'Open admin dashboard' }).first()).toBeVisible();
+  });
+
   test('driver sees today’s roster from the privacy-safe roster function', async ({ page }) => {
     const errors = trackErrors(page);
     await page.goto('/driver/dashboard');

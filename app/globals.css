@@ -285,6 +285,20 @@ select {
 .ee-stagger > *:nth-child(6) { animation-delay: 250ms; }
 .ee-stagger > *:nth-child(n + 7) { animation-delay: 300ms; }
 
+/* Headings slide in without fading: browsers don't count transparent text as
+   painted, so a fade would delay the page's Largest Contentful Paint. */
+@keyframes ee-rise {
+  from {
+    transform: translateY(10px);
+  }
+  to {
+    transform: none;
+  }
+}
+.ee-stagger > h1 {
+  animation-name: ee-rise;
+}
+
 /* Dropdowns and popovers. */
 .ee-pop {
   transform-origin: top right;

@@ -7,14 +7,27 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { getPakistanDate, getPakistanWeekStart } from '@/lib/date/pakistan';
-import PaymentSettingsTab from '@/components/admin/payment-settings-tab';
-import TimeOptionsTab from '@/components/admin/time-options-tab';
-import WhatsAppTab from '@/components/admin/whatsapp-tab';
-import ApplicationsTab, { type ApplicationRow } from '@/components/admin/applications-tab';
-import ProofViewer from '@/components/admin/proof-viewer';
+import dynamic from 'next/dynamic';
+import type { ApplicationRow } from '@/components/admin/applications-tab';
 import SectionLoading from '@/components/section-loading';
 import { notifyWhatsApp, type NotifyResponse } from '@/lib/whatsapp/client';
 import { normalizePkPhone } from '@/lib/phone';
+import {
+  SLOT_HISTORY_DAYS,
+  fetchAdminStudents,
+  fetchAnnouncements,
+  fetchDepartureSlots,
+  fetchFeePayments,
+  fetchHelpMessages,
+  shiftIsoDate,
+} from '@/lib/admin/queries';
+
+// Tabs that live in their own files download only when an admin opens them.
+const PaymentSettingsTab = dynamic(() => import('@/components/admin/payment-settings-tab'), { loading: () => <SectionLoading /> });
+const TimeOptionsTab = dynamic(() => import('@/components/admin/time-options-tab'), { loading: () => <SectionLoading /> });
+const WhatsAppTab = dynamic(() => import('@/components/admin/whatsapp-tab'), { loading: () => <SectionLoading /> });
+const ApplicationsTab = dynamic(() => import('@/components/admin/applications-tab'), { loading: () => <SectionLoading /> });
+const ProofViewer = dynamic(() => import('@/components/admin/proof-viewer'), { loading: () => <SectionLoading /> });
 
 function describeWhatsApp(result: NotifyResponse) {
   if (!result.ok) return `WhatsApp: ${result.error ?? 'failed'}`;
@@ -129,12 +142,14 @@ export default function AdminDashboard() {
   const [activityEntries, setActivityEntries] = useState<ActivityEntry[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notificationTotal, setNotificationTotal] = useState(0);
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [isTabPending, startTabTransition] = useTransition();
   const [adminReady, setAdminReady] = useState(false);
   const [departureStatusError, setDepartureStatusError] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const attendanceTabOpen = activeTab === 'attendance';
   const [activeNavGroup, setActiveNavGroup] = useState('workspace');
   const [messageFilter, setMessageFilter] = useState<'open' | 'resolved' | 'all' | 'unread'>('open');
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -213,6 +228,8 @@ export default function AdminDashboard() {
   const [newRoutePrice, setNewRoutePrice] = useState('');
   const [departureGroups, setDepartureGroups] = useState<DepartureGroup[]>([]);
   const [departureSlots, setDepartureSlots] = useState<DepartureSlot[]>([]);
+  // Earliest slot date loaded so far; older dates are fetched when an admin picks them.
+  const [slotsLoadedFrom, setSlotsLoadedFrom] = useState('');
   const [slotDate, setSlotDate] = useState(() =>
     typeof window === 'undefined' ? '' : getPakistanDate(),
   );
@@ -302,6 +319,7 @@ export default function AdminDashboard() {
       }
       setAdminReady(true);
 
+      const slotWindowStart = shiftIsoDate(getPakistanDate(), -SLOT_HISTORY_DAYS);
       const [
         { data: studentsData },
         { data: routesData },
@@ -309,30 +327,20 @@ export default function AdminDashboard() {
         { data: driversData },
         { data: helpData },
         { data: holidaysData },
-        { data: notificationsData },
+        { data: notificationsData, count: notificationsCount },
         { data: applicationsData },
         { data: departureGroupsData },
         { data: departureSlotsData, error: departureSlotsError },
         { data: departureSelectionsData, error: departureSelectionsError },
         { data: activityData },
       ] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('*, routes!profiles_route_id_fkey(name)')
-          .eq('role', 'student')
-          .order('full_name'),
+        fetchAdminStudents(supabase),
         supabase.from('routes').select('*'),
         supabase.from('coasters').select('*'),
         supabase.from('drivers').select('id, email, full_name, phone, cnic, usual_vehicle_id, active').order('full_name'),
-        supabase
-          .from('help_messages')
-          .select('*, profiles(full_name, email)')
-          .order('created_at', { ascending: false }),
+        fetchHelpMessages(supabase),
         supabase.from('holidays').select('*').order('date'),
-        supabase
-          .from('notifications')
-          .select('*')
-          .order('created_at', { ascending: false }),
+        fetchAnnouncements(supabase),
         supabase
           .from('profiles')
           .select('*')
@@ -343,11 +351,7 @@ export default function AdminDashboard() {
           .select('*')
           .eq('active', true)
           .order('university'),
-        supabase
-          .from('departure_slots')
-          .select('*')
-          .order('slot_date', { ascending: false })
-          .order('slot_number', { ascending: true }),
+        fetchDepartureSlots(supabase, slotWindowStart),
         supabase
           .from('departure_selections')
           .select('student_id, slot_id, selection_date')
@@ -361,14 +365,18 @@ export default function AdminDashboard() {
       if (driversData) setDrivers(driversData as Driver[]);
       if (helpData) setHelpMessages(helpData as HelpMessage[]);
       if (holidaysData) setHolidays(holidaysData as Holiday[]);
-      if (notificationsData)
+      if (notificationsData) {
         setNotifications(notificationsData as Notification[]);
+        setNotificationTotal(notificationsCount ?? notificationsData.length);
+      }
       if (applicationsData) setApplications(applicationsData as Application[]);
       if (activityData) setActivityEntries(activityData as ActivityEntry[]);
       if (departureGroupsData)
         setDepartureGroups(departureGroupsData as DepartureGroup[]);
-      if (departureSlotsData)
+      if (departureSlotsData) {
         setDepartureSlots(departureSlotsData as DepartureSlot[]);
+        setSlotsLoadedFrom(slotWindowStart);
+      }
       if (departureSlotsError || departureSelectionsError) {
         setDepartureStatusError(
           departureSlotsError?.message ?? departureSelectionsError?.message ??
@@ -416,22 +424,27 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!adminReady || !attendanceDate || !attendanceMonth) return;
+    const wantMonth = attendanceTabOpen;
     let cancelled = false;
     const monthStart = `${attendanceMonth}-01`;
     const [year, month] = attendanceMonth.split('-').map(Number);
     const nextMonth = new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10);
+    const columns = 'student_id, assignment_date, driver_id, driver_name, attendance_status, attendance_marked_at';
+    // The day's rows feed the sidebar badge; the month report only shows on its tab.
     void Promise.all([
-      supabase.from('daily_assignments').select('student_id, assignment_date, driver_id, driver_name, attendance_status, attendance_marked_at').eq('assignment_date', attendanceDate),
-      supabase.from('daily_assignments').select('student_id, assignment_date, driver_id, driver_name, attendance_status, attendance_marked_at').gte('assignment_date', monthStart).lt('assignment_date', nextMonth),
+      supabase.from('daily_assignments').select(columns).eq('assignment_date', attendanceDate),
+      wantMonth
+        ? supabase.from('daily_assignments').select(columns).gte('assignment_date', monthStart).lt('assignment_date', nextMonth)
+        : Promise.resolve(null),
     ]).then(([daily, monthly]) => {
       if (cancelled) return;
-      const error = daily.error ?? monthly.error;
+      const error = daily.error ?? monthly?.error;
       setAttendanceError(error?.message ?? '');
       if (daily.data) setAttendanceRows(daily.data as AttendanceRecord[]);
-      if (monthly.data) setAttendanceMonthRows(monthly.data as AttendanceRecord[]);
+      if (monthly?.data) setAttendanceMonthRows(monthly.data as AttendanceRecord[]);
     });
     return () => { cancelled = true; };
-  }, [adminReady, attendanceDate, attendanceMonth, supabase]);
+  }, [adminReady, attendanceDate, attendanceMonth, attendanceTabOpen, supabase]);
 
   useEffect(() => {
     if (!adminReady || !assignDate) return;
@@ -450,11 +463,29 @@ export default function AdminDashboard() {
     });
   }, [adminReady, assignDate, supabase]);
 
+  // Fee payments are only shown on the Fees tab: load them when it opens.
   useEffect(() => {
-    if (!adminReady || !feeReportMonth) return;
-    void supabase.from('fee_payments').select('student_id, fee_month, amount, recorded_at').order('fee_month', { ascending: false }).limit(5000)
-      .then(({ data }) => { if (data) setFeePayments(data as FeePayment[]); });
-  }, [adminReady, feeReportMonth, supabase]);
+    if (!adminReady || !feeReportMonth || activeTab !== 'fees') return;
+    let cancelled = false;
+    void fetchFeePayments(supabase, feeReportMonth).then(({ data }) => {
+      if (!cancelled && data) setFeePayments(data as FeePayment[]);
+    });
+    return () => { cancelled = true; };
+  }, [activeTab, adminReady, feeReportMonth, supabase]);
+
+  // A slot date older than what's loaded: fetch just that day.
+  useEffect(() => {
+    if (!adminReady || !slotDate || !slotsLoadedFrom || slotDate >= slotsLoadedFrom) return;
+    let cancelled = false;
+    void fetchDepartureSlots(supabase, slotDate, slotDate).then(({ data }) => {
+      if (cancelled || !data) return;
+      setDepartureSlots((current) => [
+        ...current.filter((slot) => slot.slot_date !== slotDate),
+        ...(data as DepartureSlot[]),
+      ]);
+    });
+    return () => { cancelled = true; };
+  }, [adminReady, slotDate, slotsLoadedFrom, supabase]);
 
   useEffect(() => {
     if (!adminReady) return;
@@ -640,7 +671,7 @@ export default function AdminDashboard() {
         `Marked ${selectedStudentIds.length} student${selectedStudentIds.length === 1 ? '' : 's'} as paid.`,
       );
       void logAdminActivity('Marked students as paid', { count: selectedStudentIds.length, student_ids: selectedStudentIds });
-      const { data: paymentRows } = await supabase.from('fee_payments').select('student_id, fee_month, amount, recorded_at').order('fee_month', { ascending: false }).limit(5000);
+      const { data: paymentRows } = await fetchFeePayments(supabase, feeReportMonth);
       if (paymentRows) setFeePayments(paymentRows as FeePayment[]);
       setSelectedStudentIds([]);
       setStudentPage(0);
@@ -656,7 +687,7 @@ export default function AdminDashboard() {
       const student = students.find((item) => item.id === studentId);
       void logAdminActivity('Marked student as paid', { student_id: studentId, student_name: student?.full_name });
       setStudents((current) => current.map((student) => student.id === studentId ? { ...student, fee_status: 'paid' } : student));
-      const { data } = await supabase.from('fee_payments').select('student_id, fee_month, amount, recorded_at').order('fee_month', { ascending: false }).limit(5000);
+      const { data } = await fetchFeePayments(supabase, feeReportMonth);
       if (data) setFeePayments(data as FeePayment[]);
     }
     setSavingFeeStudent(null);
@@ -751,13 +782,13 @@ export default function AdminDashboard() {
       }
     }
 
-    const { data } = await supabase
-      .from('departure_slots')
-      .select('*')
-      .order('slot_date', { ascending: false })
-      .order('slot_number', { ascending: true });
+    const reloadFrom = slotsLoadedFrom && slotsLoadedFrom < slotDate ? slotsLoadedFrom : slotDate;
+    const { data } = await fetchDepartureSlots(supabase, reloadFrom);
 
-    if (data) setDepartureSlots(data as DepartureSlot[]);
+    if (data) {
+      setDepartureSlots(data as DepartureSlot[]);
+      setSlotsLoadedFrom(reloadFrom);
+    }
     if (entries.length) void logAdminActivity('Posted departure slots', { group: departureGroups.find((group) => group.id === selectedGroupId)?.university, date: slotDate, count: entries.length });
 
     setSlotsSuccess(true);
@@ -841,6 +872,7 @@ export default function AdminDashboard() {
     }
     void logAdminActivity('Posted announcement', { title: announcementTitle, audience: announcementTargetType });
     setNotifications((prev) => [data as Notification, ...prev]);
+    setNotificationTotal((total) => total + 1);
 
     if (data && announcementWhatsApp) {
       const result = await notifyWhatsApp({
@@ -1083,7 +1115,7 @@ export default function AdminDashboard() {
     assignments: todayAssignments.length,
     fees: unpaidCount,
     messages: unreadMessages,
-    announcements: notifications.length,
+    announcements: notificationTotal,
     departures: Math.max(0, students.filter((student) => student.status === 'active').length - selectedDepartureIds.length),
     drivers: drivers.filter((driver) => driver.active).length,
     attendance: attendanceRows.filter((row) => row.attendance_status === null).length,
@@ -2385,6 +2417,9 @@ export default function AdminDashboard() {
               <h2 className="mb-4 text-xl font-semibold text-white">
                 Previous Announcements
               </h2>
+              {notificationTotal > notifications.length && (
+                <p className="-mt-2 mb-4 text-xs text-zinc-500">Showing the latest {notifications.length} of {notificationTotal}.</p>
+              )}
 
               <div className="space-y-3">
                 {notifications.length === 0 ? (
