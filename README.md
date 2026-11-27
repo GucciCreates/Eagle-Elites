@@ -100,9 +100,19 @@ Configure `WHATSAPP_TEMPLATE_LANG` and the optional `WHATSAPP_TEMPLATE_*` overri
 
 Vercel cron configuration is in `vercel.json`. Fee reminders call `/api/cron/fee-reminders` on the 1st and 10th of each month. Vercel schedules use UTC; the current `0 4` schedule corresponds to 09:00 in Pakistan Standard Time (UTC+5). Set `CRON_SECRET` in the Vercel project environment before enabling the cron jobs.
 
+## Tests
+
+- `npm test`: unit tests (Vitest) for pricing, dates and the 8-hour rule, phone numbers, login routing, form and API validation, and WhatsApp bulk sending. One test also checks that `lib/onboarding/pricing.ts` matches the database's `onboarding_amount_due()`.
+- `npm run test:e2e`: end-to-end tests (Playwright). They build the production site against a fake Supabase (`tests/e2e/fake-supabase.mjs`, sample data only) and check the landing page and fare calculator, route protection, the demo, the admin, driver and accounting pages, and phone layouts. Set `E2E_SKIP_BUILD=1` to reuse an existing build. First time on a new machine: `npx playwright install chromium`.
+- **CI:** `.github/workflows/ci.yml` runs lint, type check, unit tests, build and end-to-end tests on every pull request and on `main`.
+
+Error pages: `app/error.tsx` plus `app/dashboard`, `app/admin` and `app/driver` error boundaries show a friendly "Try again" screen. `app/global-error.tsx` covers the root layout. Error logging records only the error type and server reference, never personal data.
+
 ## Useful commands
 
 - `npm run dev` — local development server
 - `npm run lint` — ESLint
+- `npm run typecheck` — TypeScript
+- `npm test` / `npm run test:e2e` — unit / end-to-end tests
 - `npm run build` — production build and type checking
 - `npm start` — serve the last production build

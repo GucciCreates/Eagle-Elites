@@ -42,8 +42,8 @@ Effort: S (< ½ day) · M (½–2 days) · L (> 2 days).
 | U4 | Notification "unread" count = total announcements; no read state. | 3 |
 | A1 | Menus don't close on Esc or return focus; some icon buttons unlabelled. | 4 |
 | A2 | FAQ has no `FAQPage` structured data. | 4 |
-| Q1 | No automated tests and no CI. | 5 |
-| Q2 | No `app/error.tsx` or per-dashboard error boundaries. | 5 |
+| Q1 ✅ | No automated tests and no CI. **Added:** 37 unit tests, 17 end-to-end tests, GitHub Actions CI. | 5 ✅ |
+| Q2 ✅ | No `app/error.tsx` or per-dashboard error boundaries. **Added** with a friendly retry screen. | 5 ✅ |
 
 ## 4. Owner check: live database policies (S3)
 
