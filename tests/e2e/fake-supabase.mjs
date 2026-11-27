@@ -45,6 +45,11 @@ const data = {
   'rpc/driver_trip_roster': students.slice(0, 3).map((s) => ({
     student_id: s.id, full_name: s.full_name, institution: s.institution, cnic_last4: s.cnic_last4,
   })),
+  pickup_points: [
+    ['B-17 MultiGardens', 'r2'], ['D-17 Society', 'r2'], ['Saddar', 'r2'],
+    ['Wah Model Town', 'r1'], ['GT Road / Taxila', 'r1'], ['New City Phase II', 'r1'],
+    ['Hassan Abdal', 'r3'], ['GT Road / Taxila', 'r3'],
+  ].map(([name, route_id], i) => ({ id: `p${i}`, name, route_id })),
   holidays: [{ id: 'h1', date: '2026-12-25', reason: 'Quaid-e-Azam Day' }],
   notifications: [{ id: 'n1', title: 'Winter timings', message: 'Pickups move 15 minutes later.', created_at: '2026-11-25T09:00:00Z' }],
 };
