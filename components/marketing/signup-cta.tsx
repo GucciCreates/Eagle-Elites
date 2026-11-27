@@ -45,7 +45,7 @@ export default function SignupCta({
       <div className={wrap}>
         <Link
           href={session.href}
-          className="inline-flex min-h-14 items-center justify-center rounded-2xl bg-yellow-400 px-7 font-bold text-slate-950 shadow-lg shadow-yellow-500/15 transition hover:-translate-y-0.5 hover:bg-yellow-300"
+          className="ee-btn ee-btn-primary min-h-14 rounded-2xl px-7 text-base hover:-translate-y-0.5"
         >
           {session.label} <span className="ml-2" aria-hidden="true">→</span>
         </Link>
@@ -66,7 +66,7 @@ export default function SignupCta({
       />
       <Link
         href="/auth/signup"
-        className="inline-flex min-h-14 items-center justify-center rounded-2xl bg-yellow-400 px-7 font-bold text-slate-950 shadow-lg shadow-yellow-500/15 transition hover:-translate-y-0.5 hover:bg-yellow-300"
+        className="ee-btn ee-btn-primary min-h-14 rounded-2xl px-7 text-base hover:-translate-y-0.5"
       >
         Book my seat with email <span className="ml-2" aria-hidden="true">→</span>
       </Link>

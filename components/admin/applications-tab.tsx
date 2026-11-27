@@ -6,6 +6,7 @@ import ProofViewer from '@/components/admin/proof-viewer';
 import { notifyWhatsApp, type NotifyResponse } from '@/lib/whatsapp/client';
 import { REJECTION_REASONS } from '@/lib/onboarding/rejection-reasons';
 import { formatPkr } from '@/lib/onboarding/pricing';
+import { IconTile } from '@/components/ui/icons';
 
 export type ApplicationRow = {
   id: string;
@@ -201,7 +202,7 @@ export default function ApplicationsTab({
     });
 
   return (
-    <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+    <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold text-white">Applications</h2>
@@ -249,7 +250,7 @@ export default function ApplicationsTab({
 
       {sorted.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-950/60 p-8 text-center text-zinc-400">
-          <p className="text-3xl">📋</p>
+          <IconTile name="clipboard" className="mx-auto" />
           <p className="mt-3 text-lg text-white">No pending applications</p>
         </div>
       ) : (
@@ -303,7 +304,7 @@ export default function ApplicationsTab({
             return (
               <article
                 key={app.id}
-                className="rounded-[24px] border border-zinc-800 bg-zinc-950/70 p-4"
+                className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-4"
               >
                 <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
                   <label className="flex items-start gap-3">
@@ -372,7 +373,7 @@ export default function ApplicationsTab({
                       </p>
                       {dupCount > 0 && (
                         <p className="mt-1 text-xs font-semibold text-red-300">
-                          ⚠️ This transaction ID is also used on {dupCount}{' '}
+                          This transaction ID is also used on {dupCount}{' '}
                           other account{dupCount > 1 ? 's' : ''}.
                         </p>
                       )}

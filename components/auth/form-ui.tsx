@@ -4,12 +4,12 @@ import type { InputHTMLAttributes, ReactNode } from 'react';
 import PasswordInput from '@/components/password-input';
 
 export const inputClass =
-  'w-full rounded-xl border bg-zinc-900/80 px-4 py-3 text-[15px] text-white placeholder:text-zinc-500 transition focus:outline-none focus:ring-2 disabled:opacity-60';
+  'w-full min-h-12 rounded-xl border bg-zinc-950/80 px-4 py-3 text-[15px] text-white placeholder:text-zinc-500 transition focus:outline-none focus:ring-4 disabled:opacity-60';
 
 function stateClass(error?: string) {
   return error
-    ? 'border-red-500/60 focus:border-red-400 focus:ring-red-500/20'
-    : 'border-zinc-700/80 focus:border-yellow-400/80 focus:ring-yellow-400/20';
+    ? 'border-red-500/60 focus:border-red-400 focus:ring-red-500/15'
+    : 'border-zinc-700 hover:border-zinc-600 focus:border-yellow-400/80 focus:ring-yellow-400/15';
 }
 
 type FieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'className'> & {
@@ -52,7 +52,7 @@ export function Field({
       </div>
       {password ? <PasswordInput {...shared} /> : <input {...shared} />}
       {error ? (
-        <p id={errorId} className="mt-1.5 text-xs text-red-300">
+        <p id={errorId} className="ee-enter mt-1.5 text-xs text-red-300">
           {error}
         </p>
       ) : hint ? (
@@ -80,7 +80,7 @@ export function Alert({
   return (
     <div
       role={tone === 'error' ? 'alert' : 'status'}
-      className={`mb-5 rounded-xl border px-3.5 py-3 text-sm leading-6 ${styles}`}
+      className={`ee-enter mb-5 rounded-xl border px-3.5 py-3 text-sm leading-6 ${styles}`}
     >
       {children}
     </div>
@@ -103,7 +103,7 @@ export function SubmitButton({
       type="submit"
       disabled={loading || disabled}
       aria-busy={loading}
-      className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 px-4 py-3 font-semibold text-black shadow-[0_12px_28px_rgba(250,204,21,0.28)] transition hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c1119] disabled:cursor-not-allowed disabled:opacity-70"
+      className="ee-btn ee-btn-primary min-h-12 w-full text-[15px]"
     >
       {loading && (
         <span

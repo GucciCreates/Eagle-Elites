@@ -41,7 +41,7 @@ export default function CoverageSearch({ zones }: { zones: string[] }) {
         <ul className="mt-4 grid gap-2 sm:grid-cols-2">
           {matches.map((zone) => (
             <li key={zone} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-              <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full bg-yellow-300 shadow-[0_0_0_4px_rgba(250,204,21,0.15)]" />
+              <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full bg-yellow-300 shadow-[0_0_0_4px_rgba(232,187,64,0.15)]" />
               <span className="text-sm font-medium text-zinc-200">{zone}</span>
             </li>
           ))}

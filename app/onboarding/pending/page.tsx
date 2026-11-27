@@ -132,7 +132,7 @@ export default function OnboardingPending() {
               rel="noreferrer"
               className={secondary}
             >
-              💬 Ask on WhatsApp
+              Ask on WhatsApp
             </a>
           </div>
           <button
@@ -172,7 +172,7 @@ export default function OnboardingPending() {
     <AuthShell
       wide
       eyebrow="Under review"
-      title="Application submitted 🎉"
+      title="Application submitted"
       subtitle={`Most applications are reviewed within ${EXPECTED_REVIEW_HOURS} hours (Mon–Sat).`}
       top={<Stepper current={5} />}
     >
@@ -235,7 +235,7 @@ export default function OnboardingPending() {
             rel="noreferrer"
             className={secondary}
           >
-            💬 Follow up on WhatsApp
+            Follow up on WhatsApp
           </a>
           <button type="button" onClick={logout} className={secondary}>
             Log out

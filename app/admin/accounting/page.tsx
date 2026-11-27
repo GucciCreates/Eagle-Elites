@@ -1,5 +1,8 @@
 'use client';
 
+import BrandLoader from '@/components/ui/brand-loader';
+import Logo from '@/components/brand/logo';
+import Icon, { IconTile, type IconName } from '@/components/ui/icons';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -98,7 +101,7 @@ export default function AccountingDashboard() {
   const [expenseSuccess, setExpenseSuccess] = useState(false);
 
   const router = useRouter();
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
 
   useEffect(() => {
     const now = new Date();
@@ -326,37 +329,22 @@ export default function AccountingDashboard() {
   );
 
   if (loading)
-    return (
-      <div className="min-h-screen bg-[#080808] flex items-center justify-center">
-        <div className="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center animate-pulse">
-          <span className="text-black font-black text-lg">EE</span>
-        </div>
-      </div>
-    );
+    return <BrandLoader label="Loading accounts" />;
 
   return (
-    <div className="min-h-screen bg-[#080808]">
+    <div className="min-h-screen bg-[#06080c]">
       {/* Navbar */}
-      <nav className="border-b border-zinc-800 bg-zinc-900/60 backdrop-blur-sm sticky top-0 z-50">
+      <nav className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#0b0f14]/90 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push('/admin/dashboard')}
-              className="w-9 h-9 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl flex items-center justify-center transition"
+              aria-label="Back to admin dashboard"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-700 bg-zinc-800 text-zinc-400 transition hover:bg-zinc-700 hover:text-white"
             >
-              <span className="text-zinc-400 text-sm">←</span>
+              <Icon name="arrow-left" size={17} />
             </button>
-            <div className="w-9 h-9 bg-yellow-400 rounded-xl flex items-center justify-center">
-              <span className="text-black font-black text-sm">EE</span>
-            </div>
-            <div>
-              <p className="text-white font-bold text-sm leading-none">
-                Accounting
-              </p>
-              <p className="text-yellow-400 text-xs font-semibold">
-                Financial Dashboard
-              </p>
-            </div>
+            <Logo size={38} subtitle="Accounting" />
           </div>
 
           {/* Period toggle */}
@@ -368,7 +356,7 @@ export default function AccountingDashboard() {
                   onClick={() => setView(v)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${view === v ? 'bg-yellow-400 text-black' : 'text-zinc-400 hover:text-white'}`}
                 >
-                  {v === 'monthly' ? '📅 Monthly' : '📆 Weekly'}
+                  {v === 'monthly' ? 'Monthly' : 'Weekly'}
                 </button>
               ))}
             </div>
@@ -407,7 +395,7 @@ export default function AccountingDashboard() {
 
         {view === 'weekly' && (
           <div className="bg-yellow-400/10 border border-yellow-400/20 rounded-xl px-4 py-2.5 flex items-center gap-2">
-            <span className="text-yellow-400 text-sm">📆</span>
+            <Icon name="calendar" size={16} className="text-yellow-300" />
             <p className="text-yellow-300 text-sm font-medium">
               Week of {week.label}
             </p>
@@ -415,19 +403,19 @@ export default function AccountingDashboard() {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-xl p-1 overflow-x-auto">
+        <div className="ee-tabbar">
           {[
-            { key: 'overview', label: '📊 Overview' },
-            { key: 'routes', label: '🗺️ Route P&L' },
-            { key: 'expenses', label: '💸 Expenses' },
-            { key: 'trends', label: '📈 Trends' },
+            { key: 'overview', label: 'Overview' },
+            { key: 'routes', label: 'Route P&L' },
+            { key: 'expenses', label: 'Expenses' },
+            { key: 'trends', label: 'Trends' },
           ].map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as TabKey)}
-              className={`px-4 py-2 rounded-lg text-xs font-medium transition whitespace-nowrap ${
+              className={`min-h-9 rounded-xl px-4 py-2 text-sm font-semibold transition whitespace-nowrap ${
                 activeTab === tab.key
-                  ? 'bg-yellow-400 text-black'
+                  ? 'bg-yellow-400 text-[#15110a]'
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
@@ -438,46 +426,46 @@ export default function AccountingDashboard() {
 
         {/* ── OVERVIEW ── */}
         {activeTab === 'overview' && (
-          <div className="space-y-4">
+          <div className="ee-enter space-y-4">
             {/* KPI cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="ee-stagger grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 {
                   label: 'Expected Revenue',
                   value: totalExpected,
-                  icon: '💰',
+                  icon: 'receipt' as IconName,
                   color: 'text-white',
                   sub: `${students.length} active students`,
                 },
                 {
                   label: 'Collected',
                   value: totalCollected,
-                  icon: '✅',
+                  icon: 'check' as IconName,
                   color: 'text-green-400',
                   sub: `${Math.round((totalCollected / (totalExpected || 1)) * 100)}% collection rate`,
                 },
                 {
                   label: 'Total Expenses',
                   value: totalExpenses,
-                  icon: '💸',
+                  icon: 'wallet' as IconName,
                   color: 'text-red-400',
                   sub: `${filteredExpenses.length} entries`,
                 },
                 {
                   label: 'Net Profit',
                   value: netProfit,
-                  icon: '📈',
+                  icon: 'chart' as IconName,
                   color: netProfit >= 0 ? 'text-yellow-400' : 'text-red-400',
                   sub: netProfit >= 0 ? 'Profitable' : 'In loss',
                 },
               ].map((kpi) => (
                 <div
                   key={kpi.label}
-                  className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4"
+                  className="ee-lift rounded-3xl border border-zinc-800 bg-zinc-900 p-4 sm:p-5"
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    <span>{kpi.icon}</span>
-                    <p className="text-zinc-500 text-xs">{kpi.label}</p>
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <p className="text-xs text-zinc-500">{kpi.label}</p>
+                    <IconTile name={kpi.icon} tone={kpi.color.includes('red') ? 'red' : kpi.color.includes('green') ? 'green' : 'gold'} />
                   </div>
                   <p className={`text-2xl font-extrabold ${kpi.color}`}>
                     {formatPKR(kpi.value)}
@@ -492,7 +480,7 @@ export default function AccountingDashboard() {
               <div className="bg-red-950/40 border border-red-800/50 rounded-2xl p-4 flex items-center justify-between">
                 <div>
                   <p className="text-red-400 font-bold">
-                    ⚠️ Revenue Leakage Detected
+                    Revenue leakage detected
                   </p>
                   <p className="text-zinc-400 text-sm mt-0.5">
                     {formatPKR(leakage)} uncollected from{' '}
@@ -592,7 +580,7 @@ export default function AccountingDashboard() {
 
         {/* ── ROUTE P&L ── */}
         {activeTab === 'routes' && (
-          <div className="space-y-4">
+          <div className="ee-enter space-y-4">
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
               <p className="text-white font-bold text-lg mb-1">
                 Profit & Loss Per Route
@@ -674,7 +662,7 @@ export default function AccountingDashboard() {
 
         {/* ── EXPENSES ── */}
         {activeTab === 'expenses' && (
-          <div className="space-y-4">
+          <div className="ee-enter space-y-4">
             {/* Add expense form */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4">
               <p className="text-white font-bold text-lg">Log Expense</p>
@@ -800,7 +788,7 @@ export default function AccountingDashboard() {
 
               {expenseSuccess && (
                 <div className="bg-green-950/60 border border-green-800 text-green-400 px-4 py-3 rounded-xl text-sm">
-                  ✅ Expense logged successfully!
+                  Expense logged successfully.
                 </div>
               )}
 
@@ -851,7 +839,7 @@ export default function AccountingDashboard() {
 
               {filteredExpenses.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-3xl mb-3">💸</p>
+                  <IconTile name="wallet" className="mx-auto mb-3" />
                   <p className="text-zinc-400">
                     No expenses logged for this period
                   </p>
@@ -908,7 +896,7 @@ export default function AccountingDashboard() {
 
         {/* ── TRENDS ── */}
         {activeTab === 'trends' && (
-          <div className="space-y-4">
+          <div className="ee-enter space-y-4">
             {/* 6-month chart */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
               <p className="text-white font-bold text-lg mb-1">6-Month Trend</p>

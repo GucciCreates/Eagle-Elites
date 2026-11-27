@@ -13,8 +13,8 @@ import { card, ghostBtn, input, label, primaryBtn } from './ui';
 type Group = { id: string; university: string; department: string };
 
 const KIND_LABEL: Record<TimeKind, string> = {
-  arrival: '🌅 Arrival (morning)',
-  departure: '🌆 Departure (evening)',
+  arrival: 'Arrival (morning)',
+  departure: 'Departure (evening)',
 };
 
 export default function TimeOptionsTab({ groups }: { groups: Group[] }) {

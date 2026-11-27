@@ -1,5 +1,8 @@
 'use client';
 
+import BrandLoader from '@/components/ui/brand-loader';
+import Logo from '@/components/brand/logo';
+import Icon, { IconTile, type IconName } from '@/components/ui/icons';
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -1044,32 +1047,32 @@ export default function AdminDashboard() {
   const unassignedActiveStudents = students.filter((student) => student.status === 'active' && !student.route_id).length;
 
   const tabs = [
-    { key: 'overview', label: '📊', title: 'Overview' },
-    { key: 'schedule', label: '🗓️', title: 'Weekly Schedule' },
-    { key: 'students', label: '👥', title: 'Students' },
+    { key: 'overview', icon: 'chart' as IconName, title: 'Overview' },
+    { key: 'schedule', icon: 'calendar' as IconName, title: 'Weekly Schedule' },
+    { key: 'students', icon: 'users' as IconName, title: 'Students' },
     {
       key: 'applications',
-      label: '📋',
+      icon: 'clipboard' as IconName,
       title: 'Applications',
     },
-    { key: 'assignments', label: '🚐', title: 'Daily Assignments' },
-    { key: 'drivers', label: '🪪', title: 'Driver Accounts' },
-    { key: 'departures', label: '🚍', title: 'Departures' },
-    { key: 'attendance', label: '✅', title: 'Attendance' },
-    { key: 'fees', label: '💳', title: 'Fees' },
+    { key: 'assignments', icon: 'van' as IconName, title: 'Daily Assignments' },
+    { key: 'drivers', icon: 'user' as IconName, title: 'Driver Accounts' },
+    { key: 'departures', icon: 'bus' as IconName, title: 'Departures' },
+    { key: 'attendance', icon: 'check' as IconName, title: 'Attendance' },
+    { key: 'fees', icon: 'wallet' as IconName, title: 'Fees' },
     {
       key: 'messages',
-      label: '💬',
+      icon: 'chat' as IconName,
       title: `Messages${openMessages > 0 ? ` (${openMessages})` : ''}`,
     },
-    { key: 'announcements', label: '📢', title: 'Announcements' },
-    { key: 'holidays', label: '📆', title: 'Holidays' },
-    { key: 'vehicles', label: '🚌', title: 'Vehicles' },
-    { key: 'pricing', label: '💰', title: 'Pricing' },
-    { key: 'times', label: '🕒', title: 'Times' },
-    { key: 'whatsapp', label: '🟢', title: 'WhatsApp' },
-    { key: 'settings', label: '⚙️', title: 'Settings' },
-    { key: 'activity', label: '🧾', title: 'Activity Log' },
+    { key: 'announcements', icon: 'megaphone' as IconName, title: 'Announcements' },
+    { key: 'holidays', icon: 'calendar' as IconName, title: 'Holidays' },
+    { key: 'vehicles', icon: 'bus' as IconName, title: 'Vehicles' },
+    { key: 'pricing', icon: 'receipt' as IconName, title: 'Pricing' },
+    { key: 'times', icon: 'clock' as IconName, title: 'Times' },
+    { key: 'whatsapp', icon: 'chat' as IconName, title: 'WhatsApp' },
+    { key: 'settings', icon: 'settings' as IconName, title: 'Settings' },
+    { key: 'activity', icon: 'receipt' as IconName, title: 'Activity Log' },
   ];
 
   const tabBadge = (key: string) => ({
@@ -1101,32 +1104,16 @@ export default function AdminDashboard() {
   }[groupKey] ?? 0);
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#05070b] px-4 text-white">
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-8 text-center shadow-2xl">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#facc15] via-[#fbbf24] to-[#f59e0b] text-xl font-black text-slate-950">
-            EE
-          </div>
-          <p className="text-lg font-medium text-zinc-200">
-            Loading admin panel...
-          </p>
-        </div>
-      </div>
-    );
+    return <BrandLoader label="Loading admin panel" />;
   }
 
   return (
     <div className="admin-shell min-h-screen bg-[#080b10] text-white" data-admin-theme={theme}>
       <nav className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#0b0f14]/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-[90rem] items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-yellow-400/20 bg-gradient-to-br from-yellow-300/20 to-yellow-500/10 text-[11px] font-black tracking-[0.12em] text-yellow-200 shadow-[0_0_24px_rgba(250,204,21,0.12)]">
-              EE
-            </div>
-            <div>
-              <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-white">Eagle Elites</p>
-              <h1 className="mt-0.5 text-[10px] font-medium tracking-wide text-zinc-500">Admin portal</h1>
-            </div>
+            <Logo size={38} subtitle="Admin portal" />
+            <h1 className="sr-only">Eagle Elites admin portal</h1>
           </div>
 
           <div className="flex items-center gap-2">
@@ -1134,30 +1121,72 @@ export default function AdminDashboard() {
               type="button"
               aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
               onClick={() => setTheme((current) => { const next = current === 'dark' ? 'light' : 'dark'; window.localStorage.setItem('eagle-admin-theme', next); return next; })}
-              className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-300 transition hover:bg-zinc-700 hover:text-white"
+              className="flex h-9 items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800 px-3 text-xs font-medium text-zinc-300 transition hover:bg-zinc-700 hover:text-white"
             >
-              {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+              <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={16} />
+              <span className="hidden sm:inline">{theme === 'dark' ? 'Light' : 'Dark'}</span>
             </button>
             <button
               onClick={async () => {
                 await supabase.auth.signOut();
                 router.push('/admin/login');
               }}
-              className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-300 transition hover:bg-zinc-700 hover:text-white"
+              aria-label="Log out"
+              className="flex h-9 items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800 px-3 text-xs font-medium text-zinc-300 transition hover:bg-zinc-700 hover:text-white"
             >
-              Log out
+              <Icon name="logout" size={16} />
+              <span className="hidden sm:inline">Log out</span>
             </button>
           </div>
         </div>
       </nav>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-6 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-2 shadow-[0_16px_38px_rgba(0,0,0,0.18)]">
+      <main className="mx-auto max-w-[90rem] px-4 py-6 sm:px-6 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-8 lg:px-8">
+        <aside aria-label="Admin sections" className="hidden lg:block">
+          <div className="sticky top-24 max-h-[calc(100vh-7rem)] space-y-5 overflow-y-auto rounded-3xl border border-zinc-800 bg-zinc-900/70 p-3">
+            {ADMIN_NAV_GROUPS.map((group) => {
+              const attention = navGroupAttention(group.key);
+              return (
+                <div key={group.key}>
+                  <p className="flex items-center justify-between px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                    {group.label}
+                    {attention > 0 && <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold tracking-normal text-white">{attention > 99 ? '99+' : attention}</span>}
+                  </p>
+                  <ul className="space-y-0.5">
+                    {tabs.filter((tab) => ADMIN_TAB_GROUP[tab.key] === group.key).map((tab) => {
+                      const active = activeTab === tab.key;
+                      const badge = tabBadge(tab.key);
+                      const urgent = ['applications', 'fees', 'messages'].includes(tab.key) && badge > 0;
+                      return (
+                        <li key={tab.key}>
+                          <button
+                            type="button"
+                            aria-current={active ? 'page' : undefined}
+                            onClick={() => changeTab(tab.key)}
+                            className={`group relative flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-left text-sm transition ${active ? 'bg-yellow-400/[0.12] font-semibold text-yellow-100' : 'text-zinc-400 hover:bg-white/[0.04] hover:text-white'}`}
+                          >
+                            {active && <span aria-hidden="true" className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-yellow-400" />}
+                            <Icon name={tab.icon} size={17} className={active ? 'text-yellow-300' : 'text-zinc-500 group-hover:text-zinc-300'} />
+                            <span className="flex-1 truncate">{tab.title}</span>
+                            {urgent && <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">{badge > 99 ? '99+' : badge}</span>}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        </aside>
+
+        <div className="min-w-0">
+        <div className="mb-6 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-2 shadow-[0_16px_38px_rgba(0,0,0,0.18)] lg:hidden">
           <nav aria-label="Admin workspaces" className="flex gap-1 overflow-x-auto border-b border-zinc-800 pb-2">
             {ADMIN_NAV_GROUPS.map((group) => {
               const selected = activeNavGroup === group.key;
               const attention = navGroupAttention(group.key);
-              return <button key={group.key} type="button" aria-pressed={selected} onClick={() => changeTab(group.tabs[0])} className={`flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3.5 text-sm font-semibold transition ${selected ? 'bg-[#facc15] text-black shadow-[0_8px_20px_rgba(250,204,21,0.16)]' : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'}`}>
+              return <button key={group.key} type="button" aria-pressed={selected} onClick={() => changeTab(group.tabs[0])} className={`flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3.5 text-sm font-semibold transition ${selected ? 'bg-[#e8bb40] text-black shadow-[0_8px_20px_rgba(232,187,64,0.16)]' : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'}`}>
                 {group.label}
                 {attention > 0 && <span className={`inline-flex min-w-5 justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none text-white ${selected ? 'bg-black/75' : 'bg-red-500'}`}>{attention > 99 ? '99+' : attention}</span>}
               </button>;
@@ -1166,7 +1195,7 @@ export default function AdminDashboard() {
           <nav aria-label={`${activeNavGroup} sections`} className="flex gap-2 overflow-x-auto pt-2">
             {tabs.filter((tab) => ADMIN_TAB_GROUP[tab.key] === activeNavGroup).map((tab) => (
               <button key={tab.key} type="button" aria-current={activeTab === tab.key ? 'page' : undefined} onClick={() => changeTab(tab.key)} className={`flex min-h-9 shrink-0 items-center rounded-lg px-3 text-xs font-medium transition ${activeTab === tab.key ? 'bg-white/[0.1] text-white ring-1 ring-white/10' : 'text-zinc-400 hover:bg-white/[0.04] hover:text-white'}`}>
-                <span className="mr-1.5">{tab.label}</span>{tab.title}
+                <Icon name={tab.icon} size={15} className="mr-1.5" />{tab.title}
                 <span aria-label={`${tabBadge(tab.key)} ${tab.title.toLowerCase()}`} className={`ml-2 inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none text-white ${['applications', 'fees', 'messages'].includes(tab.key) && tabBadge(tab.key) > 0 ? 'bg-red-500' : 'bg-zinc-700'}`}>{tabBadge(tab.key) > 99 ? '99+' : tabBadge(tab.key)}</span>
               </button>
             ))}
@@ -1192,46 +1221,47 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        <div key={activeTab} className="ee-enter">
         {activeTab === 'times' && <TimeOptionsTab groups={departureGroups} />}
         {activeTab === 'whatsapp' && <WhatsAppTab />}
         {activeTab === 'settings' && <PaymentSettingsTab />}
 
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
+            <div className="ee-stagger grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
               {[
                 {
                   label: 'Total Students',
                   value: students.length,
-                  icon: '👥',
+                  icon: 'users' as IconName,
                   color: 'text-white',
                   tab: 'students',
                 },
                 {
                   label: 'Pending Applications',
                   value: applications.length,
-                  icon: '📋',
+                  icon: 'clipboard' as IconName,
                   color: 'text-yellow-400',
                   tab: 'applications',
                 },
                 {
                   label: 'Unpaid Fees',
                   value: unpaidCount,
-                  icon: '⚠️',
+                  icon: 'wallet' as IconName,
                   color: 'text-red-400',
                   tab: 'fees',
                 },
                 {
                   label: 'Open Messages',
                   value: openMessages,
-                  icon: '💬',
+                  icon: 'chat' as IconName,
                   color: 'text-yellow-400',
                   tab: 'messages',
                 },
                 {
                   label: 'Total Vehicles',
                   value: coasters.length,
-                  icon: '🚐',
+                  icon: 'van' as IconName,
                   color: 'text-white',
                   tab: 'vehicles',
                 },
@@ -1240,22 +1270,18 @@ export default function AdminDashboard() {
                   key={stat.label}
                   type="button"
                   onClick={() => changeTab(stat.tab)}
-                  className="group rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 text-left shadow-lg transition hover:-translate-y-0.5 hover:border-zinc-600 hover:bg-zinc-900 sm:rounded-[24px] sm:p-5"
+                  className="ee-lift group rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 text-left hover:border-zinc-600 hover:bg-zinc-900 sm:rounded-3xl sm:p-5"
                 >
-                  <div className="mb-3 flex items-center justify-between">
-                    <span className={`text-lg ${stat.color}`}>{stat.icon}</span>
-                    <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-500">
-                      {stat.label}
-                    </span>
-                  </div>
-                  <p className="text-3xl font-bold text-white">{stat.value}</p>
+                  <IconTile name={stat.icon} tone={stat.color.includes('red') ? 'red' : stat.color.includes('yellow') ? 'gold' : 'neutral'} />
+                  <p className="mt-4 text-3xl font-bold text-white">{stat.value}</p>
+                  <p className="mt-1 text-xs font-medium text-zinc-400">{stat.label}</p>
                   <p className="mt-2 text-[11px] font-medium text-zinc-500 transition group-hover:text-yellow-300">Open section <span aria-hidden="true">↗</span></p>
                 </button>
               ))}
             </div>
 
             <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-              <section className="rounded-[26px] border border-zinc-800 bg-zinc-900/75 p-5">
+              <section className="rounded-3xl border border-zinc-800 bg-zinc-900/75 p-5">
                 <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
                   <div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-yellow-300">Daily control center</p><h2 className="mt-1 text-lg font-semibold text-white">Operations snapshot</h2></div>
                   <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1.5 text-xs text-zinc-400">Selected date · {today || 'Date unavailable'}</span>
@@ -1267,7 +1293,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => changeTab('departures')} className="rounded-xl bg-yellow-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-yellow-300">Review departures <span aria-hidden="true">→</span></button><button type="button" onClick={() => changeTab('assignments')} className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-white/[0.04]">Manage vehicle assignments</button></div>
               </section>
-              <section className="rounded-[26px] border border-zinc-800 bg-zinc-900/75 p-5">
+              <section className="rounded-3xl border border-zinc-800 bg-zinc-900/75 p-5">
                 <div className="mb-4"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Needs attention</p><h2 className="mt-1 text-lg font-semibold text-white">Priority queue</h2></div>
                 <div className="space-y-2">
                   {[
@@ -1281,8 +1307,8 @@ export default function AdminDashboard() {
             </div>
 
             {upcomingHoliday && (
-              <div className="rounded-[24px] border border-[#facc15]/20 bg-[#facc15]/8 p-4 text-sm text-[#fef3c7]">
-                <span className="mr-2">📆</span>
+              <div className="flex items-center gap-3 rounded-3xl border border-yellow-400/20 bg-yellow-400/[0.08] p-4 text-sm text-yellow-100">
+                <Icon name="calendar" size={18} className="shrink-0 text-yellow-300" />
                 Upcoming no-service day: {upcomingHoliday.reason} on{' '}
                 {new Date(upcomingHoliday.date).toLocaleDateString('en-PK', {
                   weekday: 'long',
@@ -1292,7 +1318,7 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            <section className="overflow-hidden rounded-[28px] border border-zinc-800 bg-zinc-900/80">
+            <section className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900/80">
               <div className="flex flex-wrap items-end justify-between gap-3 border-b border-zinc-800 px-5 py-4">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-yellow-300">Route health</p>
@@ -1333,7 +1359,7 @@ export default function AdminDashboard() {
         )}
 
         {activeTab === 'schedule' && (
-          <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+          <section className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
             <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
               <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-yellow-300">Operations · Monday to Sunday</p><h2 className="mt-1 text-xl font-semibold text-white">Weekly travel schedule</h2><p className="mt-1 text-sm text-zinc-400">Daily headcounts by route, with scheduled vehicles and drivers.</p></div>
               <button type="button" onClick={() => changeTab('assignments')} className="rounded-xl border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:border-yellow-400">Manage assignments →</button>
@@ -1387,7 +1413,7 @@ export default function AdminDashboard() {
 
         {activeTab === 'students' && (
           <div className="grid gap-6 xl:grid-cols-[1.6fr_0.8fr]">
-            <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
               <h2 className="mb-5 text-xl font-semibold text-white">
                 All Students ({students.length})
               </h2>
@@ -1537,7 +1563,7 @@ export default function AdminDashboard() {
             </div>
 
             {editingStudent && (
-              <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+              <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-xl font-semibold text-white">
                     Edit Student
@@ -1624,7 +1650,7 @@ export default function AdminDashboard() {
                   <button
                     type="button"
                     onClick={handleSaveStudent}
-                    className="w-full rounded-xl bg-gradient-to-r from-[#facc15] via-[#fbbf24] to-[#f59e0b] px-4 py-3 text-sm font-semibold text-slate-950 shadow-[0_15px_30px_rgba(250,204,21,0.3)]"
+                    className="w-full rounded-xl bg-gradient-to-r from-[#e8bb40] via-[#f1cf6c] to-[#d39f25] px-4 py-3 text-sm font-semibold text-slate-950 shadow-[0_15px_30px_rgba(232,187,64,0.3)]"
                   >
                     {savingStudent ? 'Saving...' : 'Save Changes →'}
                   </button>
@@ -1650,7 +1676,7 @@ export default function AdminDashboard() {
 
         {activeTab === 'drivers' && (
           <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+            <section className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
               <h2 className="text-xl font-semibold text-white">Create driver login</h2>
               <p className="mt-1 text-sm text-zinc-400">Drivers receive an email invitation to set a password and sign in to record attendance for assigned trips.</p>
               {driverNotice && <p role="status" className="mt-4 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-300">{driverNotice}</p>}
@@ -1664,7 +1690,7 @@ export default function AdminDashboard() {
                 <p className="text-xs text-zinc-500">The invitation link lets the driver set a password securely. No password is stored or shared here.</p>
               </div>
             </section>
-            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+            <section className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
               <h2 className="mb-4 text-xl font-semibold text-white">Driver accounts ({drivers.length})</h2>
               {drivers.length === 0 ? <p className="rounded-xl border border-dashed border-zinc-700 px-4 py-8 text-center text-sm text-zinc-400">No driver accounts yet. Create an account to assign trips and enable driver attendance.</p> : <div className="space-y-2">{drivers.map((driver) => { const trips = attendanceMonthRows.filter((row) => row.driver_id === driver.id && row.attendance_status !== null).length; const vehicle = coasters.find((item) => item.id === driver.usual_vehicle_id); return <div key={driver.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3"><div><p className="font-medium text-white">{driver.full_name}</p><p className="text-xs text-zinc-400">{driver.email}{driver.phone ? ` · ${driver.phone}` : ''}{driver.cnic ? ` · CNIC ${driver.cnic}` : ''}</p><p className="mt-1 text-xs text-zinc-500">Usual vehicle: {vehicle?.coaster_number ?? 'Not set'} · {trips} completed trips this month</p></div><button type="button" onClick={() => void handleToggleDriver(driver)} className={`rounded-lg px-3 py-2 text-xs font-semibold ${driver.active ? 'bg-emerald-500/15 text-emerald-200' : 'bg-zinc-800 text-zinc-400'}`}>{driver.active ? 'Active · deactivate' : 'Inactive · activate'}</button></div>; })}</div>}
             </section>
@@ -1673,12 +1699,12 @@ export default function AdminDashboard() {
 
         {activeTab === 'assignments' && (
           <div className="space-y-5">
-          <section className="rounded-[28px] border border-yellow-500/20 bg-zinc-900/80 p-5">
+          <section className="rounded-3xl border border-yellow-500/20 bg-zinc-900/80 p-5">
             <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-yellow-300">Seat confirmation · {assignDate}</p><h2 className="mt-1 text-xl font-semibold text-white">{todayAssignments.filter((row) => row.seat_confirmed).length} confirmed · {todayAssignments.filter((row) => !row.seat_confirmed).length} awaiting</h2></div><button type="button" disabled={!todayAssignments.some((row) => !row.seat_confirmed)} onClick={() => void handleSeatReminder()} className="rounded-xl bg-yellow-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 disabled:opacity-40">Remind unconfirmed students</button></div>
             {todayAssignments.length > 0 && <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{todayAssignments.filter((row) => !row.seat_confirmed).map((row) => <p key={row.student_id} className="rounded-xl border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-300">{students.find((student) => student.id === row.student_id)?.full_name ?? 'Student'}</p>)}</div>}
             {todayAssignments.length === 0 && <p className="mt-3 text-sm text-zinc-500">Save vehicle assignments for this day to track seat confirmations.</p>}
           </section>
-          <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+          <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
             <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-white">
@@ -1716,7 +1742,7 @@ export default function AdminDashboard() {
                 {dailyGroups.map((group) => (
                   <div
                     key={group.route_id}
-                    className="rounded-[24px] border border-zinc-800 bg-zinc-950/70 p-4"
+                    className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-4"
                   >
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <div>
@@ -1787,7 +1813,7 @@ export default function AdminDashboard() {
 
                 {assignSuccess && (
                   <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-                    ✅ Assignments saved! All students on each route can now see
+                    Assignments saved. All students on each route can now see
                     their vehicle and driver.
                   </div>
                 )}
@@ -1795,7 +1821,7 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={handleSaveAssignments}
-                  className="rounded-xl bg-gradient-to-r from-[#facc15] via-[#fbbf24] to-[#f59e0b] px-5 py-3 text-sm font-semibold text-slate-950 shadow-[0_15px_30px_rgba(250,204,21,0.3)]"
+                  className="rounded-xl bg-gradient-to-r from-[#e8bb40] via-[#f1cf6c] to-[#d39f25] px-5 py-3 text-sm font-semibold text-slate-950 shadow-[0_15px_30px_rgba(232,187,64,0.3)]"
                 >
                   {savingAssignment ? 'Saving...' : 'Save All Assignments →'}
                 </button>
@@ -1807,7 +1833,7 @@ export default function AdminDashboard() {
 
         {activeTab === 'departures' && (
           <div className="space-y-6">
-            <section className="rounded-[28px] border border-yellow-500/20 bg-zinc-900/80 p-5">
+            <section className="rounded-3xl border border-yellow-500/20 bg-zinc-900/80 p-5">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-yellow-300">Today · {getPakistanDate()}</p>
@@ -1833,7 +1859,7 @@ export default function AdminDashboard() {
                 </div>
               )}
             </section>
-            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+            <section className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-yellow-300">Today · {getPakistanDate()}</p>
@@ -1868,7 +1894,7 @@ export default function AdminDashboard() {
               )}
             </section>
 
-            <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
               <h2 className="mb-3 text-xl font-semibold text-white">
                 Departure Groups
               </h2>
@@ -1911,7 +1937,7 @@ export default function AdminDashboard() {
                   type="button"
                   onClick={handleAddDepartureGroup}
                   disabled={addingGroup}
-                  className="rounded-xl bg-gradient-to-r from-[#facc15] via-[#fbbf24] to-[#f59e0b] px-4 py-3 text-sm font-semibold text-slate-950"
+                  className="rounded-xl bg-gradient-to-r from-[#e8bb40] via-[#f1cf6c] to-[#d39f25] px-4 py-3 text-sm font-semibold text-slate-950"
                 >
                   {addingGroup ? 'Adding...' : 'Add'}
                 </button>
@@ -1919,12 +1945,12 @@ export default function AdminDashboard() {
 
               {groupSuccess && (
                 <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-                  ✅ Departure group added successfully.
+                  Departure group added.
                 </div>
               )}
             </div>
 
-            <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
               <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div>
                   <h2 className="text-xl font-semibold text-white">
@@ -2056,7 +2082,7 @@ export default function AdminDashboard() {
 
                   {slotsSuccess && (
                     <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-                      ✅ Departure slots posted for the selected date.
+                      Departure slots posted for the selected date.
                     </div>
                   )}
 
@@ -2064,7 +2090,7 @@ export default function AdminDashboard() {
                     type="button"
                     onClick={handleSaveDepartureSlots}
                     disabled={savingSlots}
-                    className="rounded-xl bg-gradient-to-r from-[#facc15] via-[#fbbf24] to-[#f59e0b] px-5 py-3 text-sm font-semibold text-slate-950 shadow-[0_15px_30px_rgba(250,204,21,0.3)]"
+                    className="rounded-xl bg-gradient-to-r from-[#e8bb40] via-[#f1cf6c] to-[#d39f25] px-5 py-3 text-sm font-semibold text-slate-950 shadow-[0_15px_30px_rgba(232,187,64,0.3)]"
                   >
                     {savingSlots ? 'Posting...' : 'Post Slots for This Group →'}
                   </button>
@@ -2073,7 +2099,7 @@ export default function AdminDashboard() {
             </div>
 
             {selectedGroupId && (
-              <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+              <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
                 <h2 className="mb-4 text-xl font-semibold text-white">
                   Posted Slots
                 </h2>
@@ -2137,7 +2163,7 @@ export default function AdminDashboard() {
 
         {activeTab === 'attendance' && (
           <div className="space-y-6">
-            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+            <section className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-yellow-300">Driver-reported trip record</p><h2 className="mt-1 text-xl font-semibold text-white">Trip attendance</h2><p className="mt-1 text-sm text-zinc-400">Record who boarded for each student assigned to the selected date.</p></div>
                 <label className="text-xs text-zinc-400">Trip date<input aria-label="Trip date" type="date" value={attendanceDate} onChange={(event) => { setAttendanceDate(event.target.value); setAttendanceMonth(event.target.value.slice(0, 7)); }} className="mt-1 block rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white" /></label>
@@ -2146,7 +2172,7 @@ export default function AdminDashboard() {
               {attendanceRows.length === 0 ? <p className="mt-4 rounded-xl border border-dashed border-zinc-700 px-4 py-8 text-center text-sm text-zinc-400">No students have been assigned to a trip on this date.</p> : <div className="mt-4 space-y-2">{attendanceRows.map((row) => { const student = students.find((item) => item.id === row.student_id); return <div key={row.student_id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3"><div><p className="font-medium text-white">{student?.full_name ?? 'Student record unavailable'}</p><p className="text-xs text-zinc-500">{student?.routes?.name ?? 'Route not assigned'} · {student?.institution ?? 'Institution not set'} · {row.driver_name ?? 'Driver not assigned'}</p></div><span className={`rounded-full px-3 py-1 text-xs font-semibold ${row.attendance_status === 'present' ? 'bg-emerald-500/15 text-emerald-200' : row.attendance_status === 'absent' ? 'bg-red-500/15 text-red-200' : 'bg-zinc-800 text-zinc-400'}`}>{row.attendance_status ?? 'Awaiting driver'}</span></div>; })}</div>}
             </section>
 
-            <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+            <section className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
               <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-semibold text-white">Monthly attendance report</h2><p className="mt-1 text-sm text-zinc-400">Trip attendance totals for each student.</p></div><label className="text-xs text-zinc-400">Month<input aria-label="Report month" type="month" value={attendanceMonth} onChange={(event) => setAttendanceMonth(event.target.value)} className="mt-1 block rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white" /></label></div>
               <div className="overflow-x-auto"><table className="w-full min-w-[36rem] text-left text-sm"><thead className="text-xs uppercase text-zinc-500"><tr><th className="pb-2">Student</th><th className="pb-2">Trips recorded</th><th className="pb-2">Present</th><th className="pb-2">Absent</th></tr></thead><tbody className="divide-y divide-zinc-800">{students.map((student) => { const records = attendanceMonthRows.filter((row) => row.student_id === student.id); const present = records.filter((row) => row.attendance_status === 'present').length; const absent = records.filter((row) => row.attendance_status === 'absent').length; return <tr key={student.id}><td className="py-2.5"><p className="font-medium text-zinc-200">{student.full_name}</p><p className="text-xs text-zinc-500">{student.cnic_last4 || student.email}</p></td><td className="py-2.5 text-zinc-300">{present + absent} / {records.length}</td><td className="py-2.5 text-emerald-300">{present}</td><td className="py-2.5 text-red-300">{absent}</td></tr>; })}</tbody></table></div>
             </section>
@@ -2169,24 +2195,24 @@ export default function AdminDashboard() {
                 return Math.max(0, Math.floor((Date.now() - new Date(`${due}T00:00:00`).getTime()) / 86400000));
               };
               return <>
-                <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+                <section className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
                   <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-yellow-300">Monthly collection</p><h2 className="mt-1 text-xl font-semibold text-white">Fee collection dashboard</h2><p className="mt-1 text-sm text-zinc-400">Expected fees are calculated from active route assignments.</p></div><label className="text-xs text-zinc-400">Month<input type="month" value={feeReportMonth} onChange={(event) => setFeeReportMonth(event.target.value)} className="mt-1 block rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white" /></label></div>
                   <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4"><p className="text-xs text-zinc-500">Expected</p><p className="mt-1 text-2xl font-bold text-white">PKR {expected.toLocaleString()}</p></div><div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4"><p className="text-xs text-zinc-500">Collected this month</p><p className="mt-1 text-2xl font-bold text-emerald-300">PKR {collected.toLocaleString()}</p></div><div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4"><p className="text-xs text-zinc-500">Unpaid</p><p className="mt-1 text-2xl font-bold text-amber-200">{unpaid.length} students</p></div></div>
                   <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={downloadMonthlyInvoice} className="rounded-xl bg-yellow-400 px-4 py-2.5 text-sm font-semibold text-zinc-950">Export monthly invoice CSV</button><button type="button" onClick={() => void handleFeeReminders(unpaid.map((student) => student.id))} disabled={!unpaid.length} className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-zinc-200 disabled:opacity-40">WhatsApp unpaid students</button></div>
                   {feeReportMonth !== getPakistanDate().slice(0, 7) && <p className="mt-3 text-xs text-zinc-500">Historical months are read-only. Payment updates are recorded in the current month.</p>}
                 </section>
-                <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+                <section className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-semibold text-white">Unpaid students ({unpaid.length})</h2><p className="text-sm text-zinc-400">Days overdue are counted from the due date, or the first of the selected month.</p></div><input value={feeSearch} onChange={(event) => setFeeSearch(event.target.value)} placeholder="Search unpaid students" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600" /></div>
                   <div className="space-y-3">{visibleUnpaid.map((student) => <article key={student.id} className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-medium text-white">{student.full_name}</p><p className="text-xs text-zinc-400">{student.institution ?? 'University not set'} · {student.routes?.name ?? 'No route'} · PKR {(routes.find((route) => route.id === student.route_id)?.price ?? 0).toLocaleString()}</p><p className={`mt-1 text-xs ${overdueDays(student) > 0 ? 'text-red-300' : 'text-amber-200'}`}>{overdueDays(student)} days overdue</p></div><div className="flex gap-2"><button type="button" onClick={() => void handleFeeReminders([student.id])} className="rounded-lg border border-emerald-700/60 px-3 py-2 text-xs font-semibold text-emerald-200">WhatsApp reminder</button><button type="button" disabled={savingFeeStudent === student.id || feeReportMonth !== getPakistanDate().slice(0, 7)} onClick={() => void handleMarkStudentPaid(student.id)} className="rounded-lg bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-200 disabled:opacity-40">{savingFeeStudent === student.id ? 'Saving…' : 'Mark paid'}</button></div></div>{student.payment_proof_url && <details className="mt-3"><summary className="cursor-pointer text-xs font-medium text-yellow-300">View payment proof</summary><div className="mt-3 max-w-xl"><ProofViewer value={student.payment_proof_url} label={`${student.full_name} payment proof`} /></div></details>}</article>)}{visibleUnpaid.length === 0 && <p className="rounded-xl border border-dashed border-zinc-700 px-4 py-8 text-center text-sm text-zinc-400">No unpaid students match this search.</p>}</div>
                 </section>
-                <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5"><h2 className="mb-3 text-xl font-semibold text-white">Payment history by student</h2><div className="overflow-x-auto"><table className="w-full min-w-[34rem] text-left text-sm"><thead className="text-xs uppercase text-zinc-500"><tr><th className="pb-2">Student</th><th className="pb-2">Fee month</th><th className="pb-2">Amount</th><th className="pb-2">Recorded</th></tr></thead><tbody className="divide-y divide-zinc-800">{feePayments.slice(0, 100).map((payment) => <tr key={payment.student_id + payment.fee_month}><td className="py-2.5 text-zinc-200">{students.find((student) => student.id === payment.student_id)?.full_name ?? 'Student'}</td><td className="py-2.5 text-zinc-300">{payment.fee_month.slice(0, 7)}</td><td className="py-2.5 text-emerald-300">PKR {Number(payment.amount).toLocaleString()}</td><td className="py-2.5 text-zinc-400">{new Date(payment.recorded_at).toLocaleDateString('en-PK')}</td></tr>)}</tbody></table>{feePayments.length === 0 && <p className="py-6 text-center text-sm text-zinc-500">No monthly payment history yet.</p>}</div></section>
+                <section className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5"><h2 className="mb-3 text-xl font-semibold text-white">Payment history by student</h2><div className="overflow-x-auto"><table className="w-full min-w-[34rem] text-left text-sm"><thead className="text-xs uppercase text-zinc-500"><tr><th className="pb-2">Student</th><th className="pb-2">Fee month</th><th className="pb-2">Amount</th><th className="pb-2">Recorded</th></tr></thead><tbody className="divide-y divide-zinc-800">{feePayments.slice(0, 100).map((payment) => <tr key={payment.student_id + payment.fee_month}><td className="py-2.5 text-zinc-200">{students.find((student) => student.id === payment.student_id)?.full_name ?? 'Student'}</td><td className="py-2.5 text-zinc-300">{payment.fee_month.slice(0, 7)}</td><td className="py-2.5 text-emerald-300">PKR {Number(payment.amount).toLocaleString()}</td><td className="py-2.5 text-zinc-400">{new Date(payment.recorded_at).toLocaleDateString('en-PK')}</td></tr>)}</tbody></table>{feePayments.length === 0 && <p className="py-6 text-center text-sm text-zinc-500">No monthly payment history yet.</p>}</div></section>
               </>;
             })()}
           </div>
         )}
 
         {activeTab === 'messages' && (
-          <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+          <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-white">
@@ -2203,7 +2229,7 @@ export default function AdminDashboard() {
 
             {helpMessages.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-950/60 p-8 text-center text-zinc-400">
-                <p className="text-3xl">💬</p>
+                <IconTile name="chat" className="mx-auto" />
                 <p className="mt-3 text-lg text-white">No messages yet</p>
               </div>
             ) : (
@@ -2234,7 +2260,7 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="mb-3 flex flex-wrap gap-2">
-                      <button type="button" onClick={() => void updateHelpMessage(message, { is_urgent: !message.is_urgent })} className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${message.is_urgent ? 'border-red-500/40 bg-red-500/10 text-red-200' : 'border-zinc-700 text-zinc-300'}`}>{message.is_urgent ? '⚠ Urgent' : 'Mark urgent'}</button>
+                      <button type="button" onClick={() => void updateHelpMessage(message, { is_urgent: !message.is_urgent })} className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${message.is_urgent ? 'border-red-500/40 bg-red-500/10 text-red-200' : 'border-zinc-700 text-zinc-300'}`}>{message.is_urgent ? 'Urgent' : 'Mark urgent'}</button>
                       <button type="button" onClick={() => void updateHelpMessage(message, { admin_read_at: message.admin_read_at ? null : new Date().toISOString() })} className="rounded-lg border border-zinc-700 px-2.5 py-1.5 text-xs text-zinc-300">{message.admin_read_at ? 'Mark unread' : 'Mark read'}</button>
                       <button type="button" onClick={() => void updateHelpMessage(message, { status: message.status === 'resolved' ? 'open' : 'resolved' })} className="rounded-lg border border-zinc-700 px-2.5 py-1.5 text-xs text-zinc-300">{message.status === 'resolved' ? 'Reopen' : 'Resolve'}</button>
                     </div>
@@ -2269,7 +2295,7 @@ export default function AdminDashboard() {
                           type="button"
                           onClick={() => handleSendReply(message.id)}
                           disabled={sendingReply === message.id}
-                          className="rounded-xl bg-[#facc15] px-4 py-2.5 text-sm font-bold text-black transition hover:bg-[#fbbf24] disabled:opacity-60"
+                          className="rounded-xl bg-[#e8bb40] px-4 py-2.5 text-sm font-bold text-black transition hover:bg-[#f1cf6c] disabled:opacity-60"
                         >
                           {sendingReply === message.id ? '...' : 'Reply'}
                         </button>
@@ -2284,7 +2310,7 @@ export default function AdminDashboard() {
         )}
 
         {activeTab === 'activity' && (
-          <section className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+          <section className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
             <div className="mb-5 flex items-center justify-between gap-3"><div><h2 className="text-xl font-semibold text-white">Admin activity</h2><p className="text-sm text-zinc-400">Recent actions recorded for the admin team.</p></div><button type="button" onClick={async () => { const { data } = await supabase.from('admin_activity_log').select('id, action, details, created_at').order('created_at', { ascending: false }).limit(100); if (data) setActivityEntries(data as ActivityEntry[]); }} className="rounded-lg border border-zinc-700 px-3 py-2 text-xs text-zinc-300">Refresh</button></div>
             {activityEntries.length === 0 ? <p className="rounded-xl border border-dashed border-zinc-700 px-4 py-8 text-center text-sm text-zinc-400">Activity will appear here as admins manage applications, fees, messages, and departure slots.</p> : <ol className="space-y-2">{activityEntries.map((entry) => <li key={entry.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3"><span className="text-sm text-zinc-200">{entry.action}{entry.details.count ? ` · ${entry.details.count} students` : ''}{entry.details.student_name ? ` · ${entry.details.student_name}` : ''}{entry.details.title ? ` · ${entry.details.title}` : ''}{entry.details.group ? ` · ${entry.details.group}` : ''}</span><span className="ml-auto flex flex-col items-end gap-1"><span className="text-[10px] text-zinc-500">{String(entry.details.admin ?? 'Admin')}</span><time className="text-xs text-zinc-500">{new Date(entry.created_at).toLocaleString('en-PK', { dateStyle: 'medium', timeStyle: 'short' })}</time></span></li>)}</ol>}
           </section>
@@ -2292,7 +2318,7 @@ export default function AdminDashboard() {
 
         {activeTab === 'announcements' && (
           <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
               <h2 className="mb-4 text-xl font-semibold text-white">
                 Send Announcement
               </h2>
@@ -2337,7 +2363,7 @@ export default function AdminDashboard() {
 
                 {announcementSuccess && (
                   <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-                  ✅ Announcement sent to the selected audience.
+                  Announcement sent to the selected audience.
                   </div>
                 )}
                 {whatsAppNotice && <p role="status" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-300">{whatsAppNotice}</p>}
@@ -2346,7 +2372,7 @@ export default function AdminDashboard() {
                   type="button"
                   onClick={handleSendAnnouncement}
                   disabled={sendingAnnouncement || !announcementTitle.trim() || !announcementMessage.trim() || (['university', 'departure_group'].includes(announcementTargetType) && !announcementTargetValue)}
-                  className="rounded-xl bg-gradient-to-r from-[#facc15] via-[#fbbf24] to-[#f59e0b] px-5 py-3 text-sm font-semibold text-slate-950 shadow-[0_15px_30px_rgba(250,204,21,0.3)] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-gradient-to-r from-[#e8bb40] via-[#f1cf6c] to-[#d39f25] px-5 py-3 text-sm font-semibold text-slate-950 shadow-[0_15px_30px_rgba(232,187,64,0.3)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {sendingAnnouncement
                     ? 'Sending...'
@@ -2355,7 +2381,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
               <h2 className="mb-4 text-xl font-semibold text-white">
                 Previous Announcements
               </h2>
@@ -2405,7 +2431,7 @@ export default function AdminDashboard() {
 
         {activeTab === 'holidays' && (
           <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-            <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
               <h2 className="mb-4 text-xl font-semibold text-white">
                 Add No-Service Day
               </h2>
@@ -2450,14 +2476,14 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={handleAddHoliday}
-                  className="rounded-xl bg-gradient-to-r from-[#facc15] via-[#fbbf24] to-[#f59e0b] px-5 py-3 text-sm font-semibold text-slate-950"
+                  className="rounded-xl bg-gradient-to-r from-[#e8bb40] via-[#f1cf6c] to-[#d39f25] px-5 py-3 text-sm font-semibold text-slate-950"
                 >
                   {addingHoliday ? 'Adding...' : 'Add No-Service Day →'}
                 </button>
               </div>
             </div>
 
-            <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
               <h2 className="mb-4 text-xl font-semibold text-white">
                 Scheduled No-Service Days
               </h2>
@@ -2501,7 +2527,7 @@ export default function AdminDashboard() {
         )}
 
         {activeTab === 'vehicles' && (
-          <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+          <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
             <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <input
                 value={newVehicle}
@@ -2515,7 +2541,7 @@ export default function AdminDashboard() {
               <button
                 type="button"
                 onClick={handleAddVehicle}
-                className="rounded-xl bg-gradient-to-r from-[#facc15] via-[#fbbf24] to-[#f59e0b] px-5 py-3 text-sm font-semibold text-slate-950"
+                className="rounded-xl bg-gradient-to-r from-[#e8bb40] via-[#f1cf6c] to-[#d39f25] px-5 py-3 text-sm font-semibold text-slate-950"
               >
                 {addingVehicle ? 'Adding...' : 'Add'}
               </button>
@@ -2535,7 +2561,7 @@ export default function AdminDashboard() {
                       key={coaster.id}
                       className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-3 text-white"
                     >
-                      <div className="flex items-center justify-between"><p className="font-semibold">🚐 {coaster.coaster_number}</p><span className={`rounded-full px-2 py-1 text-[10px] ${coaster.maintenance_status === 'active' || !coaster.maintenance_status ? 'bg-emerald-500/10 text-emerald-300' : 'bg-amber-500/10 text-amber-200'}`}>{coaster.maintenance_status ?? 'active'}</span></div>
+                      <div className="flex items-center justify-between"><p className="flex items-center gap-2 font-semibold"><Icon name="bus" size={17} className="text-yellow-300" />{coaster.coaster_number}</p><span className={`rounded-full px-2 py-1 text-[10px] ${coaster.maintenance_status === 'active' || !coaster.maintenance_status ? 'bg-emerald-500/10 text-emerald-300' : 'bg-amber-500/10 text-amber-200'}`}>{coaster.maintenance_status ?? 'active'}</span></div>
                       <div className="mt-3 grid grid-cols-2 gap-2">
                         <select aria-label={`${coaster.coaster_number} vehicle type`} value={coaster.vehicle_type ?? 'van'} onChange={(event) => void handleUpdateVehicle(coaster, { vehicle_type: event.target.value })} className="rounded-lg border border-zinc-700 bg-zinc-950 px-2 py-2 text-xs text-zinc-200"><option value="coaster">Coaster</option><option value="hiace">Hiace</option><option value="van">Van</option><option value="bus">Bus</option><option value="other">Other</option></select>
                         <input aria-label={`${coaster.coaster_number} seat capacity`} type="number" min="1" value={coaster.seat_capacity ?? 28} onChange={(event) => setCoasters((current) => current.map((item) => item.id === coaster.id ? { ...item, seat_capacity: Number(event.target.value) } : item))} onBlur={(event) => void handleUpdateVehicle(coaster, { seat_capacity: Number(event.target.value) || 1 })} className="rounded-lg border border-zinc-700 bg-zinc-950 px-2 py-2 text-xs text-zinc-200" />
@@ -2554,7 +2580,7 @@ export default function AdminDashboard() {
 
         {activeTab === 'pricing' && (
           <div className="space-y-6">
-            <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
               <h2 className="mb-2 text-2xl font-semibold text-white">
                 Route Pricing
               </h2>
@@ -2564,7 +2590,7 @@ export default function AdminDashboard() {
               </p>
 
               <div className="mb-5 flex items-start gap-3 rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-3 text-sm text-yellow-100">
-                <span className="mt-0.5 text-base">⚠️</span>
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-400/20 text-xs font-bold text-amber-200">!</span>
                 <p>
                   Price changes are live immediately. Students will see updated
                   prices on the landing page right away.
@@ -2573,7 +2599,7 @@ export default function AdminDashboard() {
 
               {routes.length === 0 ? (
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-6 text-center">
-                  <div className="mb-2 text-3xl">🗺️</div>
+                  <IconTile name="route" className="mx-auto mb-2" />
                   <p className="text-zinc-400">No routes found</p>
                 </div>
               ) : (
@@ -2599,7 +2625,7 @@ export default function AdminDashboard() {
 
                         {priceSuccess === route.id && (
                           <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-300">
-                            ✅ Updated!
+                            Updated.
                           </span>
                         )}
                       </div>
@@ -2628,7 +2654,7 @@ export default function AdminDashboard() {
                           type="button"
                           onClick={() => handleUpdatePrice(route.id)}
                           disabled={savingPrice === route.id}
-                          className="rounded-xl bg-gradient-to-r from-[#facc15] via-[#fbbf24] to-[#f59e0b] px-5 py-2.5 text-sm font-bold text-slate-950 transition hover:brightness-105 disabled:opacity-40"
+                          className="rounded-xl bg-gradient-to-r from-[#e8bb40] via-[#f1cf6c] to-[#d39f25] px-5 py-2.5 text-sm font-bold text-slate-950 transition hover:brightness-105 disabled:opacity-40"
                         >
                           {savingPrice === route.id ? '...' : 'Update →'}
                         </button>
@@ -2647,7 +2673,7 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            <div className="rounded-[28px] border border-zinc-800 bg-zinc-900/80 p-5">
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
               <h2 className="mb-4 text-xl font-semibold text-white">
                 Add New Route
               </h2>
@@ -2677,6 +2703,8 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+        </div>
+        </div>
       </main>
     </div>
   );
