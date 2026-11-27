@@ -46,8 +46,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-archivo);
+  --font-mono: var(--font-plex-mono);
 }
 
 :root {
@@ -78,8 +78,8 @@ body {
     radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.07), transparent 30%),
     var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
-  letter-spacing: -0.015em;
+  font-family: var(--font-archivo), Arial, Helvetica, sans-serif;
+  letter-spacing: -0.01em;
   text-rendering: optimizeLegibility;
 }
 
@@ -171,22 +171,73 @@ select {
     color: var(--color-yellow-300);
   }
 
+  /* ----------------------------------------------------------------------
+     Buttons: one system everywhere.
+     Sizes: default 48px (touch-friendly), .ee-btn-lg 56px.
+     Variants: primary (gold), secondary (outline), whatsapp, ghost.
+     States: hover, focus-visible ring, pressed, disabled, loading
+     (set aria-busy="true" to show the spinner and block repeat taps).
+     ---------------------------------------------------------------------- */
   .ee-btn {
+    position: relative;
     display: inline-flex;
-    min-height: 2.75rem;
+    min-height: 3rem;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    border-radius: 0.75rem;
-    padding: 0.625rem 1.125rem;
-    font-size: 0.875rem;
+    border-radius: 0.875rem;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.9375rem;
     font-weight: 700;
+    line-height: 1.2;
     white-space: nowrap;
+    text-decoration: none;
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      box-shadow 200ms ease,
+      filter 160ms ease,
+      transform 160ms var(--ease-out-soft);
   }
 
-  .ee-btn:disabled {
+  .ee-btn:focus-visible {
+    outline: 2px solid var(--color-yellow-300);
+    outline-offset: 3px;
+  }
+
+  .ee-btn:not(:disabled):not([aria-busy='true']):active {
+    transform: translateY(1px) scale(0.985);
+  }
+
+  .ee-btn:disabled,
+  .ee-btn[aria-disabled='true'] {
     cursor: not-allowed;
     opacity: 0.55;
+  }
+
+  .ee-btn[aria-busy='true'] {
+    pointer-events: none;
+    color: transparent !important;
+  }
+
+  .ee-btn[aria-busy='true']::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 999px;
+    border: 2px solid currentColor;
+    border-color: var(--ee-spinner, #15110a) transparent var(--ee-spinner, #15110a) var(--ee-spinner, #15110a);
+    animation: ee-spin 700ms linear infinite;
+  }
+
+  .ee-btn-lg {
+    min-height: 3.5rem;
+    border-radius: 1rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
   }
 
   .ee-btn-primary {
@@ -200,16 +251,57 @@ select {
     box-shadow: 0 14px 30px rgba(232, 187, 64, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.35);
   }
 
+  .ee-btn-primary:not(:disabled):active {
+    box-shadow: 0 4px 10px rgba(232, 187, 64, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
   .ee-btn-secondary {
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    --ee-spinner: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.16);
     background: rgba(255, 255, 255, 0.04);
     color: white;
     font-weight: 600;
   }
 
   .ee-btn-secondary:not(:disabled):hover {
-    border-color: rgba(232, 187, 64, 0.4);
+    border-color: rgba(232, 187, 64, 0.45);
     background: rgba(255, 255, 255, 0.07);
+  }
+
+  .ee-btn-whatsapp {
+    background: #25d366;
+    color: #06170d;
+    box-shadow: 0 10px 24px rgba(37, 211, 102, 0.16);
+  }
+
+  .ee-btn-whatsapp:not(:disabled):hover {
+    filter: brightness(1.05);
+    box-shadow: 0 14px 30px rgba(37, 211, 102, 0.24);
+  }
+
+  .ee-btn-ghost {
+    --ee-spinner: #fff;
+    color: var(--color-zinc-200);
+    font-weight: 600;
+  }
+
+  .ee-btn-ghost:not(:disabled):hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+  }
+
+  /* Expanded "signage" display type for marketing headlines. */
+  .ee-display {
+    font-stretch: 112%;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 0.98;
+  }
+
+  .ee-mono {
+    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-feature-settings: 'zero' 0;
+    letter-spacing: 0;
   }
 
   .ee-chip {
@@ -260,6 +352,12 @@ select {
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes ee-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
