@@ -27,7 +27,7 @@
   --color-zinc-200: #d6dae1;
   --color-zinc-300: #b6bdc8;
   --color-zinc-400: #8e97a6;
-  --color-zinc-500: #737c8c;
+  --color-zinc-500: #7d8696;
   --color-zinc-600: #525a68;
   --color-zinc-700: #343b47;
   --color-zinc-800: #1e242d;
@@ -290,11 +290,10 @@ select {
     color: white;
   }
 
-  /* Expanded "signage" display type for marketing headlines. */
+  /* Heavy "signage" display type for marketing headlines. */
   .ee-display {
-    font-stretch: 112%;
     font-weight: 800;
-    letter-spacing: -0.035em;
+    letter-spacing: -0.03em;
     line-height: 0.98;
   }
 
@@ -734,4 +733,53 @@ select {
   background-clip: text;
   color: transparent;
   animation: ee-sheen 6s linear infinite;
+}
+
+/* ==========================================================================
+   Transit line (landing hero). One orchestrated moment: the line draws
+   itself, then the stations light up in order. Static for reduced motion.
+   ========================================================================== */
+.ee-network-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(180deg, black, transparent 85%);
+}
+
+.ee-line-track {
+  background: linear-gradient(180deg, var(--color-yellow-300), var(--color-yellow-500));
+  transform-origin: top;
+  animation: ee-draw 900ms var(--ease-out-soft) both;
+}
+
+.ee-station {
+  animation: ee-station-in 420ms var(--ease-out-soft) both;
+}
+
+@keyframes ee-draw {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes ee-station-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Fare receipt: torn paper edge. */
+.ee-receipt::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 -9px 0;
+  height: 10px;
+  background: conic-gradient(from -45deg at bottom, #f4efe2 90deg, transparent 0) 50% / 16px 100%;
 }

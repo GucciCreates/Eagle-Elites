@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import GoogleButton from '@/components/auth/google-button';
+import Icon from '@/components/ui/icons';
 import { friendlyAuthError } from '@/lib/auth/form';
 import { startGoogleSignIn } from '@/lib/auth/google';
 import { useSessionDestination } from '@/lib/auth/use-session-destination';
@@ -44,10 +45,11 @@ export default function SignupCta({
     return (
       <div className={wrap}>
         <Link
+          prefetch={false}
           href={session.href}
-          className="ee-btn ee-btn-primary min-h-14 rounded-2xl px-7 text-base hover:-translate-y-0.5"
+          className="ee-btn ee-btn-primary ee-btn-lg"
         >
-          {session.label} <span className="ml-2" aria-hidden="true">→</span>
+          {session.label} <Icon name="arrow-right" size={18} />
         </Link>
         <p className={`text-xs text-zinc-400 ${align === 'center' ? 'text-center' : ''}`}>
           You’re signed in. Pick up right where you left off.
@@ -65,10 +67,11 @@ export default function SignupCta({
         label="Sign up with Google"
       />
       <Link
+        prefetch={false}
         href="/auth/signup"
-        className="ee-btn ee-btn-primary min-h-14 rounded-2xl px-7 text-base hover:-translate-y-0.5"
+        className="ee-btn ee-btn-primary ee-btn-lg"
       >
-        Book my seat with email <span className="ml-2" aria-hidden="true">→</span>
+        Reserve with email <Icon name="arrow-right" size={18} />
       </Link>
       {error && (
         <p role="alert" className="rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-100">
@@ -77,10 +80,10 @@ export default function SignupCta({
       )}
       <p className={`text-xs leading-5 text-zinc-400 ${align === 'center' ? 'text-center' : ''}`}>
         Already riding with us?{' '}
-        <Link href="/auth/login" className="font-semibold text-yellow-200 underline-offset-4 hover:underline">
+        <Link prefetch={false} href="/auth/login" className="font-semibold text-yellow-200 underline-offset-4 hover:underline">
           Log in
         </Link>
-        . Applying doesn’t confirm a seat until the team approves it.
+        . Applying doesn’t confirm a seat: it’s confirmed once your payment is verified.
       </p>
     </div>
   );
