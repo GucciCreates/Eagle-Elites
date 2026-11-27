@@ -35,6 +35,7 @@ For a production build, run `npm run lint`, `npm run build`, then `npm start`.
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | App and public route fares | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser auth and public route fares | Publishable/anon key; database access must be protected by RLS |
+| `NEXT_PUBLIC_SITE_URL` | Optional | Public address for share previews, sitemap and canonical links; on Vercel it defaults to the production domain |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only admin and scheduled jobs | Keep secret; never prefix with `NEXT_PUBLIC_` |
 | `CRON_SECRET` | Fee reminder cron | Long random secret used to authorize scheduled requests |
 | `WHATSAPP_TOKEN` | WhatsApp notifications | Meta WhatsApp Cloud API token |
@@ -44,6 +45,15 @@ For a production build, run `npm run lint`, `npm run build`, then `npm start`.
 | `WHATSAPP_TEMPLATE_*` | Optional | Override the template names listed below |
 
 WhatsApp credentials are optional for core portal use. The fee reminders and notification endpoints require their server-side credentials to be configured.
+
+## Landing page and branding
+
+The public homepage (`app/page.tsx`, `components/marketing/`) shows live route fares, seats left, pickup areas and institutions from Supabase. It refreshes about once a minute and falls back to built-in lists if the database can't be reached. Visitors can sign up with Google or email, and signed-in visitors are offered a link to their dashboard.
+
+- **Logo:** replace `public/brand/logo.svg` (used across the site) and `app/icon.svg` (browser tab icon) with the official logo. Keep the same file names. To use a PNG instead, change `logoSrc` in `lib/brand.ts`.
+- **Contacts, legal name, address:** edit `lib/brand.ts`; the landing page, login screens and search-engine data all read from it.
+- **Fees shown in the fare calculator** come from `lib/onboarding/pricing.ts`. Keep it in step with `public.onboarding_amount_due()` in the database.
+- **Google sign-in** must be enabled in Supabase; see [docs/GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md).
 
 ## Database migrations
 

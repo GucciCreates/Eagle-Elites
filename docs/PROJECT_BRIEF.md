@@ -6,7 +6,7 @@ Replace the manual forms, spreadsheets, and chat-based tracking used for student
 
 ## Current application
 
-- Public landing page with route fares, pickup coverage, application guidance, and contact details.
+- Public landing page with live route fares and seat availability, a fare calculator, pickup-area search, Google sign-up, FAQ, and contact details.
 - Student account creation, onboarding, payment-proof submission, and application status tracking.
 - Student dashboard for route schedules, departure selections, payments, notices, timetable preferences, and support requests.
 - Admin tools for application review, route and vehicle management, assignments, notifications, departure slots, expenses, and payment settings.
@@ -15,7 +15,7 @@ Replace the manual forms, spreadsheets, and chat-based tracking used for student
 
 ## Roles and future scope
 
-The current portal focuses on students and administrators. Driver-specific manifests and attendance, delegation/coaster outsourcing, and expanded operational reporting remain product roadmap items unless separately implemented.
+The portal serves students (and faculty/staff riders), administrators, and drivers. Drivers have their own login to see assigned trips and mark attendance. Delegation/coaster outsourcing and expanded operational reporting remain roadmap items.
 
 ## Technical stack
 

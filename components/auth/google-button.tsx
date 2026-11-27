@@ -5,24 +5,31 @@ export default function GoogleButton({
   loading = false,
   disabled = false,
   label = 'Continue with Google',
+  variant = 'dark',
 }: {
   onClick: () => void;
   loading?: boolean;
   disabled?: boolean;
   label?: string;
+  /** "light" is the high-contrast white button used on the landing page. */
+  variant?: 'dark' | 'light';
 }) {
+  const look =
+    variant === 'light'
+      ? 'min-h-14 rounded-2xl border-white bg-white text-base text-slate-900 shadow-lg shadow-black/20 hover:bg-zinc-100'
+      : 'rounded-xl border-zinc-700 bg-zinc-900/70 text-sm text-zinc-100 hover:border-zinc-500 hover:bg-zinc-800';
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={loading || disabled}
       aria-busy={loading}
-      className="flex w-full items-center justify-center gap-3 rounded-xl border border-zinc-700 bg-zinc-900/70 px-4 py-3 text-sm font-semibold text-zinc-100 transition hover:border-zinc-500 hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/50 disabled:cursor-not-allowed disabled:opacity-60"
+      className={`flex w-full items-center justify-center gap-3 border px-4 py-3 font-semibold transition ${look} focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/50 disabled:cursor-not-allowed disabled:opacity-60`}
     >
       {loading ? (
         <span
           aria-hidden="true"
-          className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-transparent"
+          className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
         />
       ) : (
         <svg

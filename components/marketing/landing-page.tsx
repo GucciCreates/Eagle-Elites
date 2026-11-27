@@ -1,333 +1,501 @@
-'use client';
-
 import Link from 'next/link';
-import { useState } from 'react';
+import Logo from '@/components/brand/logo';
+import CoverageSearch from '@/components/marketing/coverage-search';
+import FareCalculator from '@/components/marketing/fare-calculator';
+import SignupCta from '@/components/marketing/signup-cta';
+import SiteHeader from '@/components/marketing/site-header';
+import { BRAND, CONTACTS, WHATSAPP_GENERAL, whatsappLink } from '@/lib/brand';
+import { formatPkr, EXPECTED_REVIEW_HOURS, RESERVATION_FEE, AC_SURCHARGE } from '@/lib/onboarding/pricing';
+import type { LandingData } from '@/lib/public/landing-data';
+import { seatBadge } from '@/lib/public/seats';
 
-export type LiveRoute = { id: string; name: string; price: number };
-
-const PICKUP_ZONES = [
-  'Hassan Abdal',
-  'Wah Cantt (Br 1–3)',
-  'Gudwal / 26 Area',
-  'Kohistan Enclave',
-  'Wah Model Town',
-  'New City Phase II',
-  'GT Road / Taxila',
-  'B-17 MultiGardens',
-  'D-17 Society',
-  'E-16 / Tarnol / G-15',
+const VEHICLES = [
+  { name: 'Coaster', note: 'Main campus runs', icon: '🚌' },
+  { name: 'Executive Coaster', note: 'Extra legroom', icon: '🚌' },
+  { name: 'Toyota Hiace', note: 'Smaller routes', icon: '🚐' },
+  { name: 'Hiace Grand Cabin', note: 'High roof, AC', icon: '🚐' },
+  { name: 'Mercedes van', note: 'Premium groups', icon: '🚙' },
 ];
 
-const VEHICLE_TYPES = [
-  { name: 'Coaster', icon: '🚌' },
-  { name: 'Toyota Hiace', icon: '🚐' },
-  { name: 'Mercedes van', icon: '🚙' },
-  { name: 'Executive Coaster', icon: '🚌' },
-  { name: 'Hiace Grand Cabin', icon: '🚐' },
+const STEPS = [
+  { title: 'Create your account', body: 'Sign up with Google in one tap, or with your email.' },
+  { title: 'Pick route & pickup', body: 'Choose your campus, nearest stop, AC preference and class timings.' },
+  { title: 'Pay & upload proof', body: `Transfer the first payment and upload the receipt. Your reference number makes it easy to match.` },
+  { title: 'Get approved & ride', body: `The team reviews applications within about ${EXPECTED_REVIEW_HOURS} business hours. Then your seat, vehicle and driver show up in your dashboard.` },
 ];
 
-const ROUTE_LINK = (routeName: string) =>
-  `https://wa.me/923225166580?text=${encodeURIComponent(`Hi Eagle Elites, I would like to ask about the ${routeName} route, its current fare, pickup points, and timings.`)}`;
+const PORTAL_FEATURES = [
+  { icon: '🎟️', title: 'Daily seat confirmation', body: 'See tomorrow’s vehicle, driver and contact, and confirm your seat in a tap.' },
+  { icon: '🗓️', title: 'Weekly timetable', body: 'Set arrival and departure per day to match your classes. Change a trip up to 8 hours before it.' },
+  { icon: '💬', title: 'WhatsApp alerts', body: 'Approvals, fee reminders, holidays and vehicle changes come straight to WhatsApp.' },
+  { icon: '🧾', title: 'Payments in one place', body: 'Monthly fee status, receipts and history — no more chasing screenshots.' },
+  { icon: '🛟', title: 'Built-in help desk', body: 'Raise an issue from your dashboard and track the reply.' },
+  { icon: '🎁', title: 'Free annual trip', body: 'Registered passengers get a free annual trip with us.' },
+];
 
-const WHATSAPP_LINK =
-  'https://wa.me/923225166580?text=Hi%20Eagle%20Elites%2C%20I%27d%20like%20to%20ask%20about%20student%20transport.';
+const SAFETY = [
+  { title: 'Live GPS tracking', body: 'Know where the vehicle is — no more waiting at the stop guessing.' },
+  { title: 'Attendance on every trip', body: 'Drivers mark each passenger present or absent as they board.' },
+  { title: 'Guardian on file', body: 'A parent or guardian contact is part of every application.' },
+  { title: 'Assigned, registered drivers', body: 'Each trip has a named driver and contact you can see in advance.' },
+  { title: '24/7 WhatsApp support', body: 'A real person on WhatsApp, any time of day.' },
+  { title: 'Registered company', body: `${BRAND.legalName}. ${BRAND.registration}.` },
+];
 
-function formatPrice(price: number) {
-  return `PKR ${Number(price).toLocaleString('en-PK')}`;
+const FAQ = [
+  {
+    q: 'How much will I pay at the start?',
+    a: `Your route’s monthly fee, plus a one-time ${formatPkr(RESERVATION_FEE)} reservation fee. AC vehicles add ${formatPkr(AC_SURCHARGE)} a month. Use the fare calculator above to see your exact first payment.`,
+  },
+  {
+    q: 'When are monthly fees due?',
+    a: 'A reminder goes out on the 1st of each month and the fee is due by the 10th. Opted-in riders get both reminders on WhatsApp.',
+  },
+  {
+    q: 'Does applying guarantee my seat?',
+    a: `Not yet — the team checks your details and payment proof first, usually within ${EXPECTED_REVIEW_HOURS} business hours. If a route is full you can join its waitlist.`,
+  },
+  {
+    q: 'Can I change my pickup or drop-off time?',
+    a: 'Yes. Set your weekly timetable from the dashboard, and change a trip time at least 8 hours before it leaves (once per day each week).',
+  },
+  {
+    q: 'What if my application needs changes?',
+    a: 'You’ll see exactly what to fix in your portal (and on WhatsApp if you opted in). Update it and resubmit — no need to start over.',
+  },
+  {
+    q: 'Do you serve faculty and staff?',
+    a: 'Yes. Faculty and staff can apply through the same portal and choose their institution.',
+  },
+  {
+    q: 'What about holidays and cancelled classes?',
+    a: 'Holidays are announced in the portal and on WhatsApp, so you’ll know before you leave home.',
+  },
+];
+
+function SectionHeading({ eyebrow, title, body }: { eyebrow: string; title: string; body?: string }) {
+  return (
+    <div className="max-w-2xl">
+      <p className="text-xs font-bold uppercase tracking-[0.22em] text-yellow-300">{eyebrow}</p>
+      <h2 className="mt-3 text-3xl font-black tracking-tight text-balance sm:text-4xl">{title}</h2>
+      {body && <p className="mt-3 text-sm leading-7 text-zinc-400 sm:text-base">{body}</p>}
+    </div>
+  );
 }
 
-export default function LandingPage({
-  initialRoutes,
-  routesAvailable,
-}: {
-  initialRoutes: LiveRoute[];
-  routesAvailable: boolean;
-}) {
-  const routes = initialRoutes;
-  const routesError = !routesAvailable;
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+function LiveTripCard() {
+  const stops = [
+    { name: 'Pickup · B-17', time: '7:05 AM', done: true },
+    { name: 'GT Road', time: '7:25 AM', done: true },
+    { name: 'Campus gate', time: '7:50 AM', done: false },
+  ];
+  return (
+    <div className="relative mx-auto w-full max-w-md">
+      <div aria-hidden="true" className="absolute -inset-10 -z-10 rounded-full bg-yellow-300/10 blur-3xl" />
+      <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#0d131c]/95 shadow-2xl shadow-black/50">
+        <div className="flex items-center justify-between border-b border-dashed border-white/15 px-6 py-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-500">Boarding pass</p>
+            <p className="mt-1 text-lg font-black">Coaster 12 · Morning run</p>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-emerald-300/30 bg-emerald-300/10 px-3 py-1 text-xs font-semibold text-emerald-200">
+            <span className="ee-pulse h-2 w-2 shrink-0 rounded-full bg-emerald-300" /> Live GPS
+          </span>
+        </div>
 
-  const closeMenu = () => setMobileMenuOpen(false);
+        <div className="relative px-6 py-6">
+          <div aria-hidden="true" className="absolute bottom-10 left-[35px] top-10 w-0.5 bg-gradient-to-b from-yellow-300 via-yellow-300/60 to-zinc-700" />
+          <div aria-hidden="true" className="ee-ride absolute left-[27px] flex h-[18px] w-[18px] items-center justify-center rounded-full bg-yellow-300 text-[10px] shadow-[0_0_0_6px_rgba(250,204,21,0.18)]">
+            ▲
+          </div>
+          <ol className="relative space-y-6">
+            {stops.map((stop) => (
+              <li key={stop.name} className="flex items-center gap-4">
+                <span className={`h-3 w-3 shrink-0 rounded-full border-2 ${stop.done ? 'border-yellow-300 bg-yellow-300' : 'border-zinc-500 bg-[#0d131c]'} ml-[5px]`} />
+                <span className="flex flex-1 items-center justify-between gap-3">
+                  <span className={`text-sm font-semibold ${stop.done ? 'text-white' : 'text-zinc-400'}`}>{stop.name}</span>
+                  <span className="text-xs tabular-nums text-zinc-500">{stop.time}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <div className="grid grid-cols-3 border-t border-white/10 text-center text-xs">
+          <div className="border-r border-white/10 px-3 py-4">
+            <p className="text-zinc-500">Driver</p>
+            <p className="mt-1 font-semibold text-zinc-200">Assigned</p>
+          </div>
+          <div className="border-r border-white/10 px-3 py-4">
+            <p className="text-zinc-500">Seat</p>
+            <p className="mt-1 font-semibold text-emerald-200">Confirmed ✓</p>
+          </div>
+          <div className="px-3 py-4">
+            <p className="text-zinc-500">ETA</p>
+            <p className="mt-1 font-semibold text-yellow-200">12 min</p>
+          </div>
+        </div>
+      </div>
+      <p className="mt-4 text-center text-xs text-zinc-500">Example of what you see in your rider dashboard</p>
+    </div>
+  );
+}
+
+export default function LandingPage({ data }: { data: LandingData }) {
+  const { routes, routesAvailable, pickupZones, institutions } = data;
+  const lowestFare = routes.length ? Math.min(...routes.map((r) => r.price)) : null;
+
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    name: BRAND.name,
+    legalName: BRAND.legalName,
+    description: 'Daily student and staff transport to universities across Islamabad, Rawalpindi and Wah Cantt.',
+    email: BRAND.email,
+    telephone: `+${CONTACTS[0].e164}`,
+    address: { '@type': 'PostalAddress', streetAddress: 'Office 01, GT Road, Barrier No. 03', addressLocality: 'Wah Cantt', addressCountry: 'PK' },
+    areaServed: BRAND.cities,
+    ...(lowestFare !== null && { priceRange: `From ${formatPkr(lowestFare)} / month` }),
+  };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#070b10] text-white">
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#090d13]/90 backdrop-blur-xl">
-        <nav
-          aria-label="Main navigation"
-          className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 sm:px-8"
-        >
-          <a href="#home" className="flex items-center gap-3 rounded-lg" onClick={closeMenu}>
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-yellow-300 to-amber-500 font-black text-slate-950 shadow-lg shadow-yellow-500/10">
-              EE
-            </span>
-            <span>
-              <span className="block text-sm font-extrabold leading-tight">Eagles Elite</span>
-              <span className="block text-[10px] uppercase tracking-[0.2em] text-zinc-400">Transport Service</span>
-            </span>
-          </a>
-
-          <div className="hidden items-center gap-7 md:flex">
-            <a className="text-sm text-zinc-300 hover:text-white" href="#routes">Routes & fares</a>
-            <a className="text-sm text-zinc-300 hover:text-white" href="#coverage">Pickup areas</a>
-            <a className="text-sm text-zinc-300 hover:text-white" href="#how-it-works">How it works</a>
-            <a className="text-sm text-zinc-300 hover:text-white" href="#contact">Contact</a>
-          </div>
-
-          <div className="hidden items-center gap-3 md:flex">
-            <Link href="/auth/login" className="rounded-xl px-3 py-2 text-sm text-zinc-300 hover:text-white">Log in</Link>
-            <Link href="/auth/signup" className="rounded-xl bg-yellow-400 px-4 py-2.5 text-sm font-bold text-slate-950 hover:bg-yellow-300">Start an application</Link>
-          </div>
-
-          <button
-            type="button"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/15 text-xl md:hidden"
-            aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-            aria-expanded={mobileMenuOpen}
-            aria-controls="mobile-navigation"
-            onClick={() => setMobileMenuOpen((open) => !open)}
-          >
-            <span aria-hidden="true">{mobileMenuOpen ? '×' : '☰'}</span>
-          </button>
-        </nav>
-
-        {mobileMenuOpen && (
-          <div id="mobile-navigation" className="border-t border-white/10 bg-[#090d13] px-5 py-4 md:hidden">
-            <div className="mx-auto grid max-w-7xl gap-1">
-              {[
-                ['Routes & fares', '#routes'],
-                ['Pickup areas', '#coverage'],
-                ['How it works', '#how-it-works'],
-                ['Fleet', '#fleet'],
-                ['Contact', '#contact'],
-              ].map(([label, href]) => (
-                <a key={href} href={href} onClick={closeMenu} className="rounded-xl px-3 py-3 text-sm text-zinc-200 hover:bg-white/5">
-                  {label}
-                </a>
-              ))}
-              <div className="mt-2 grid grid-cols-2 gap-2 border-t border-white/10 pt-3">
-                <Link href="/auth/login" onClick={closeMenu} className="rounded-xl border border-white/15 px-3 py-3 text-center text-sm font-medium">Log in</Link>
-                <Link href="/auth/signup" onClick={closeMenu} className="rounded-xl bg-yellow-400 px-3 py-3 text-center text-sm font-bold text-slate-950">Apply</Link>
-              </div>
-            </div>
-          </div>
-        )}
-      </header>
+    <div className="relative min-h-screen overflow-x-clip bg-[#070b10] text-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }}
+      />
+      <SiteHeader />
 
       <main>
-        <section id="home" className="relative isolate scroll-mt-24 overflow-hidden">
-          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_15%_15%,rgba(250,204,21,0.14),transparent_32%),radial-gradient(circle_at_90%_75%,rgba(56,189,248,0.09),transparent_30%)]" />
-          <div className="mx-auto grid max-w-7xl gap-12 px-5 pb-20 pt-16 sm:px-8 sm:pt-24 lg:grid-cols-[1.08fr_0.92fr] lg:items-center lg:gap-16 lg:pb-28">
+        {/* HERO */}
+        <section id="home" className="relative isolate -mt-[68px] scroll-mt-24 overflow-hidden pt-[68px]">
+          <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_12%_10%,rgba(250,204,21,0.16),transparent_34%),radial-gradient(circle_at_92%_70%,rgba(56,189,248,0.10),transparent_32%)]" />
+          <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:44px_44px] [mask-image:radial-gradient(circle_at_30%_30%,black,transparent_70%)]" />
+          <div className="mx-auto grid max-w-7xl gap-14 px-5 pb-20 pt-8 sm:px-8 sm:pt-20 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:pb-28">
             <div>
-              <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-yellow-300/20 bg-yellow-300/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-yellow-100">
-                <span className="h-2 w-2 rounded-full bg-yellow-300" />
-                Student and staff transport
+              <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-yellow-300/25 bg-yellow-300/[0.06] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-yellow-100">
+                <span className="ee-pulse h-2 w-2 shrink-0 rounded-full bg-yellow-300" />
+                Admissions open<span className="hidden sm:inline"> · {BRAND.cities.join(' · ')}</span>
               </p>
-              <h1 className="max-w-3xl text-5xl font-black leading-[0.98] tracking-[-0.055em] sm:text-6xl xl:text-7xl">
-                A simpler way to get to <span className="text-yellow-300">campus.</span>
+              <h1 className="max-w-3xl text-[2.75rem] font-black leading-[0.98] tracking-[-0.05em] text-balance sm:text-6xl xl:text-7xl">
+                Your daily ride to campus, <span className="bg-gradient-to-r from-yellow-200 via-yellow-300 to-amber-500 bg-clip-text text-transparent">handled.</span>
               </h1>
-              <p className="mt-6 max-w-2xl text-base leading-7 text-zinc-300 sm:text-lg sm:leading-8">
-                Explore route fares and pickup areas around Islamabad, Rawalpindi, and Wah Cantt. Ask the team to confirm your stop, schedule, and availability before applying.
+              <p className="mt-6 max-w-xl text-base leading-7 text-zinc-300 sm:text-lg sm:leading-8">
+                Door-to-campus transport for students and staff, with live GPS, your own timetable, and WhatsApp updates. Book your seat in minutes{lowestFare !== null ? `, from ${formatPkr(lowestFare)} a month` : ''}.
               </p>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link href="/auth/signup" className="inline-flex min-h-14 items-center justify-center rounded-2xl bg-yellow-400 px-7 py-4 text-center font-bold text-slate-950 shadow-lg shadow-yellow-500/10 hover:-translate-y-0.5 hover:bg-yellow-300">
-                  Start a transport application <span className="ml-2" aria-hidden="true">→</span>
-                </Link>
-                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-14 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.03] px-7 py-4 font-semibold text-white hover:border-white/30 hover:bg-white/[0.07]">
-                  Ask a question on WhatsApp
-                </a>
+              <div className="mt-8">
+                <SignupCta />
               </div>
-              <p className="mt-4 max-w-xl text-xs leading-5 text-zinc-400">
-                Applying does not confirm a seat. The team will review your details and confirm route availability.
-              </p>
+
+              <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-zinc-300">
+                {['SECP registered', 'Live GPS tracking', '24/7 WhatsApp support'].map((item) => (
+                  <li key={item} className="flex items-center gap-2">
+                    <span aria-hidden="true" className="text-yellow-300">✓</span> {item}
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            <div className="relative mx-auto w-full max-w-xl">
-              <div className="absolute -inset-8 -z-10 rounded-full bg-yellow-300/5 blur-3xl" />
-              <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#0d131c]/90 p-5 shadow-2xl shadow-black/40 sm:p-7">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-yellow-300">Plan your commute</p>
-                    <h2 className="mt-2 text-2xl font-bold">Check the details first</h2>
-                  </div>
-                  <span className="rounded-2xl border border-white/10 bg-white/5 p-3 text-2xl" aria-hidden="true">🚌</span>
-                </div>
-                <div className="my-7 rounded-2xl border border-white/10 bg-[#080c12] p-5">
-                  <div className="flex items-center gap-4">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full border border-yellow-300/50 bg-yellow-300/10 text-sm text-yellow-200">1</span>
-                    <div><p className="font-semibold">Find your route</p><p className="mt-1 text-sm text-zinc-400">Review the routes and fares listed below.</p></div>
-                  </div>
-                  <div className="ml-[17px] h-7 border-l border-dashed border-zinc-600" />
-                  <div className="flex items-center gap-4">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full border border-sky-300/40 bg-sky-300/10 text-sm text-sky-200">2</span>
-                    <div><p className="font-semibold">Confirm your stop and timing</p><p className="mt-1 text-sm text-zinc-400">Ask the team for current trip details.</p></div>
-                  </div>
-                  <div className="ml-[17px] h-7 border-l border-dashed border-zinc-600" />
-                  <div className="flex items-center gap-4">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full border border-emerald-300/40 bg-emerald-300/10 text-sm text-emerald-200">3</span>
-                    <div><p className="font-semibold">Submit your application</p><p className="mt-1 text-sm text-zinc-400">Account activation follows team review.</p></div>
-                  </div>
-                </div>
-                <a href="#routes" className="flex items-center justify-between rounded-xl border border-white/10 px-4 py-3 text-sm font-medium text-zinc-200 hover:border-yellow-300/40 hover:text-white">
-                  Browse current route fares <span aria-hidden="true">↓</span>
-                </a>
-              </div>
-              <div className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-zinc-400">
-                <span>Islamabad</span><span>Rawalpindi</span><span>Wah Cantt</span>
-              </div>
-            </div>
+            <LiveTripCard />
           </div>
         </section>
 
-        <section id="routes" className="scroll-mt-24 border-y border-white/5 bg-white/[0.02] px-5 py-20 sm:px-8">
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-9 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.22em] text-yellow-300">Routes and fares</p>
-                <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">See the current route prices</h2>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">Prices shown are read from the route list. Confirm the fare, pickup point, schedule, and seat availability with the team before making a payment.</p>
+        {/* STATS */}
+        <section aria-label="Eagle Elites at a glance" className="border-y border-white/[0.06] bg-white/[0.02]">
+          <dl className="mx-auto grid max-w-7xl grid-cols-2 gap-px overflow-hidden px-5 sm:px-8 md:grid-cols-4">
+            {[
+              ['15+', 'Institutions served'],
+              [routes.length ? String(routes.length) : '—', 'Active routes'],
+              [String(pickupZones.length), 'Pickup areas'],
+              ['24/7', 'WhatsApp support'],
+            ].map(([value, label]) => (
+              <div key={label} className="px-2 py-8 text-center">
+                <dt className="sr-only">{label}</dt>
+                <dd>
+                  <span className="block text-3xl font-black tracking-tight text-yellow-200 sm:text-4xl">{value}</span>
+                  <span className="mt-1 block text-xs uppercase tracking-[0.16em] text-zinc-500">{label}</span>
+                </dd>
               </div>
-            </div>
+            ))}
+          </dl>
+        </section>
 
-            {routesError ? (
-              <div className="rounded-2xl border border-amber-300/20 bg-amber-300/5 p-6">
-                <h3 className="font-semibold text-amber-100">Route prices are temporarily unavailable</h3>
-                <p className="mt-2 text-sm text-zinc-300">Message the team for a current fare and pickup details.</p>
-                <a className="mt-4 inline-flex rounded-xl bg-yellow-400 px-4 py-2.5 text-sm font-bold text-slate-950 hover:bg-yellow-300" href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">Ask for a fare</a>
+        {/* INSTITUTIONS */}
+        <section aria-label="Institutions we serve" className="py-10">
+          <p className="text-center text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Riding daily to</p>
+          <div className="ee-marquee-mask mt-5 overflow-hidden">
+            <ul className="ee-marquee flex w-max gap-3">
+              {[...institutions, ...institutions].map((name, i) => (
+                <li
+                  key={`${name}-${i}`}
+                  aria-hidden={i >= institutions.length}
+                  className="whitespace-nowrap rounded-full border border-white/10 bg-white/[0.03] px-5 py-2.5 text-sm font-semibold text-zinc-300"
+                >
+                  {name}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* FARES */}
+        <section id="fares" className="scroll-mt-24 px-5 py-20 sm:px-8">
+          <div className="mx-auto max-w-7xl">
+            <SectionHeading
+              eyebrow="Routes & fares"
+              title="Clear monthly fares. No surprises."
+              body="Live prices from our route list. Pick your route, choose AC if you want it, and see your exact first payment."
+            />
+
+            {!routesAvailable || routes.length === 0 ? (
+              <div className="mt-10 rounded-2xl border border-amber-300/20 bg-amber-300/5 p-6">
+                <h3 className="font-semibold text-amber-100">
+                  {routesAvailable ? 'Fares are being updated' : 'Route prices are temporarily unavailable'}
+                </h3>
+                <p className="mt-2 text-sm text-zinc-300">Message the team for a current fare and pickup details — we reply fast.</p>
+                <a className="mt-4 inline-flex rounded-xl bg-yellow-400 px-4 py-2.5 text-sm font-bold text-slate-950 hover:bg-yellow-300" href={WHATSAPP_GENERAL} target="_blank" rel="noopener noreferrer">
+                  Ask for a fare
+                </a>
               </div>
-            ) : routes.length === 0 ? (
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-zinc-300">No route fares are listed right now. Contact the team to ask about service in your area.</div>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {routes.map((route) => (
-                  <article key={route.id} className="flex flex-col rounded-2xl border border-white/10 bg-[#0b1018] p-5 transition hover:-translate-y-0.5 hover:border-yellow-300/30">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">Route fare</p>
-                    <h3 className="mt-3 min-h-14 text-xl font-bold leading-7">{route.name}</h3>
-                    <p className="mt-4 text-3xl font-black text-yellow-200">{formatPrice(route.price)}</p>
-                    <p className="mt-1 text-xs text-zinc-500">Confirm fare period and included services with the team.</p>
-                    <a href={ROUTE_LINK(route.name)} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-white hover:border-yellow-300/40 hover:bg-yellow-300/5">
-                      Ask about this route <span className="ml-2" aria-hidden="true">↗</span>
-                    </a>
-                  </article>
-                ))}
+              <div className="mt-10 grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {routes.map((route) => {
+                    const badge = seatBadge(route.seatsLeft);
+                    return (
+                      <article key={route.id} className="group flex flex-col rounded-2xl border border-white/10 bg-[#0b1018] p-5 transition hover:-translate-y-0.5 hover:border-yellow-300/30">
+                        <div className="flex items-start justify-between gap-3">
+                          <h3 className="text-lg font-bold leading-6">{route.name}</h3>
+                          {badge && <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${badge.tone}`}>{badge.text}</span>}
+                        </div>
+                        <p className="mt-4 text-2xl font-black text-yellow-200">
+                          {formatPkr(route.price)} <span className="text-sm font-medium text-zinc-500">/ month</span>
+                        </p>
+                        <a
+                          href={whatsappLink(`Hi Eagle Elites, I'd like to ask about the ${route.name} route: pickup points and timings.`)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-4 text-sm font-semibold text-zinc-400 transition group-hover:text-yellow-200"
+                        >
+                          Pickup points & timings ↗
+                        </a>
+                      </article>
+                    );
+                  })}
+                </div>
+                <div className="lg:sticky lg:top-24">
+                  <FareCalculator routes={routes} />
+                </div>
               </div>
             )}
           </div>
         </section>
 
-        <section id="coverage" className="scroll-mt-24 px-5 py-20 sm:px-8">
-          <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+        {/* COVERAGE */}
+        <section id="coverage" className="scroll-mt-24 border-y border-white/[0.06] bg-[#0a0e14] px-5 py-20 sm:px-8">
+          <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.8fr_1.2fr]">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-yellow-300">Pickup coverage</p>
-              <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Check whether we cover your area</h2>
-              <p className="mt-4 text-sm leading-7 text-zinc-400">These are the pickup areas currently listed on the site. Coverage can vary by route and stop, so confirm your exact location with the team.</p>
-              <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-950 hover:bg-zinc-200">Check my pickup point</a>
+              <SectionHeading
+                eyebrow="Pickup coverage"
+                title="Is your area covered?"
+                body="Search your sector, town or society. Not listed? Request a stop — routes grow where riders are."
+              />
+              <a href={WHATSAPP_GENERAL} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex min-h-12 items-center rounded-xl border border-white/15 px-5 text-sm font-semibold hover:border-yellow-300/40">
+                Confirm my exact stop ↗
+              </a>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {PICKUP_ZONES.map((zone, i) => (
-                <div key={zone} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-4">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-yellow-300/10 text-sm text-yellow-200" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
-                  <span className="text-sm font-medium text-zinc-200">{zone}</span>
-                </div>
-              ))}
-            </div>
+            <CoverageSearch zones={pickupZones} />
           </div>
         </section>
 
-        <section id="how-it-works" className="scroll-mt-24 border-y border-white/5 bg-[#0a0e14] px-5 py-20 sm:px-8">
+        {/* HOW IT WORKS */}
+        <section id="how-it-works" className="scroll-mt-24 px-5 py-20 sm:px-8">
           <div className="mx-auto max-w-7xl">
-            <div className="max-w-2xl">
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-yellow-300">Getting started</p>
-              <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Know what happens before you apply</h2>
-              <p className="mt-3 text-sm leading-6 text-zinc-400">The portal collects your commuting details and application. The team reviews applications before activating accounts.</p>
-            </div>
-            <div className="mt-9 grid gap-4 md:grid-cols-3">
-              {[
-                { n: '01', title: 'Ask about the route', body: 'Confirm the current fare, pickup stop, timing, vehicle, and available seats for your campus.' },
-                { n: '02', title: 'Create your account', body: 'Enter your contact, institution, pickup preferences, and the information requested in the portal.' },
-                { n: '03', title: 'Wait for review', body: 'Submit the requested payment proof and wait for the team to review and confirm your application.' },
-              ].map((step) => (
-                <article key={step.n} className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
-                  <span className="text-sm font-bold tracking-[0.16em] text-yellow-300">{step.n}</span>
-                  <h3 className="mt-4 text-xl font-bold">{step.title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-zinc-400">{step.body}</p>
+            <SectionHeading eyebrow="How it works" title="From sign-up to your first ride in four steps" />
+            <ol className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {STEPS.map((step, i) => (
+                <li key={step.title} className="relative rounded-2xl border border-white/10 bg-white/[0.025] p-6">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-400 text-sm font-black text-slate-950">{i + 1}</span>
+                  <h3 className="mt-5 text-lg font-bold">{step.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-zinc-400">{step.body}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* PORTAL */}
+        <section className="px-5 pb-20 sm:px-8">
+          <div className="mx-auto max-w-7xl rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_90%_10%,rgba(250,204,21,0.10),transparent_40%),#0b1018] p-6 sm:p-10">
+            <SectionHeading
+              eyebrow="Your rider portal"
+              title="Everything about your commute, in one place"
+              body="No more spreadsheets, group-chat screenshots or guessing which coaster to board."
+            />
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {PORTAL_FEATURES.map((f) => (
+                <article key={f.title} className="rounded-2xl border border-white/10 bg-black/20 p-5">
+                  <span className="text-2xl" aria-hidden="true">{f.icon}</span>
+                  <h3 className="mt-3 font-bold">{f.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-zinc-400">{f.body}</p>
                 </article>
               ))}
             </div>
-            <p className="mt-5 rounded-xl border border-amber-300/15 bg-amber-300/[0.04] p-4 text-sm leading-6 text-amber-100/90">Payment instructions appear during the application. Confirm the total amount and payment terms with the team before transferring money. Submitting an application does not itself reserve a seat.</p>
           </div>
         </section>
 
-        <section id="fleet" className="scroll-mt-24 px-5 py-20 sm:px-8">
-          <div className="mx-auto max-w-7xl">
-            <div className="grid gap-8 rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_85%_20%,rgba(250,204,21,0.08),transparent_35%),#0b1018] p-6 sm:p-9 lg:grid-cols-[0.75fr_1.25fr] lg:items-center">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.22em] text-yellow-300">Fleet</p>
-                <h2 className="mt-3 text-3xl font-black tracking-tight">Ask which vehicle serves your route</h2>
-                <p className="mt-4 text-sm leading-7 text-zinc-400">Vehicle model and amenities can vary by route and availability. Contact the team to confirm the vehicle assigned to your trip.</p>
-                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex min-h-12 items-center justify-center rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold hover:border-yellow-300/40">Ask about the fleet <span className="ml-2" aria-hidden="true">↗</span></a>
-              </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {VEHICLE_TYPES.map((vehicle) => (
-                  <div key={vehicle.name} className="flex min-h-32 flex-col items-center justify-center rounded-2xl border border-white/10 bg-black/20 p-4 text-center">
-                    <span className="text-4xl" aria-hidden="true">{vehicle.icon}</span>
-                    <span className="mt-3 text-sm font-semibold text-zinc-200">{vehicle.name}</span>
+        {/* SAFETY */}
+        <section id="safety" className="scroll-mt-24 border-y border-white/[0.06] bg-white/[0.02] px-5 py-20 sm:px-8">
+          <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.8fr_1.2fr]">
+            <SectionHeading
+              eyebrow="For parents"
+              title="Safety you can check, not just trust"
+              body="Every ride is tracked, every passenger is accounted for, and someone is always reachable."
+            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              {SAFETY.map((s) => (
+                <div key={s.title} className="flex gap-4 rounded-2xl border border-white/10 bg-[#0b1018] p-5">
+                  <span aria-hidden="true" className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/15 text-sm text-emerald-300">✓</span>
+                  <div>
+                    <h3 className="font-bold">{s.title}</h3>
+                    <p className="mt-1 text-sm leading-6 text-zinc-400">{s.body}</p>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
 
-        <section id="contact" className="scroll-mt-24 border-t border-white/5 bg-white/[0.02] px-5 py-20 sm:px-8">
+        {/* FLEET */}
+        <section id="fleet" className="scroll-mt-24 px-5 py-20 sm:px-8">
           <div className="mx-auto max-w-7xl">
-            <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr]">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.22em] text-yellow-300">Contact</p>
-                <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Get the details for your commute</h2>
-                <p className="mt-4 text-sm leading-7 text-zinc-400">Ask about route availability, exact pickup points, current timings, fares, and the vehicle assigned to your trip.</p>
-                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex min-h-12 items-center justify-center rounded-xl bg-yellow-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-yellow-300">Message Eagle Elites on WhatsApp</a>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <a href="tel:+923225166580" className="rounded-2xl border border-white/10 bg-[#0b1018] p-5 hover:border-yellow-300/30">
-                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">Call / WhatsApp</span>
-                  <span className="mt-2 block text-lg font-bold">M. Hammad</span>
-                  <span className="mt-1 block text-sm text-zinc-400">0322 5166580</span>
-                </a>
-                <a href="tel:+923135018125" className="rounded-2xl border border-white/10 bg-[#0b1018] p-5 hover:border-yellow-300/30">
-                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">Call / WhatsApp</span>
-                  <span className="mt-2 block text-lg font-bold">Engr. Waleed</span>
-                  <span className="mt-1 block text-sm text-zinc-400">0313 5018125</span>
-                </a>
-                <a href="mailto:eagleselitepk@gmail.com" className="rounded-2xl border border-white/10 bg-[#0b1018] p-5 hover:border-yellow-300/30 sm:col-span-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">Email</span>
-                  <span className="mt-2 block font-bold">eagleselitepk@gmail.com</span>
-                </a>
-                <div className="rounded-2xl border border-white/10 bg-[#0b1018] p-5 sm:col-span-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">Office</span>
-                  <span className="mt-2 block text-sm leading-6 text-zinc-200">Office 01, GT Road, Barrier No. 03, Wah Cantt, Pakistan</span>
+            <SectionHeading
+              eyebrow="Fleet"
+              title="The right vehicle for every route"
+              body="AC coasters, Hiaces and vans. The vehicle for your route is shown in your dashboard before each trip."
+            />
+            <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {VEHICLES.map((v) => (
+                <div key={v.name} className="flex flex-col items-center rounded-2xl border border-white/10 bg-[#0b1018] p-5 text-center">
+                  <span className="text-4xl" aria-hidden="true">{v.icon}</span>
+                  <span className="mt-3 text-sm font-bold text-zinc-100">{v.name}</span>
+                  <span className="mt-1 text-xs text-zinc-500">{v.note}</span>
                 </div>
-              </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section id="faq" className="scroll-mt-24 border-t border-white/[0.06] bg-[#0a0e14] px-5 py-20 sm:px-8">
+          <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.7fr_1.3fr]">
+            <SectionHeading eyebrow="FAQ" title="Questions riders and parents ask" body="Still unsure? Message us on WhatsApp — we answer around the clock." />
+            <div className="divide-y divide-white/10 rounded-2xl border border-white/10 bg-[#0b1018]">
+              {FAQ.map((item) => (
+                <details key={item.q} className="group px-5 py-1 [&_summary::-webkit-details-marker]:hidden">
+                  <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 py-3 font-semibold">
+                    {item.q}
+                    <span aria-hidden="true" className="text-xl text-yellow-300 transition group-open:rotate-45">+</span>
+                  </summary>
+                  <p className="pb-5 text-sm leading-7 text-zinc-400">{item.a}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* FINAL CTA */}
+        <section className="px-5 py-20 sm:px-8">
+          <div className="relative mx-auto max-w-5xl overflow-hidden rounded-[2.5rem] border border-yellow-300/20 bg-[radial-gradient(circle_at_50%_0%,rgba(250,204,21,0.22),transparent_60%),#0b1018] px-6 py-14 text-center sm:px-12">
+            <h2 className="mx-auto max-w-2xl text-3xl font-black tracking-tight text-balance sm:text-5xl">Seats fill up every semester. Reserve yours today.</h2>
+            <p className="mx-auto mt-4 max-w-xl text-zinc-300">It takes about five minutes. Use your Google account and you won’t even need a new password.</p>
+            <div className="mt-8">
+              <SignupCta align="center" />
+            </div>
+          </div>
+        </section>
+
+        {/* CONTACT */}
+        <section id="contact" className="scroll-mt-24 border-t border-white/[0.06] bg-white/[0.02] px-5 py-20 sm:px-8">
+          <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.85fr_1.15fr]">
+            <div>
+              <SectionHeading eyebrow="Contact" title="Talk to a real person" body="Route availability, exact pickup points, timings, fares or anything else — we’re a message away." />
+              <a href={WHATSAPP_GENERAL} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex min-h-12 items-center rounded-xl bg-[#25D366] px-5 text-sm font-bold text-slate-950 hover:brightness-110">
+                Chat on WhatsApp
+              </a>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {CONTACTS.map((c) => (
+                <a key={c.e164} href={`tel:+${c.e164}`} className="rounded-2xl border border-white/10 bg-[#0b1018] p-5 hover:border-yellow-300/30">
+                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">Call / WhatsApp</span>
+                  <span className="mt-2 block text-lg font-bold">{c.name}</span>
+                  <span className="mt-1 block text-sm text-zinc-400">{c.display}</span>
+                </a>
+              ))}
+              <a href={`mailto:${BRAND.email}`} className="rounded-2xl border border-white/10 bg-[#0b1018] p-5 hover:border-yellow-300/30 sm:col-span-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">Email</span>
+                <span className="mt-2 block break-all font-bold">{BRAND.email}</span>
+              </a>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(BRAND.address)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-2xl border border-white/10 bg-[#0b1018] p-5 hover:border-yellow-300/30 sm:col-span-2"
+              >
+                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">Office · open in Maps ↗</span>
+                <span className="mt-2 block text-sm leading-6 text-zinc-200">{BRAND.address}</span>
+              </a>
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-white/10 px-5 py-7 sm:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+      <footer className="border-t border-white/10 px-5 pb-24 pt-10 sm:px-8 md:pb-10">
+        <div className="mx-auto flex max-w-7xl flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div>
-            <p className="text-sm font-bold">Eagles Elite Transport Service (SMC) Pvt Ltd</p>
-            <p className="mt-1 text-xs text-zinc-500">SECP Registered · License No. 023072</p>
-            <p className="mt-2 text-xs text-zinc-500">© 2026 Eagles Elite Transport Service</p>
+            <Logo />
+            <p className="mt-4 text-sm font-semibold text-zinc-300">{BRAND.legalName}</p>
+            <p className="mt-1 text-xs text-zinc-500">{BRAND.registration}</p>
+            <p className="mt-1 text-xs text-zinc-500">© {new Date().getFullYear()} {BRAND.name}. All rights reserved.</p>
           </div>
-          <div className="flex flex-wrap gap-x-5 gap-y-3 text-sm text-zinc-400">
-            <Link href="/auth/login" className="hover:text-white">Student login</Link>
-            <Link href="/auth/signup" className="hover:text-white">Apply</Link>
-            <Link href="/admin/login" className="hover:text-white">Admin</Link>
+          <div className="grid grid-cols-2 gap-x-12 gap-y-3 text-sm text-zinc-400">
+            <p className="col-span-2 text-xs font-semibold uppercase tracking-[0.16em] text-zinc-600 sm:col-span-1">Riders</p>
+            <p className="hidden text-xs font-semibold uppercase tracking-[0.16em] text-zinc-600 sm:block">Staff</p>
+            <Link href="/auth/signup" className="hover:text-white">Book a seat</Link>
+            <Link href="/admin/login" className="hover:text-white">Admin portal</Link>
+            <Link href="/auth/login" className="hover:text-white">Rider login</Link>
+            <Link href="/driver/login" className="hover:text-white">Driver portal</Link>
+            <a href="#faq" className="hover:text-white">FAQ</a>
             <a href="#home" className="hover:text-white">Back to top ↑</a>
           </div>
         </div>
       </footer>
+
+      {/* Mobile sticky action bar */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#070b10]/95 p-3 backdrop-blur-xl md:hidden">
+        <div className="grid grid-cols-2 gap-2">
+          <a href={WHATSAPP_GENERAL} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#25D366] text-sm font-bold text-slate-950">
+            WhatsApp us
+          </a>
+          <Link href="/auth/signup" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-yellow-400 text-sm font-bold text-slate-950">
+            Book my seat
+          </Link>
+        </div>
+      </div>
+
+      {/* Desktop floating WhatsApp */}
+      <a
+        href={WHATSAPP_GENERAL}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Chat with Eagle Elites on WhatsApp"
+        className="fixed bottom-6 right-6 z-40 hidden h-14 w-14 items-center justify-center rounded-full bg-[#25D366] shadow-xl shadow-black/40 transition hover:scale-105 md:flex"
+      >
+        <svg viewBox="0 0 32 32" className="h-7 w-7" fill="#0b141a" aria-hidden="true">
+          <path d="M16 3a13 13 0 0 0-11.2 19.6L3 29l6.6-1.7A13 13 0 1 0 16 3Zm0 23.6c-2 0-4-.6-5.7-1.6l-.4-.2-3.9 1 1-3.8-.2-.4A10.6 10.6 0 1 1 16 26.6Zm5.8-7.9c-.3-.2-1.9-.9-2.2-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7 0a8.7 8.7 0 0 1-4.3-3.8c-.3-.5.3-.5.9-1.6.1-.2 0-.4 0-.5l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6a1.2 1.2 0 0 0-.9.4 3.6 3.6 0 0 0-1.1 2.7 6.3 6.3 0 0 0 1.3 3.3 14.4 14.4 0 0 0 5.5 4.9c2 .9 2.8 1 3.9.8a3.3 3.3 0 0 0 2.1-1.5 2.7 2.7 0 0 0 .2-1.5c-.1-.1-.3-.2-.6-.3Z" />
+        </svg>
+      </a>
     </div>
   );
 }

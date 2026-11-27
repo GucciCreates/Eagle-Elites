@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { BRAND } from '@/lib/brand';
 
 type PanelVariant = 'login' | 'signup' | 'admin' | 'driver';
 
@@ -141,9 +142,16 @@ export default function AuthShell({
               <Link
                 href="/"
                 aria-label="Eagle Elites home"
-                className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#facc15] via-[#fbbf24] to-[#f59e0b] text-base font-black text-black shadow-[0_14px_32px_rgba(250,204,21,0.3)] focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/60"
+                className="mx-auto mb-4 flex w-fit rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/60"
               >
-                EE
+                {/* eslint-disable-next-line @next/next/no-img-element -- SVG brand file */}
+                <img
+                  src={BRAND.logoSrc}
+                  alt=""
+                  width={56}
+                  height={56}
+                  className="h-14 w-14 rounded-2xl shadow-[0_14px_32px_rgba(250,204,21,0.22)]"
+                />
               </Link>
               <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-yellow-300/80">
                 {eyebrow ?? 'Eagle Elites'}
@@ -171,7 +179,7 @@ export default function AuthShell({
         </main>
 
         <p className="text-center text-xs text-zinc-600">
-          © 2026 Eagle Elites Transport
+          © {BRAND.legalName}
         </p>
       </div>
     </div>
