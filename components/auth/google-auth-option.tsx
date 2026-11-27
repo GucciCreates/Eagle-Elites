@@ -5,8 +5,9 @@ import { createClient } from '@/lib/supabase/client';
 import { friendlyAuthError } from '@/lib/auth/form';
 import GoogleButton from '@/components/auth/google-button';
 import { Alert } from '@/components/auth/form-ui';
+import { startGoogleSignIn, type AuthPortal } from '@/lib/auth/google';
 
-export type AuthPortal = 'student' | 'admin' | 'driver';
+export type { AuthPortal };
 
 export default function GoogleAuthOption({
   portal,
@@ -25,15 +26,7 @@ export default function GoogleAuthOption({
     setError('');
 
     try {
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?portal=${portal}`,
-          queryParams: { prompt: 'select_account' },
-        },
-      });
-
-      if (oauthError) throw oauthError;
+      await startGoogleSignIn(supabase, portal);
     } catch (reason) {
       setError(
         friendlyAuthError(
