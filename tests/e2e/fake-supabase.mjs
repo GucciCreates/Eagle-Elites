@@ -50,6 +50,12 @@ const data = {
     ['Wah Model Town', 'r1'], ['GT Road / Taxila', 'r1'], ['New City Phase II', 'r1'],
     ['Hassan Abdal', 'r3'], ['GT Road / Taxila', 'r3'],
   ].map(([name, route_id], i) => ({ id: `p${i}`, name, route_id })),
+  'rpc/driver_trip_stops': students.slice(0, 3).map((s, i) => ({
+    student_id: s.id, full_name: s.full_name, institution: s.institution, cnic_last4: s.cnic_last4,
+    pickup_point: ['B-17 MultiGardens', 'Saddar', null][i], morning_time: ['07:10:00', '07:25:00', null][i], evening_time: '16:30:00',
+  })),
+  trip_events: [],
+  vehicle_checks: [],
   holidays: [{ id: 'h1', date: '2026-12-25', reason: 'Quaid-e-Azam Day' }],
   notifications: [{ id: 'n1', title: 'Winter timings', message: 'Pickups move 15 minutes later.', created_at: '2026-11-25T09:00:00Z' }],
 };

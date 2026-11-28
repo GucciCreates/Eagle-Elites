@@ -6,6 +6,11 @@ export type QueuedMark = { student_id: string; date: string; status: 'present' |
 
 export const QUEUE_KEY = 'ee-driver-attendance-queue';
 
+/** Adds the time of the tap. */
+export function stampMark(mark: Omit<QueuedMark, 'at'>): QueuedMark {
+  return { ...mark, at: Date.now() };
+}
+
 export function enqueue(queue: QueuedMark[], mark: QueuedMark): QueuedMark[] {
   return [...queue.filter((m) => !(m.student_id === mark.student_id && m.date === mark.date)), mark];
 }
