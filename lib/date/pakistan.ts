@@ -37,3 +37,33 @@ export function getPakistanDateForWeekday(weekStart: string, weekday: string) {
   date.setUTCDate(date.getUTCDate() + weekdayIndex);
   return date.toISOString().slice(0, 10);
 }
+
+/** YYYY-MM-DD shifted by whole days. */
+export function addDays(isoDate: string, days: number) {
+  const date = new Date(`${isoDate}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+/** Monday of the week containing isoDate. */
+export function weekStartOf(isoDate: string) {
+  const date = new Date(`${isoDate}T00:00:00Z`);
+  return addDays(isoDate, -((date.getUTCDay() + 6) % 7));
+}
+
+/** "Monday" … "Sunday" for isoDate. */
+export function weekdayOf(isoDate: string) {
+  return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][
+    new Date(`${isoDate}T00:00:00Z`).getUTCDay()
+  ];
+}
+
+/** Current Pakistan time as "HH:MM" (24-hour). */
+export function getPakistanTime(date = new Date()) {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: PAKISTAN_TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+}

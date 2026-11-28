@@ -7,6 +7,7 @@ import { getWhatsAppConfig } from '@/lib/whatsapp/config';
 import { sendToRecipients, type Recipient } from '@/lib/whatsapp/send';
 import { apiError, isIsoDate, isUuid, text } from '@/lib/api/validate';
 import { normalizePkPhone } from '@/lib/phone';
+import { notifyAssignments } from '@/lib/whatsapp/assignment';
 
 type Body =
   | { event: 'approval'; studentId: string }
@@ -224,69 +225,8 @@ export async function POST(request: Request) {
     }
 
     case 'assignment': {
-      const ids = Array.isArray(body.studentIds)
-        ? body.studentIds.slice(0, 1000)
-        : [];
-      if (ids.length === 0) {
-        summary = { sent: 0, failed: 0, skipped: 0 };
-        break;
-      }
-      const { data } = await service
-        .from('daily_assignments')
-        .select(
-          'student_id, driver_name, driver_contact, coasters(coaster_number), profiles!inner(id, phone, full_name, whatsapp_opt_in)',
-        )
-        .eq('assignment_date', body.date)
-        .in('student_id', ids);
-
-      type Row = {
-        student_id: string;
-        driver_name: string | null;
-        driver_contact: string | null;
-        coasters:
-          { coaster_number: string } | { coaster_number: string }[] | null;
-        profiles:
-          | {
-              id: string;
-              phone: string | null;
-              full_name: string | null;
-              whatsapp_opt_in: boolean;
-            }
-          | {
-              id: string;
-              phone: string | null;
-              full_name: string | null;
-              whatsapp_opt_in: boolean;
-            }[];
-      };
-      const one = <T>(value: T | T[] | null): T | null =>
-        Array.isArray(value) ? (value[0] ?? null) : value;
-
-      const rows = ((data ?? []) as Row[]).filter(
-        (row) => one(row.profiles)?.whatsapp_opt_in,
-      );
-      const byStudent = new Map(rows.map((row) => [row.student_id, row]));
-
-      summary = await sendToRecipients(
-        service,
-        'assignment',
-        rows.map((row) => one(row.profiles)!) as Recipient[],
-        (r) => {
-          const row = byStudent.get(r.id ?? '');
-          return [
-            r.full_name || 'Student',
-            formatDate(body.date),
-            one(row?.coasters ?? null)?.coaster_number || '-',
-            row?.driver_name || '-',
-            row?.driver_contact || '-',
-          ];
-        },
-        // Re-sends if the vehicle/driver changes for the same day.
-        (r) => {
-          const row = byStudent.get(r.id ?? '');
-          return `assignment:${body.date}:${r.id}:${one(row?.coasters ?? null)?.coaster_number}:${row?.driver_name}:${row?.driver_contact}`;
-        },
-      );
+      const ids = Array.isArray(body.studentIds) ? body.studentIds : [];
+      summary = await notifyAssignments(service, body.date, ids);
       break;
     }
 
