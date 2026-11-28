@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS public.trip_events (
   resolved_at TIMESTAMPTZ,
   resolved_by UUID REFERENCES public.admin_users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT trip_events_problem_type_check CHECK ((kind = 'problem') = (problem_type IS NOT NULL))
+  CONSTRAINT trip_events_problem_needs_type CHECK ((kind = 'problem') = (problem_type IS NOT NULL))
 );
 
 CREATE INDEX IF NOT EXISTS trip_events_date_driver_idx
