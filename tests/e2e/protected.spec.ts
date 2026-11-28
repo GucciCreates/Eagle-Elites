@@ -66,6 +66,43 @@ test.describe('signed-in staff', () => {
     expect(errors).toEqual([]);
   });
 
+  test('admin morning checklist shows driver problems', async ({ page }) => {
+    const errors = trackErrors(page);
+    await page.goto('/admin/dashboard');
+    const checklist = page.getByRole('region', { name: 'Morning checklist' });
+    await expect(checklist).toBeVisible();
+    await expect(checklist.getByText('Problems reported by drivers today')).toBeVisible();
+    await expect(checklist.getByText(/Heavy traffic · Imran Ali/)).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
+  test('admin Plan a Day, Staff Roles and Attendance tabs open', async ({ page }) => {
+    const errors = trackErrors(page);
+    await page.goto('/admin/dashboard');
+    const sidebar = page.getByRole('complementary', { name: 'Admin sections' });
+    await sidebar.getByRole('button', { name: /Plan a Day/ }).click();
+    await expect(page.getByRole('heading', { name: 'Plan a day' })).toBeVisible();
+    await expect(page.getByText(/published automatically at about 9:30 PM/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Preview' })).toBeEnabled();
+    await sidebar.getByRole('button', { name: /Staff Roles/ }).click();
+    await expect(page.getByRole('heading', { name: 'Staff roles' })).toBeVisible();
+    await sidebar.getByRole('button', { name: /Attendance/ }).click();
+    await expect(page.getByRole('heading', { name: 'Absence alerts' })).toBeVisible();
+    await sidebar.getByRole('button', { name: /Settings/ }).click();
+    await expect(page.getByRole('heading', { name: 'Daily operations' })).toBeVisible();
+    expect(errors.filter((e) => !/\/api\/admin\//.test(e) && !/status of 50[03]/.test(e))).toEqual([]);
+  });
+
+  test('driver can send trip updates and report a problem', async ({ page }) => {
+    await page.goto('/driver/dashboard');
+    const trip = page.getByRole('region', { name: 'Trip status' });
+    await expect(trip).toBeVisible();
+    await trip.getByRole('button', { name: 'morning' }).click();
+    await expect(trip.getByRole('button', { name: /Left for pickups/ })).toBeVisible();
+    await trip.getByRole('button', { name: /Report a problem/ }).click();
+    await expect(trip.getByRole('radio', { name: 'Vehicle breakdown' })).toBeVisible();
+  });
+
   test('accounting page loads', async ({ page }) => {
     const errors = trackErrors(page);
     await page.goto('/admin/accounting');

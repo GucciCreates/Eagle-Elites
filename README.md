@@ -37,7 +37,7 @@ For a production build, run `npm run lint`, `npm run build`, then `npm start`.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser auth and public route fares | Publishable/anon key; database access must be protected by RLS |
 | `NEXT_PUBLIC_SITE_URL` | Optional | Public address for share previews, sitemap and canonical links; on Vercel it defaults to the production domain |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only admin and scheduled jobs | Keep secret; never prefix with `NEXT_PUBLIC_` |
-| `CRON_SECRET` | Fee reminder cron | Long random secret used to authorize scheduled requests |
+| `CRON_SECRET` | Fee reminder and plan-tomorrow crons | Long random secret used to authorize scheduled requests |
 | `WHATSAPP_TOKEN` | WhatsApp notifications | Meta WhatsApp Cloud API token |
 | `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp notifications | Phone number ID from WhatsApp Manager |
 | `WHATSAPP_TEMPLATE_LANG` | Optional | Defaults to `en` |
@@ -79,6 +79,25 @@ Migration files are kept in `supabase/migrations/` with their existing timestamp
 
 `20261127000000_driver_roster_privacy.sql` limits what drivers can read about students, and `20261127010000_tighten_student_policies.sql` removes student deletes on schedules/departure choices and hides the vehicle list from signed-out visitors; their rollbacks are in `supabase/rollback/`. The later migrations cover RLS hardening, application settings, time options, WhatsApp opt-in/logging, and onboarding updates. The security rollback script is in `supabase/rollback/`; use it only when intentionally reverting its matching migration.
 
+### Daily operations (driver and admin tools)
+
+Two migrations switch on the operations features. Apply them in order, after a backup; each has a rollback in `supabase/rollback/` and both were tested on a local Postgres copy (`supabase/tests/ops_migrations_test.sh`).
+
+1. `20261127030000_driver_operations.sql`: trip updates and problem reports (`trip_events`), the daily vehicle check (`vehicle_checks`) and the pickup-order roster function (`driver_trip_stops`).
+2. `20261127040000_admin_operations.sql`: "not riding" days (`ride_skips`; marking a day frees that day's unmarked seat), automatic cancellation of unmarked trips when a holiday is added, the `operations` settings row, and staff roles (`admin_users.staff_role`: owner, operations, accounts). Every existing admin starts as **owner**, so nothing changes until an owner sets roles in **Staff Roles**.
+
+Until they are applied the screens still load and say that the feature needs the database update.
+
+What each piece does:
+
+- **Plan a Day** (admin): builds a day's trips from weekly schedules, each rider in their route's usual vehicle with its usual driver. It never replaces a trip set by hand and leaves out "not riding" days. Preview first, then publish.
+- **Nightly auto-publish**: `/api/cron/plan-tomorrow` runs at 16:30 UTC (9:30 PM Pakistan time) and publishes tomorrow's plan. Needs `CRON_SECRET`. It can be switched off in **Settings → Daily operations**. On Vercel's Hobby plan cron times are approximate.
+- **Morning checklist** (admin overview): driver problem reports (with "Mark handled"), failed vehicle checks, overfull vehicles, students without a trip, unconfirmed seats, vehicles in maintenance, drivers without a vehicle and applications waiting more than 48 hours.
+- **Absence alerts** (Attendance tab): students absent 3 trips in a row, or on half of 4+ trips, in the last 21 days. Shown to admins only. No one else is messaged.
+- **Driver app**: vehicle check, trip status buttons ("left", "arriving", "arrived"), problem reports, an "I'm here" message to a single student, and attendance that is saved offline and sent when signal returns.
+- **Trip WhatsApp messages**: status updates go to opted-in riders who are not marked absent. Each message is a paid WhatsApp conversation; switch them off in **Settings → Daily operations** (`trip_whatsapp`).
+- **Not riding** (student home): the next 14 days; tomorrow closes at the cutoff (default 9:00 PM, changeable in Settings). The database enforces the window.
+
 ## WhatsApp templates
 
 Students receive messages only when opted in. Configure and get Meta approval for the templates before enabling the relevant notifications. Current template defaults:
@@ -98,7 +117,7 @@ Configure `WHATSAPP_TEMPLATE_LANG` and the optional `WHATSAPP_TEMPLATE_*` overri
 
 ## Scheduled jobs
 
-Vercel cron configuration is in `vercel.json`. Fee reminders call `/api/cron/fee-reminders` on the 1st and 10th of each month. Vercel schedules use UTC; the current `0 4` schedule corresponds to 09:00 in Pakistan Standard Time (UTC+5). Set `CRON_SECRET` in the Vercel project environment before enabling the cron jobs.
+Vercel cron configuration is in `vercel.json`. Fee reminders call `/api/cron/fee-reminders` on the 1st and 10th of each month. `/api/cron/plan-tomorrow` publishes tomorrow's trips every evening at 16:30 UTC (9:30 PM PKT). Vercel schedules use UTC; the current `0 4` schedule corresponds to 09:00 in Pakistan Standard Time (UTC+5). Set `CRON_SECRET` in the Vercel project environment before enabling the cron jobs.
 
 ## Tests
 

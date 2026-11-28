@@ -65,6 +65,16 @@ test.describe('public site', () => {
     expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([]);
   });
 
+  test('demo rider can mark a day as not riding', async ({ page }) => {
+    await page.goto('/demo');
+    const days = page.getByRole('region', { name: /Days you won.t ride/ });
+    await expect(days).toBeVisible();
+    const first = days.getByRole('list', { name: 'Next two weeks' }).getByRole('button').nth(1);
+    await first.click();
+    await expect(first).toHaveAttribute('aria-pressed', 'true');
+    await expect(days.getByRole('status')).toContainText('not riding');
+  });
+
   test('landing page does not download the sign-in SDK before it loads', async ({ page }) => {
     let loaded = false;
     const early: Promise<string>[] = [];

@@ -42,6 +42,7 @@ export type DepartureSelection = {
 
 export type DailyAssignment = {
   id: string;
+  driver_id?: string | null;
   driver_name: string;
   driver_contact: string;
   seat_confirmed: boolean;

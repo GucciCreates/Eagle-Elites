@@ -28,6 +28,19 @@ const TimeOptionsTab = dynamic(() => import('@/components/admin/time-options-tab
 const WhatsAppTab = dynamic(() => import('@/components/admin/whatsapp-tab'), { loading: () => <SectionLoading /> });
 const ApplicationsTab = dynamic(() => import('@/components/admin/applications-tab'), { loading: () => <SectionLoading /> });
 const ProofViewer = dynamic(() => import('@/components/admin/proof-viewer'), { loading: () => <SectionLoading /> });
+const PlanTab = dynamic(() => import('@/components/admin/plan-tab'), { loading: () => <SectionLoading /> });
+const StaffTab = dynamic(() => import('@/components/admin/staff-tab'), { loading: () => <SectionLoading /> });
+const MorningChecklist = dynamic(() => import('@/components/admin/morning-checklist'), { loading: () => <SectionLoading /> });
+const AbsenceAlerts = dynamic(() => import('@/components/admin/absence-alerts'), { loading: () => <SectionLoading /> });
+const OperationsSettingsCard = dynamic(() => import('@/components/admin/operations-settings'), { loading: () => <SectionLoading /> });
+
+type StaffRole = 'owner' | 'operations' | 'accounts';
+/** Tabs each staff role does not see. The database enforces the same split. */
+const HIDDEN_TABS: Record<StaffRole, string[]> = {
+  owner: [],
+  operations: ['fees', 'pricing'],
+  accounts: ['staff'],
+};
 
 function describeWhatsApp(result: NotifyResponse) {
   if (!result.ok) return `WhatsApp: ${result.error ?? 'failed'}`;
@@ -122,9 +135,9 @@ type WeeklyPlanRow = { student_id: string; week_start: string; day_of_week: stri
 type FeePayment = { student_id: string; fee_month: string; amount: number; recorded_at: string };
 
 const ADMIN_NAV_GROUPS = [
-  { key: 'workspace', label: 'Workspace', tabs: ['overview', 'activity'] },
+  { key: 'workspace', label: 'Workspace', tabs: ['overview', 'activity', 'staff'] },
   { key: 'people', label: 'People', tabs: ['students', 'applications', 'drivers', 'messages'] },
-  { key: 'operations', label: 'Operations', tabs: ['schedule', 'assignments', 'departures', 'attendance', 'vehicles', 'holidays', 'times'] },
+  { key: 'operations', label: 'Operations', tabs: ['plan', 'schedule', 'assignments', 'departures', 'attendance', 'vehicles', 'holidays', 'times'] },
   { key: 'finance', label: 'Finance', tabs: ['fees', 'pricing', 'settings'] },
   { key: 'communications', label: 'Communications', tabs: ['announcements', 'whatsapp'] },
 ] as const;
@@ -147,6 +160,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [isTabPending, startTabTransition] = useTransition();
   const [adminReady, setAdminReady] = useState(false);
+  const [staffRole, setStaffRole] = useState<StaffRole>('owner');
   const [departureStatusError, setDepartureStatusError] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const attendanceTabOpen = activeTab === 'attendance';
@@ -317,6 +331,10 @@ export default function AdminDashboard() {
         router.push('/admin/login');
         return;
       }
+      // staff_role arrives with the admin-operations update; until then everyone is an owner.
+      const { data: roleRow } = await supabase.from('admin_users').select('staff_role').eq('id', session.user.id).maybeSingle();
+      const role = (roleRow as { staff_role?: string } | null)?.staff_role;
+      if (role === 'operations' || role === 'accounts') setStaffRole(role);
       setAdminReady(true);
 
       const slotWindowStart = shiftIsoDate(getPakistanDate(), -SLOT_HISTORY_DAYS);
@@ -1078,8 +1096,10 @@ export default function AdminDashboard() {
   });
   const unassignedActiveStudents = students.filter((student) => student.status === 'active' && !student.route_id).length;
 
-  const tabs = [
+  const allTabs = [
     { key: 'overview', icon: 'chart' as IconName, title: 'Overview' },
+    { key: 'plan', icon: 'calendar' as IconName, title: 'Plan a Day' },
+    { key: 'staff', icon: 'shield' as IconName, title: 'Staff Roles' },
     { key: 'schedule', icon: 'calendar' as IconName, title: 'Weekly Schedule' },
     { key: 'students', icon: 'users' as IconName, title: 'Students' },
     {
@@ -1106,6 +1126,7 @@ export default function AdminDashboard() {
     { key: 'settings', icon: 'settings' as IconName, title: 'Settings' },
     { key: 'activity', icon: 'receipt' as IconName, title: 'Activity Log' },
   ];
+  const tabs = allTabs.filter((tab) => !HIDDEN_TABS[staffRole].includes(tab.key) && (tab.key !== 'staff' || staffRole === 'owner'));
 
   const tabBadge = (key: string) => ({
     overview: students.length,
@@ -1256,10 +1277,18 @@ export default function AdminDashboard() {
         <div key={activeTab} className="ee-enter">
         {activeTab === 'times' && <TimeOptionsTab groups={departureGroups} />}
         {activeTab === 'whatsapp' && <WhatsAppTab />}
-        {activeTab === 'settings' && <PaymentSettingsTab />}
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
+            <OperationsSettingsCard canEdit={staffRole !== 'accounts'} />
+            {staffRole !== 'operations' && <PaymentSettingsTab />}
+          </div>
+        )}
+        {activeTab === 'plan' && <PlanTab canPublish={staffRole !== 'accounts'} />}
+        {activeTab === 'staff' && staffRole === 'owner' && <StaffTab />}
 
         {activeTab === 'overview' && (
           <div className="space-y-6">
+            <MorningChecklist supabase={supabase} students={students} coasters={coasters} drivers={drivers} applications={applications} holidays={holidays} onOpenTab={changeTab} />
             <div className="ee-stagger grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
               {[
                 {
@@ -2195,6 +2224,7 @@ export default function AdminDashboard() {
 
         {activeTab === 'attendance' && (
           <div className="space-y-6">
+            <AbsenceAlerts supabase={supabase} students={students} />
             <section className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-yellow-300">Driver-reported trip record</p><h2 className="mt-1 text-xl font-semibold text-white">Trip attendance</h2><p className="mt-1 text-sm text-zinc-400">Record who boarded for each student assigned to the selected date.</p></div>
@@ -2507,6 +2537,10 @@ export default function AdminDashboard() {
                   />
                   Notify opted-in students on WhatsApp
                 </label>
+
+                <p className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-2.5 text-xs text-zinc-400">
+                  Trips already planned for this day are cancelled automatically, except ones a driver has already marked.
+                </p>
 
                 <button
                   type="button"

@@ -32,7 +32,9 @@ const data = {
   departure_groups: ['Air University', 'Bahria University', 'NUST', 'FAST-NUCES'].map((university, i) => ({
     id: `g${i}`, university, department: 'All programs', active: true,
   })),
-  admin_users: [{ id: 'u1' }],
+  admin_users: [{ id: 'u1', staff_role: 'owner' }],
+  app_settings: [{ key: 'operations', value: { skip_cutoff: '21:00', auto_plan: true, trip_whatsapp: true } }],
+  ride_skips: [],
   drivers: [{ id: 'u1', email: 'driver@example.test', full_name: 'Imran Ali', phone: '03001112223', active: true }],
   profiles: students,
   coasters: [{ id: 'c1', coaster_number: 'EE-12', vehicle_type: 'Coaster', seat_capacity: 26, maintenance_status: 'active', default_route_id: 'r1' }],
@@ -54,7 +56,10 @@ const data = {
     student_id: s.id, full_name: s.full_name, institution: s.institution, cnic_last4: s.cnic_last4,
     pickup_point: ['B-17 MultiGardens', 'Saddar', null][i], morning_time: ['07:10:00', '07:25:00', null][i], evening_time: '16:30:00',
   })),
-  trip_events: [],
+  trip_events: [{
+    id: 'e1', driver_id: 'u1', trip_date: today, leg: 'morning', kind: 'problem', problem_type: 'traffic',
+    note: 'Stuck near Golra Mor', created_at: `${today}T02:10:00Z`, resolved_at: null, riders_notified: 2,
+  }],
   vehicle_checks: [],
   holidays: [{ id: 'h1', date: '2026-12-25', reason: 'Quaid-e-Azam Day' }],
   notifications: [{ id: 'n1', title: 'Winter timings', message: 'Pickups move 15 minutes later.', created_at: '2026-11-25T09:00:00Z' }],

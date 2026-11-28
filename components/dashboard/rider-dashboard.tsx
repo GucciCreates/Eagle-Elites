@@ -17,6 +17,7 @@ import { createClient } from '@/lib/supabase/client';
 import TimeSelect from '@/components/time-select';
 import WhatsAppOptInCard from '@/components/whatsapp-opt-in-card';
 import SectionLoading from '@/components/section-loading';
+import dynamic from 'next/dynamic';
 import {
   fetchTimeOptionsForGroup,
   type TimeOption,
@@ -44,6 +45,9 @@ import {
   type DashboardTab,
   type ScheduleView,
 } from '@/lib/dashboard/student';
+
+const RideDays = dynamic(() => import('@/components/dashboard/ride-days'));
+const TripStatus = dynamic(() => import('@/components/dashboard/trip-status'));
 
 /** Sample identity used only by the public /demo page. Never mixed with a real session. */
 const DEMO_SESSION = {
@@ -1004,6 +1008,7 @@ export default function RiderDashboard({ demo = false }: { demo?: boolean }) {
                     {!assignment.seat_confirmed && <button type="button" onClick={handleConfirmSeat} disabled={confirmingSeat} className="mt-3 inline-flex min-h-9 items-center rounded-lg bg-yellow-400 px-3 py-2 text-xs font-bold text-slate-950 transition hover:bg-yellow-300 disabled:opacity-50">{confirmingSeat ? 'Confirming…' : 'Confirm seat'}</button>}
                   </div>
                 </div>}
+                {todaySchedule && assignment && <TripStatus supabase={supabase} driverId={assignment.driver_id ?? null} demo={demo} />}
               </section>
 
               <section className="rounded-3xl border border-white/[0.08] bg-[#10151d] p-5 shadow-[0_18px_42px_rgba(0,0,0,0.14)] sm:p-6">
@@ -1168,6 +1173,8 @@ export default function RiderDashboard({ demo = false }: { demo?: boolean }) {
               </section>
 
             </div>
+
+            {profile?.route_id && <RideDays supabase={supabase} studentId={profile.id} holidays={holidays} demo={demo} />}
 
             {holidays.length > 0 && (
               <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5 shadow-[0_18px_35px_rgba(0,0,0,0.12)]">
